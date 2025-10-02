@@ -51,6 +51,7 @@ interface SummaryData {
 interface ChartData {
   name: string;
   value: number;
+  [key: string]: string | number;
 }
 
 const PIE_CHART_COLORS = [
