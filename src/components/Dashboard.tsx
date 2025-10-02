@@ -122,6 +122,7 @@ export default function Dashboard() {
           { name: "Pemasukan", value: newSummary.totalIncome },
           { name: "Pengeluaran", value: newSummary.totalExpense },
         ]);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         setError(err.message);
       } finally {
