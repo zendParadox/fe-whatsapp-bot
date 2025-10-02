@@ -1,0 +1,31 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // atau "mysql" jika menggunakan PlanetScale
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Enum untuk tipe transaksi
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+// Model untuk tabel transaksi
+model Transaction {
+  id          String          @id @default(uuid())
+  type        TransactionType
+  amount      Decimal         @db.Decimal(12, 2)
+  category    String
+  description String?
+  created_at  DateTime        @default(now())
+  user_id     String // Nantinya bisa menjadi relasi ke tabel User
+
+  @@index([user_id])
+}
