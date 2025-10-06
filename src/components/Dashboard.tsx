@@ -30,7 +30,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// Tipe data untuk transaksi yang diterima dari API
 interface Transaction {
   id: string;
   type: "INCOME" | "EXPENSE";
@@ -62,7 +61,7 @@ const PIE_CHART_COLORS = [
   "#AF19FF",
   "#FF4560",
 ];
-const BAR_CHART_COLORS = ["#22C55E", "#EF4444"]; // Hijau untuk Pemasukan, Merah untuk Pengeluaran
+const BAR_CHART_COLORS = ["#22C55E", "#EF4444"];
 
 export default function Dashboard() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -83,14 +82,12 @@ export default function Dashboard() {
       setIsLoading(true);
       setError(null);
       try {
-        // Ganti dengan endpoint API Anda yang sesungguhnya
         const res = await fetch(`/api/transactions?month=${month}`);
         if (!res.ok) {
           throw new Error("Gagal mengambil data transaksi");
         }
         const data = await res.json();
 
-        // Proses data untuk ringkasan dan chart
         let totalIncome = 0;
         let totalExpense = 0;
         const categoryMap: { [key: string]: number } = {};
@@ -117,7 +114,6 @@ export default function Dashboard() {
           Object.entries(categoryMap).map(([name, value]) => ({ name, value }))
         );
 
-        // BARU: Menyiapkan data untuk grafik batang
         setBarChartData([
           { name: "Pemasukan", value: newSummary.totalIncome },
           { name: "Pengeluaran", value: newSummary.totalExpense },
@@ -226,7 +222,6 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        {/* ======================= DIUBAH ======================= */}
         <Card>
           <CardHeader>
             <CardTitle>Pemasukan vs Pengeluaran</CardTitle>
@@ -258,54 +253,73 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-        {/* ======================================================== */}
       </div>
 
-      {/* Tabel Transaksi Terbaru */}
-      <div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Transaksi Terbaru</CardTitle>
+            <CardTitle>Pemasukan Terbaru</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Tanggal</TableHead>
-                  <TableHead>Tipe</TableHead>
                   <TableHead>Kategori</TableHead>
                   <TableHead>Deskripsi</TableHead>
                   <TableHead className="text-right">Jumlah</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transactions.map((tx) => (
-                  <TableRow key={tx.id}>
-                    <TableCell>
-                      {new Date(tx.created_at).toLocaleDateString("id-ID")}
-                    </TableCell>
-                    <TableCell>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          tx.type === "INCOME"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {tx.type === "INCOME" ? "Pemasukan" : "Pengeluaran"}
-                      </span>
-                    </TableCell>
-                    <TableCell>{tx.category}</TableCell>
-                    <TableCell>{tx.description || "-"}</TableCell>
-                    <TableCell
-                      className={`text-right font-medium ${
-                        tx.type === "INCOME" ? "text-green-600" : "text-red-600"
-                      }`}
-                    >
-                      {formatCurrency(Number(tx.amount))}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {transactions
+                  .filter((tx) => tx.type === "INCOME")
+                  .map((tx) => (
+                    <TableRow key={tx.id}>
+                      <TableCell>
+                        {new Date(tx.created_at).toLocaleDateString("id-ID")}
+                      </TableCell>
+                      <TableCell>{tx.category}</TableCell>
+                      <TableCell>{tx.description || "-"}</TableCell>
+                      <TableCell className="text-right font-medium text-green-600">
+                        {formatCurrency(Number(tx.amount))}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Pengeluaran */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Pengeluaran Terbaru</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tanggal</TableHead>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead>Deskripsi</TableHead>
+                  <TableHead className="text-right">Jumlah</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {transactions
+                  .filter((tx) => tx.type !== "INCOME") // Atau tx.type === 'EXPENSE'
+                  .map((tx) => (
+                    <TableRow key={tx.id}>
+                      <TableCell>
+                        {new Date(tx.created_at).toLocaleDateString("id-ID")}
+                      </TableCell>
+                      <TableCell>{tx.category}</TableCell>
+                      <TableCell>{tx.description || "-"}</TableCell>
+                      <TableCell className="text-right font-medium text-red-600">
+                        {formatCurrency(Number(tx.amount))}
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           </CardContent>
