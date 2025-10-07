@@ -19,11 +19,9 @@ import {
 const prisma = new PrismaClient();
 
 // DIPERBAIKI: Menggunakan cara resmi dari Prisma untuk mendefinisikan tipe dengan relasi
-type TransactionWithCategory = Prisma.TransactionGetPayload<{
-  include: {
-    category: true;
-  };
-}>;
+type TransactionWithCategory = Prisma.TransactionGetPayload<
+  Prisma.TransactionArgs & { include: { category: true } }
+>;
 
 interface Summary {
   totalIncome: number;
