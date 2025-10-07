@@ -3,11 +3,11 @@
 
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
-
 datasource db {
-  provider = "postgresql" // atau "mysql" jika menggunakan PlanetScale
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -17,15 +17,74 @@ enum TransactionType {
   EXPENSE
 }
 
-// Model untuk tabel transaksi
+// 👤 Model untuk pengguna aplikasi
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String?
+  password     String
+  whatsapp_jid String?   @unique
+  created_at   DateTime  @default(now())
+
+  transactions Transaction[]
+  categories   Category[]
+  budgets      Budget[]
+}
+
+// 🏷️ Model untuk kategori transaksi
+model Category {
+  id   String @id @default(uuid())
+  name String
+
+  // Relasi: Kategori ini milik satu User
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  // Relasi: Satu Kategori bisa digunakan di banyak Transaksi
+  transactions Transaction[]
+
+  // Relasi: Satu Kategori bisa punya banyak Budget (untuk bulan/tahun berbeda)
+  budgets Budget[]
+
+  // Kategori harus unik untuk setiap user
+  @@unique([user_id, name])
+}
+
+// 🎯 Model untuk budget bulanan
+model Budget {
+  id     String  @id @default(uuid())
+  amount Decimal @db.Decimal(12, 2)
+  month  Int // 1-12
+  year   Int
+
+  // Relasi: Budget ini untuk satu Kategori
+  category_id String
+  category    Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  // Relasi: Budget ini milik satu User
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  // Budget harus unik untuk user, kategori, bulan, dan tahun yang sama
+  @@unique([user_id, category_id, month, year])
+}
+
+// 🔄 Model Transaction yang sudah di-refactor
 model Transaction {
   id          String          @id @default(uuid())
   type        TransactionType
   amount      Decimal         @db.Decimal(12, 2)
-  category    String
   description String?
   created_at  DateTime        @default(now())
-  user_id     String // Nantinya bisa menjadi relasi ke tabel User
+
+  // Relasi: Transaksi ini milik satu User
+  user_id String
+  user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  // Relasi: Transaksi ini memiliki satu Kategori
+  category_id String
+  category    Category @relation(fields: [category_id], references: [id], onDelete: Restrict)
 
   @@index([user_id])
+  @@index([category_id])
 }
