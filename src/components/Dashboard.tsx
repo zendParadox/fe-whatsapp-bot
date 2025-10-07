@@ -41,12 +41,18 @@ import { startOfMonth, endOfMonth, format } from "date-fns";
 import { DatePickerWithRange } from "./ui/date-range-picker";
 
 // --- INTERFACE & KONSTANTA ---
+interface CategoryObj {
+  name?: string;
+  [k: string]: any;
+}
+
 interface Transaction {
   id: string;
   type: "INCOME" | "EXPENSE";
-  amount: number;
-  category: string;
-  description: string | null;
+  amount: number | string;
+  // Bisa berupa string (nama kategori) atau object { name: string, ... } atau null
+  category?: string | CategoryObj | null;
+  description?: string | null;
   created_at: string;
 }
 
@@ -239,6 +245,12 @@ export default function Dashboard() {
     value: c.amount,
   }));
 
+  function getCategoryName(category?: string | CategoryObj | null) {
+    if (!category) return "-";
+    if (typeof category === "string") return category;
+    return category.name ?? "-";
+  }
+
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
       <header className="flex flex-col md:flex-row justify-between items-center gap-4">
@@ -389,7 +401,7 @@ export default function Dashboard() {
                       <TableCell>
                         {new Date(tx.created_at).toLocaleDateString("id-ID")}
                       </TableCell>
-                      <TableCell>{tx.category.name}</TableCell>
+                      <TableCell>{getCategoryName(tx.category)}</TableCell>
                       <TableCell
                         className={`text-right font-medium ${
                           tx.type === "INCOME"

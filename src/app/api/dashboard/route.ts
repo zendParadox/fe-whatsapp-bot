@@ -1,8 +1,7 @@
 // file: app/api/dashboard/route.ts
 
 import { NextResponse, type NextRequest } from "next/server";
-// DIPERBAIKI: Impor 'Prisma' dari @prisma/client
-import { Prisma, PrismaClient, TransactionType } from "@prisma/client";
+import { PrismaClient, TransactionType } from "@prisma/client";
 import type { Decimal } from "@prisma/client/runtime/library";
 import {
   startOfMonth,
@@ -18,11 +17,22 @@ import {
 
 const prisma = new PrismaClient();
 
-// DIPERBAIKI: Menggunakan cara resmi dari Prisma untuk mendefinisikan tipe dengan relasi
-type TransactionWithCategory = Prisma.TransactionGetPayload<
-  Prisma.TransactionCountArgs & { include: { category: true } }
->;
+// -----------------------------
+// Opsi B: Infer tipe dari query
+// -----------------------------
+// Helper yang hanya dipakai untuk infer tipe TypeScript.
+// Jangan panggil helper ini saat runtime — kita hanya gunakan ReturnType<> pada level type.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _fetchTransactionsWithCategory = () =>
+  prisma.transaction.findMany({ include: { category: true } });
 
+type TransactionWithCategory = Awaited<
+  ReturnType<typeof _fetchTransactionsWithCategory>
+>[number];
+
+// -----------------------------
+// Tipe lain untuk response/data
+// -----------------------------
 interface Summary {
   totalIncome: number;
   totalExpense: number;
