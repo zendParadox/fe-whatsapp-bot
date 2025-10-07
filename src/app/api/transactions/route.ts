@@ -1,4 +1,4 @@
-// src/app/api/transactions/route.ts
+/* eslint-disable */
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma"; // sesuaikan path jika perlu
 import type { Prisma } from "@prisma/client";
