@@ -1,13 +1,14 @@
+// src/app/api/transactions/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma"; // sesuaikan path jika perlu
+import type { Prisma } from "@prisma/client";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const month = searchParams.get("month");
 
-  let whereClause = {};
+  // gunakan tipe Prisma.TransactionWhereInput agar lebih aman (atau 'any' jika belum mau import type)
+  let whereClause: Prisma.TransactionClient | Record<string, unknown> = {};
 
   if (month === "current" || month === "last") {
     const now = new Date();
@@ -15,41 +16,48 @@ export async function GET(request: Request) {
     let endDate: Date;
 
     if (month === "current") {
-      // Awal bulan ini
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      // Awal bulan depan
       endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
     } else {
-      // month === 'last'
-      // Awal bulan lalu
       startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      // Awal bulan ini
       endDate = new Date(now.getFullYear(), now.getMonth(), 1);
     }
 
     whereClause = {
       created_at: {
-        gte: startDate, // gte: greater than or equal to
-        lt: endDate, // lt: less than
+        gte: startDate,
+        lt: endDate,
       },
     };
   }
-  // Jika month adalah 'all' atau tidak dispesifikasikan, whereClause tetap kosong {}
-  // yang berarti akan mengambil semua transaksi.
 
   try {
     const transactions = await prisma.transaction.findMany({
       where: whereClause,
       orderBy: {
-        created_at: "desc", // Urutkan dari yang terbaru
+        created_at: "desc",
       },
     });
 
-    // Prisma mengembalikan amount sebagai tipe Decimal, kita perlu mengubahnya menjadi number
-    const serializedTransactions = transactions.map((tx) => ({
-      ...tx,
-      amount: Number(tx.amount),
-    }));
+    const serializedTransactions = transactions.map((tx) => {
+      // tx.amount biasanya prisma Decimal. Gunakan toNumber jika ada, fallback ke Number/toString
+      // This avoids losing precision unexpectedly; but for UI number display toNumber is fine.
+      const amountAny: any = (tx as any).amount;
+      let amountNumber: number;
+
+      if (amountAny && typeof amountAny.toNumber === "function") {
+        amountNumber = amountAny.toNumber();
+      } else if (amountAny && typeof amountAny.toString === "function") {
+        amountNumber = Number(amountAny.toString());
+      } else {
+        amountNumber = Number(amountAny);
+      }
+
+      return {
+        ...tx,
+        amount: amountNumber,
+      };
+    });
 
     return NextResponse.json({ transactions: serializedTransactions });
   } catch (error) {

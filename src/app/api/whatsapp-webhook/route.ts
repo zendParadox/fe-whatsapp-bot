@@ -1,121 +1,118 @@
-// app/api/whatsapp-webhook/route.ts
+// file: app/api/whatsapp-webhook/route.ts
 
-import { NextResponse } from "next/server";
-import { PrismaClient, Prisma } from "@prisma/client";
+import { NextResponse, type NextRequest } from "next/server";
+import { PrismaClient, TransactionType } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
+import { z } from "zod";
 
 const prisma = new PrismaClient();
 
-/**
- * Mem-parsing pesan transaksi dari format teks.
- * Contoh: "keluar 50000 makanan ringan"
- * "masuk 1000000 gaji bulanan"
- * @param message Pesan teks yang akan di-parse.
- * @returns Objek transaksi yang sudah di-parse atau null jika format salah.
- */
-function parseTransactionMessage(message: string): {
-  type: "INCOME" | "EXPENSE";
-  amount: number;
-  category: string;
-  description: string | null;
-} | null {
-  // Menghapus spasi berlebih dan mengubah ke huruf kecil
-  const parts = message.trim().toLowerCase().split(/\s+/);
+// Skema validasi untuk payload yang masuk dari bot Go
+const webhookPayloadSchema = z.object({
+  sender: z.string(),
+  message: z.string(),
+});
 
-  // Pesan harus memiliki minimal 3 bagian: [tipe] [jumlah] [kategori]
-  if (parts.length < 3) {
-    return null;
-  }
+// Fungsi untuk mem-parsing pesan menjadi data transaksi
+function parseTransactionMessage(message: string) {
+  const parts = message.toLowerCase().split(" ");
+  if (parts.length < 2) return null;
 
-  const [typeStr, amountStr, category, ...descriptionParts] = parts;
-
-  let type: "INCOME" | "EXPENSE";
-  if (typeStr === "masuk") {
-    type = "INCOME";
-  } else if (typeStr === "keluar") {
-    type = "EXPENSE";
-  } else {
-    // Tipe tidak valid
-    return null;
-  }
-
-  // Mengonversi jumlah menjadi angka, pastikan tidak ada format seperti "50k" atau "50.000"
-  const amount = parseInt(amountStr.replace(/[^0-9]/g, ""), 10);
-  if (isNaN(amount) || amount <= 0) {
-    return null;
-  }
-
+  const command = parts[0];
+  const amount = parseFloat(parts[1]);
   const description =
-    descriptionParts.length > 0 ? descriptionParts.join(" ") : null;
+    parts.length > 2
+      ? message.split(" ").slice(2).join(" ")
+      : "Transaksi WhatsApp";
 
-  return { type, amount, category, description };
+  let type: TransactionType;
+
+  if (command === "masuk" || command === "income") {
+    type = TransactionType.INCOME;
+  } else if (command === "keluar" || command === "expense") {
+    type = TransactionType.EXPENSE;
+  } else {
+    return null; // Perintah tidak valid
+  }
+
+  if (isNaN(amount) || amount <= 0) {
+    return null; // Jumlah tidak valid
+  }
+
+  return { type, amount, description };
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    // 1. Dapatkan body dari request
     const body = await request.json();
-    const { sender, message } = body;
 
-    // 2. Validasi input dasar
-    if (!sender || !message) {
+    // 1. Validasi payload yang masuk
+    const validation = webhookPayloadSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { message: "Bad Request: `sender` and `message` are required." },
+        { message: "Payload tidak valid." },
         { status: 400 }
       );
+    }
+    const { sender, message } = validation.data;
+
+    // 2. Cari pengguna berdasarkan JID WhatsApp
+    const user = await prisma.user.findUnique({
+      where: { whatsapp_jid: sender },
+    });
+
+    if (!user) {
+      console.log(`Pengguna dengan JID ${sender} tidak ditemukan.`);
+      return NextResponse.json({
+        message:
+          "❌ Nomor Anda tidak terdaftar di sistem. Silakan hubungkan akun Anda melalui dashboard web.",
+      });
     }
 
     // 3. Parse pesan transaksi
     const parsedData = parseTransactionMessage(message);
 
-    // 4. Jika format pesan salah, kirim balasan error
     if (!parsedData) {
-      const replyMessage =
-        "❌ Format salah. Gunakan: `keluar` atau `masuk` [jumlah] [kategori] [deskripsi opsional]";
-      console.log(`Mengirim balasan ke ${sender}: ${replyMessage}`);
-      // Di aplikasi nyata, respons ini akan dikirim kembali ke WhatsApp via service lain.
-      return NextResponse.json({ message: replyMessage }, { status: 200 });
-    }
-
-    // 5. Coba simpan transaksi ke database
-    try {
-      // TODO: Anda harus mencari user ID yang sebenarnya berdasarkan `sender` (nomor telepon).
-      // const user = await prisma.user.findUnique({ where: { phone: sender } });
-      // if (!user) { ... handle user not found ... }
-
-      await prisma.transaction.create({
-        data: {
-          type: parsedData.type,
-          amount: parsedData.amount,
-          category: parsedData.category,
-          description: parsedData.description,
-          user_id: sender, // GANTI INI dengan ID user yang sebenarnya, bukan nomor telepon
-        },
+      return NextResponse.json({
+        message:
+          "❌ Format pesan salah. Contoh:\n\n*keluar 50000 makan siang*\natau\n*masuk 100000 bonus project*",
       });
-
-      const replyMessage = `✅ Transaksi '${
-        parsedData.category
-      }' sebesar Rp${parsedData.amount.toLocaleString(
-        "id-ID"
-      )} berhasil dicatat.`;
-      console.log(`Mengirim balasan ke ${sender}: ${replyMessage}`);
-      return NextResponse.json({ message: replyMessage }, { status: 200 });
-    } catch (e) {
-      console.error("Database Error:", e);
-      // Tangani error spesifik dari Prisma
-      if (e instanceof Prisma.PrismaClientKnownRequestError) {
-        const replyMessage =
-          "❌ Terjadi kesalahan saat menyimpan data ke database. Coba lagi.";
-        return NextResponse.json({ message: replyMessage }, { status: 500 });
-      }
-      // Tangani error umum lainnya
-      const replyMessage = "❌ Terjadi kesalahan internal pada server.";
-      return NextResponse.json({ message: replyMessage }, { status: 500 });
     }
+
+    // 4. Dapatkan atau buat kategori default
+    // Di aplikasi nyata, Anda bisa membuat ini lebih cerdas
+    let category = await prisma.category.findFirst({
+      where: { user_id: user.id, name: "Lainnya" },
+    });
+
+    if (!category) {
+      category = await prisma.category.create({
+        data: { name: "Lainnya", user_id: user.id },
+      });
+    }
+
+    // 5. Buat transaksi di database
+    const newTransaction = await prisma.transaction.create({
+      data: {
+        type: parsedData.type,
+        amount: new Decimal(parsedData.amount),
+        description: parsedData.description,
+        user_id: user.id,
+        category_id: category.id,
+      },
+    });
+
+    // 6. Kirim pesan balasan sukses
+    const formattedAmount = `Rp ${parsedData.amount.toLocaleString("id-ID")}`;
+    const typeText = parsedData.type === "INCOME" ? "Pemasukan" : "Pengeluaran";
+
+    const replyMessage = `✅ Transaksi berhasil dicatat!\n\n*Tipe:* ${typeText}\n*Jumlah:* ${formattedAmount}\n*Deskripsi:* ${parsedData.description}`;
+
+    return NextResponse.json({ message: replyMessage });
   } catch (error) {
-    // Error jika body JSON tidak valid atau kesalahan tak terduga lainnya
-    console.error("General Error:", error);
+    console.error("Webhook Error:", error);
     return NextResponse.json(
-      { message: "Internal Server Error" },
+      { message: "Maaf, terjadi kesalahan internal di server." },
       { status: 500 }
     );
   }
