@@ -6,7 +6,6 @@ import {
   startOfMonth,
   endOfMonth,
   subMonths,
-  startOfYear,
   format,
   parseISO,
   startOfDay,
@@ -53,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     // --- 2. QUERY DATABASE SECARA PARALEL ---
     const [currentTransactions, previousSummary, budgets, trendDataRaw] =
-      await prisma.$transaction([
+      await Promise.all([
         // Query 1: Ambil transaksi di periode kustom
         prisma.transaction.findMany({
           where: {

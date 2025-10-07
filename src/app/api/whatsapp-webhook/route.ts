@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 5. Buat transaksi di database
-    const newTransaction = await prisma.transaction.create({
+    await prisma.transaction.create({
       data: {
         type: parsedData.type,
         amount: new Decimal(parsedData.amount),
