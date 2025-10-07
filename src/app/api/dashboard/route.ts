@@ -1,7 +1,9 @@
 // file: app/api/dashboard/route.ts
 
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient } from "@prisma/client";
+// DIPERBAIKI: Impor 'Prisma' dari @prisma/client
+import { Prisma, PrismaClient, TransactionType } from "@prisma/client";
+import type { Decimal } from "@prisma/client/runtime/library";
 import {
   startOfMonth,
   endOfMonth,
@@ -11,25 +13,44 @@ import {
   startOfDay,
   endOfDay,
   subDays,
-  differenceInDays, // BARU: Impor fungsi baru
+  differenceInDays,
 } from "date-fns";
 
 const prisma = new PrismaClient();
+
+// DIPERBAIKI: Menggunakan cara resmi dari Prisma untuk mendefinisikan tipe dengan relasi
+type TransactionWithCategory = Prisma.TransactionGetPayload<{
+  include: {
+    category: true;
+  };
+}>;
+
+interface Summary {
+  totalIncome: number;
+  totalExpense: number;
+  balance: number;
+}
+type TrendRecord = {
+  type: TransactionType;
+  created_at: Date;
+  _sum: {
+    amount: Decimal | null;
+  };
+};
 
 export async function GET(request: NextRequest) {
   try {
     // --- 1. PENGATURAN PERIODE & USER ---
     const { searchParams } = new URL(request.url);
-    // BARU: Baca parameter 'from' dan 'to'
     const from = searchParams.get("from");
     const to = searchParams.get("to");
 
-    const userId = "user-123"; // TODO: Ganti dengan logic otentikasi
+    // TODO: Ganti dengan logic otentikasi
+    const userId = "user-123";
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // BARU: Logika untuk menangani rentang tanggal kustom
     let startDate: Date;
     let endDate: Date;
     const now = new Date();
@@ -38,12 +59,10 @@ export async function GET(request: NextRequest) {
       startDate = startOfDay(parseISO(from));
       endDate = endOfDay(parseISO(to));
     } else {
-      // Default jika tidak ada rentang tanggal: bulan ini
       startDate = startOfMonth(now);
       endDate = endOfMonth(now);
     }
 
-    // BARU: Hitung periode sebelumnya berdasarkan durasi rentang saat ini
     const durationInDays = differenceInDays(endDate, startDate) + 1;
     const previousPeriodEndDate = endOfDay(subDays(startDate, 1));
     const previousPeriodStartDate = startOfDay(
@@ -53,31 +72,25 @@ export async function GET(request: NextRequest) {
     // --- 2. QUERY DATABASE SECARA PARALEL ---
     const [currentTransactions, previousSummary, budgets, trendDataRaw] =
       await Promise.all([
-        // Query 1: Ambil transaksi di periode kustom
         prisma.transaction.findMany({
           where: {
             user_id: userId,
-            created_at: { gte: startDate, lte: endDate }, // DIPERBAIKI: Menggunakan startDate & endDate dinamis
+            created_at: { gte: startDate, lte: endDate },
           },
           include: { category: true },
           orderBy: { created_at: "desc" },
         }),
-
-        // Query 2: Ambil ringkasan pengeluaran periode sebelumnya yang dinamis
         prisma.transaction.aggregate({
           where: {
             user_id: userId,
             type: "EXPENSE",
             created_at: {
-              gte: previousPeriodStartDate, // DIPERBAIKI
-              lte: previousPeriodEndDate, // DIPERBAIKI
+              gte: previousPeriodStartDate,
+              lte: previousPeriodEndDate,
             },
           },
           _sum: { amount: true },
         }),
-
-        // Query 3: Ambil budget untuk bulan dari startDate
-        // Catatan: Untuk rentang multi-bulan, logika ini bisa diperluas
         prisma.budget.findMany({
           where: {
             user_id: userId,
@@ -86,8 +99,6 @@ export async function GET(request: NextRequest) {
           },
           include: { category: true },
         }),
-
-        // Query 4: Data tren tetap 6 bulan terakhir untuk konteks
         prisma.transaction.groupBy({
           by: ["type", "created_at"],
           where: {
@@ -105,7 +116,7 @@ export async function GET(request: NextRequest) {
     // --- 3. PROSES DATA HASIL QUERY ---
 
     const summary = currentTransactions.reduce(
-      (acc, tx) => {
+      (acc: Summary, tx) => {
         if (tx.type === "INCOME") acc.totalIncome += Number(tx.amount);
         else acc.totalExpense += Number(tx.amount);
         return acc;
@@ -114,21 +125,21 @@ export async function GET(request: NextRequest) {
     );
     summary.balance = summary.totalIncome - summary.totalExpense;
 
-    const categoryExpenses = currentTransactions
+    const categoryExpenses = (currentTransactions as TransactionWithCategory[])
       .filter((tx) => tx.type === "EXPENSE")
-      .reduce((acc, tx) => {
+      .reduce((acc: Record<string, number>, tx) => {
         acc[tx.category.name] =
           (acc[tx.category.name] || 0) + Number(tx.amount);
         return acc;
-      }, {} as Record<string, number>);
+      }, {});
 
     const topCategories = Object.entries(categoryExpenses)
-      .sort(([, a], [, b]) => b - a)
+      .sort(([, a]: [string, number], [, b]: [string, number]) => b - a)
       .slice(0, 5)
       .map(([category, amount]) => ({ category, amount }));
 
-    // DIPERBAIKI: Rata-rata pengeluaran harian berdasarkan durasi
-    const avgDailyExpense = summary.totalExpense / durationInDays;
+    const avgDailyExpense =
+      summary.totalExpense > 0 ? summary.totalExpense / durationInDays : 0;
 
     const budgetData = budgets.map((b) => {
       const actual = categoryExpenses[b.category.name] || 0;
@@ -139,7 +150,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    const trendMap = trendDataRaw.reduce((acc, record) => {
+    const trendMap = (trendDataRaw as TrendRecord[]).reduce((acc, record) => {
       const monthYear = format(new Date(record.created_at), "MMM yyyy");
       if (!acc[monthYear]) {
         acc[monthYear] = {
@@ -175,9 +186,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responseData);
   } catch (error) {
     console.error("API Error:", error);
-    return NextResponse.json(
-      { error: "Gagal mengambil data dashboard" },
-      { status: 500 }
-    );
+    let errorMessage = "Gagal mengambil data dashboard";
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
