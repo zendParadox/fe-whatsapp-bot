@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
             user_id: userId,
             created_at: { gte: startDate, lte: endDate },
           },
-          // include: { category: true },
+          include: { category: true },
           orderBy: { created_at: "desc" },
         }) as unknown as any, // <<< cast cepat supaya build lulus
         prisma.transaction.aggregate({
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
             month: startDate.getMonth() + 1,
             year: startDate.getFullYear(),
           },
-          // include: { category: true },
+          include: { category: true },
         }) as unknown as any, // <<< cast cepat
         prisma.transaction.groupBy({
           by: ["type", "created_at"],
