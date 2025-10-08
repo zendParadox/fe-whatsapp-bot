@@ -1,5 +1,4 @@
 /* eslint-disable */
-// file: app/api/dashboard/route.ts
 
 import { NextResponse, type NextRequest } from "next/server";
 import { PrismaClient, TransactionType } from "@prisma/client";
@@ -15,6 +14,8 @@ import {
   subDays,
   differenceInDays,
 } from "date-fns";
+import { verifyToken } from "@/lib/auth";
+import { cookies } from "next/headers";
 
 const prisma = new PrismaClient();
 
@@ -33,16 +34,28 @@ type TrendRecord = {
 
 export async function GET(request: NextRequest) {
   try {
+    // ambil token dari cookie
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
+
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const payload = verifyToken(token);
+    if (!payload || !payload.userId) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+    const userId = payload.userId as string;
     // --- 1. PENGATURAN PERIODE & USER ---
     const { searchParams } = new URL(request.url);
     const from = searchParams.get("from");
     const to = searchParams.get("to");
 
     // TODO: Ganti dengan logic otentikasi yang nyata
-    const userId = "user-123";
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // const userId = "user-123";
+    // if (!userId) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
 
     let startDate: Date;
     let endDate: Date;
