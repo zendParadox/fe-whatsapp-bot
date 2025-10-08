@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
           },
           include: { category: true },
           orderBy: { created_at: "desc" },
-        }) as unknown as any, // <<< cast cepat supaya build lulus
+        }),
         prisma.transaction.aggregate({
           where: {
             user_id: userId,
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
             year: startDate.getFullYear(),
           },
           include: { category: true },
-        }) as unknown as any, // <<< cast cepat
+        }),
         prisma.transaction.groupBy({
           by: ["type", "created_at"],
           where: {

@@ -3,8 +3,9 @@
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  // previewFeatures removed — keep generator simple for current Prisma versions
 }
+
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
@@ -82,8 +83,9 @@ model Transaction {
   user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   // Relasi: Transaksi ini memiliki satu Kategori
-  category_id String
-  category    Category @relation(fields: [category_id], references: [id], onDelete: Restrict)
+  // BUAT OPTIONAL supaya transaksi bisa "Uncategorized" (sesuai handling di kode kamu)
+  category_id String?         // nullable
+  category    Category?       @relation(fields: [category_id], references: [id], onDelete: SetNull)
 
   @@index([user_id])
   @@index([category_id])
