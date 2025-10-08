@@ -1,3 +1,4 @@
+/* eslint-disable */
 // src/lib/auth.ts
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";

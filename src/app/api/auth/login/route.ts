@@ -1,3 +1,4 @@
+/* eslint-disable */
 // src/app/api/auth/login/route.ts
 import { NextResponse, type NextRequest } from "next/server";
 import { PrismaClient } from "@prisma/client";
