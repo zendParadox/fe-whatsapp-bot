@@ -193,22 +193,9 @@ export default function Dashboard() {
   const handleApplyFilter = () => {
     setActiveDateRange(selectedDateRange);
   };
-  //   const router = useRouter();
-  //   const handleLogout = async () => {
-  //     try {
-  //       await fetch("/api/auth/logout", {
-  //         method: "POST",
-  //         credentials: "include", // pastikan cookie dikirim
-  //       });
-  //       router.push("/"); // redirect ke halaman login
-  //     } catch (error) {
-  //       console.error("Logout error:", error);
-  //     }
-  //   };
 
   useEffect(() => {
     async function fetchData() {
-      // Pastikan `from` dan `to` ada di state yang AKTIF sebelum memanggil API
       if (!activeDateRange?.from || !activeDateRange?.to) {
         return;
       }
