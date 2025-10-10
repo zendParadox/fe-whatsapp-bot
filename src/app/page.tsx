@@ -7,12 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  BotMessageSquare,
-  Wallet,
-  Target,
-  MessageSquarePlus,
-} from "lucide-react";
+import { Wallet, Target, MessageSquarePlus } from "lucide-react";
 
 // Komponen Header untuk Navigasi
 function AppHeader() {
