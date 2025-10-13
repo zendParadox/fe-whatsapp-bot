@@ -253,31 +253,41 @@ export default function Dashboard() {
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">
-      <header className="flex flex-col md:flex-row justify-between items-center gap-4 w-full p-4 border-b">
-        {/* Judul Dashboard */}
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
-            Dashboard Keuangan
-          </h1>
-        </div>
-
-        {/* Grup Kontrol (Filter Tanggal & Logout) */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-          {/* Grup Filter Tanggal */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <DatePickerWithRange
-              date={selectedDateRange}
-              onDateChange={setSelectedDateRange}
-              // Tambahkan className="w-full" jika komponennya mendukung,
-              // agar memenuhi lebar di layar kecil
-            />
-            <Button onClick={handleApplyFilter} className="whitespace-nowrap">
-              Terapkan
-            </Button>
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 w-full p-4 border-b">
+        {/* === BAGIAN KIRI (Desktop) / BAGIAN ATAS (Mobile) === */}
+        <div className="w-full md:w-auto mb-2">
+          {/* Tombol Logout - Hanya Tampil di Mobile */}
+          <div className="w-full flex justify-end md:hidden">
+            <LogoutButton />
           </div>
 
-          {/* Tombol Logout */}
-          <LogoutButton></LogoutButton>
+          {/* Judul Dashboard */}
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
+              Dashboard Keuangan
+            </h1>
+          </div>
+        </div>
+
+        {/* === BAGIAN KANAN (Desktop) / BAGIAN BAWAH (Mobile) === */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          {/* Grup Date Picker dan Tombol Terapkan */}
+          <DatePickerWithRange
+            date={selectedDateRange}
+            onDateChange={setSelectedDateRange}
+            className="w-full sm:w-auto "
+          />
+          <Button
+            onClick={handleApplyFilter}
+            className="whitespace-nowrap w-full sm:w-auto"
+          >
+            Terapkan
+          </Button>
+
+          {/* Tombol Logout - Hanya Tampil di Desktop */}
+          <div className="hidden md:flex">
+            <LogoutButton />
+          </div>
         </div>
       </header>
 
