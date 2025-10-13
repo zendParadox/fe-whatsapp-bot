@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({
         message:
-          "❌ Nomor Anda tidak terdaftar. Silakan hubungkan akun Anda dari dashboard web.",
+          "❌ Nomor Anda belum terdaftar. Silakan daftar terlebih dahulu di https://fe-whatsapp-bot.vercel.app/register",
       });
     }
 
