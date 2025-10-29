@@ -440,11 +440,11 @@ export default function Dashboard() {
   }
 
   // auto-hide toast after 3s
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => toast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
+  // useEffect(() => {
+  //   if (!toast) return;
+  //   const t = setTimeout(() => toast(null), 3000);
+  //   return () => clearTimeout(t);
+  // }, [toast]);
 
   if (isLoading)
     return (

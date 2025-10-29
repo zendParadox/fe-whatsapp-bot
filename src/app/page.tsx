@@ -35,7 +35,7 @@ function AppHeader() {
 function AppFooter() {
   return (
     <footer className="py-6 text-center text-sm text-muted-foreground">
-      <p>&copy; {new Date().getFullYear()} FinanChat. All rights reserved.</p>
+      <p>&copy; {new Date().getFullYear()} GoTEK. All rights reserved.</p>
     </footer>
   );
 }
