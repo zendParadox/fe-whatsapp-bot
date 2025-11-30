@@ -59,6 +59,7 @@ import { Label } from "@/components/ui/label";
 import { Edit, Trash } from "lucide-react";
 import RecentTransactionsCard from "@/components/dashboard/RecentTransactionsCard";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 // --- INTERFACE & KONSTANTA ---
 interface CategoryObj {
@@ -222,6 +223,7 @@ export default function Dashboard() {
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
+  const router = useRouter();
 
   // toast/snackbar state
   // const [toast, setToast] = useState<null | {
@@ -245,9 +247,16 @@ export default function Dashboard() {
 
       try {
         const res = await fetch(`/api/dashboard?from=${from}&to=${to}`);
+
+        if (res.status === 401 || res.status === 403) {
+          router.push("/unauthorized");
+          return;
+        }
+
         if (!res.ok) {
           throw new Error("Gagal mengambil data dashboard");
         }
+
         const apiData: DashboardData = await res.json();
         setData(apiData);
       } catch (err: any) {
