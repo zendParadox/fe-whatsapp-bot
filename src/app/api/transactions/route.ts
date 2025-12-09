@@ -68,3 +68,55 @@ export async function GET(request: Request) {
     );
   }
 }
+
+export async function POST(request: Request) {
+  try {
+    const { cookies } = await import("next/headers");
+    const { verifyToken } = await import("@/lib/auth");
+    
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
+    
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const payload = verifyToken(token);
+    if (!payload?.userId) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    }
+    const userId = payload.userId as string;
+
+    const body = await request.json();
+    const { amount, type, description, category_id, date } = body;
+
+    // Basic validation
+    if (!amount || !type) {
+      return NextResponse.json(
+        { error: "Amount and Type are required" },
+        { status: 400 }
+      );
+    }
+    
+    // Create transaction
+    const newTx = await prisma.transaction.create({
+      data: {
+        user_id: userId,
+        amount: Number(amount),
+        type: type, // INCOME or EXPENSE
+        description: description || "",
+        category_id: category_id || null, // Optional
+        // If date provided, use it, otherwise default (now)
+        created_at: date ? new Date(date) : undefined
+      }
+    });
+
+    return NextResponse.json({ data: newTx }, { status: 201 });
+  } catch (error) {
+    console.error("POST /api/transactions error:", error);
+    return NextResponse.json(
+      { error: "Failed to create transaction" },
+      { status: 500 }
+    );
+  }
+}

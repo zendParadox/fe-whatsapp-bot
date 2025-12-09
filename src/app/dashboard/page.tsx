@@ -58,6 +58,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Edit, Trash } from "lucide-react";
 import RecentTransactionsCard from "@/components/dashboard/RecentTransactionsCard";
+import SmartAiInput from "@/components/dashboard/SmartAiInput";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -200,6 +201,7 @@ export default function Dashboard() {
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   });
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // states for edit/delete
   const [editingTx, setEditingTx] = useState<Transaction | null>(null);
@@ -267,7 +269,8 @@ export default function Dashboard() {
     }
 
     fetchData();
-  }, [activeDateRange]);
+    fetchData();
+  }, [activeDateRange, refreshKey]);
 
   // fetch categories (sekali saat mount)
   useEffect(() => {
@@ -538,6 +541,12 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* Smart Analysis Input */}
+      <SmartAiInput 
+        categories={categories} 
+        onTransactionAdded={() => setRefreshKey(k => k + 1)} 
+      />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <ComparisonCard
