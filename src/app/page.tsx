@@ -7,22 +7,41 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Wallet, Target, MessageSquarePlus } from "lucide-react";
+import {
+  Wallet,
+  Target,
+  MessageSquarePlus,
+  ArrowRight,
+  Zap,
+  Shield,
+  Smartphone,
+} from "lucide-react";
+import { ModeToggle } from "@/components/mode-toggle";
 
-// Komponen Header untuk Navigasi
+// Components
 function AppHeader() {
   return (
-    <header className="py-4 px-6 md:px-8 border-b">
-      <div className="container mx-auto flex justify-between items-center">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-          {/* <BotMessageSquare className="h-7 w-7 text-primary" /> */}
-          <span>GoTEK</span>
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/50 backdrop-blur-md">
+      <div className="container mx-auto flex h-16 items-center justify-between px-6 md:px-8">
+        <Link href="/" className="flex items-center gap-2 text-xl font-bold tracking-tighter">
+          <span className="bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent dark:text-glow">
+            GoTEK
+          </span>
         </Link>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline">
+        <div className="hidden md:flex items-center gap-6">
+          <Link href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            Fitur
+          </Link>
+          <Link href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            Cara Kerja
+          </Link>
+        </div>
+        <div className="flex items-center gap-3">
+            <ModeToggle />
+          <Button asChild variant="ghost" className="hidden sm:inline-flex hover:bg-accent hover:text-accent-foreground">
             <Link href="/login">Masuk</Link>
           </Button>
-          <Button asChild>
+          <Button asChild className="bg-gradient-to-r from-neon-purple to-neon-pink hover:opacity-90 transition-opacity border-0 shadow-lg dark:shadow-[0_0_20px_rgba(188,19,254,0.3)]">
             <Link href="/register">Daftar Sekarang</Link>
           </Button>
         </div>
@@ -31,123 +50,216 @@ function AppHeader() {
   );
 }
 
-// Komponen Footer
 function AppFooter() {
   return (
-    <footer className="py-6 text-center text-sm text-muted-foreground">
-      <p>&copy; {new Date().getFullYear()} GoTEK. All rights reserved.</p>
+    <footer className="border-t border-border bg-muted/20 py-12">
+      <div className="container mx-auto px-4 text-center">
+        <div className="mb-8 flex justify-center">
+          <span className="text-2xl font-bold bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent">
+            GoTEK
+          </span>
+        </div>
+        <p className="text-muted-foreground mb-4">
+          Kelola keuangan dengan cara masa depan.
+        </p>
+        <p className="text-sm text-zinc-500">
+          &copy; {new Date().getFullYear()} GoTEK. All rights reserved.
+        </p>
+      </div>
     </footer>
   );
 }
 
-// Komponen Utama Halaman
 export default function HomePage() {
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col bg-background text-foreground overflow-hidden selection:bg-neon-cyan/20">
       <AppHeader />
 
-      <main className="flex-grow">
+      <main className="flex-grow pt-16">
+        {/* Floating Background Blobs */}
+        <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-neon-purple/20 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '4s' }} />
+          <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-neon-cyan/20 rounded-full blur-[100px] animate-pulse" style={{ animationDuration: '6s', animationDelay: '1s' }} />
+        </div>
+
         {/* Hero Section */}
-        <section className="py-20 md:py-32 text-center bg-gradient-to-b from-white to-gray-50 dark:from-background dark:to-slate-900/20">
-          <div className="container mx-auto px-4">
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
-              Catat Keuangan Semudah Chatting
+        <section className="relative py-24 md:py-32 lg:py-40 px-4 text-center">
+          <div className="container mx-auto max-w-5xl relative z-10">
+            <div className="inline-flex items-center rounded-full border border-neon-cyan/30 bg-neon-cyan/5 px-3 py-1 text-sm text-neon-cyan mb-8 backdrop-blur-sm">
+              <span className="flex h-2 w-2 rounded-full bg-neon-cyan mr-2 animate-pulse"></span>
+              Revolutionizing Finance
+            </div>
+            
+            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight">
+              Catat Keuangan <br />
+              <span className="bg-gradient-to-r from-neon-cyan via-blue-500 to-neon-purple bg-clip-text text-transparent dark:text-glow-purple">
+                Semudah Chatting
+              </span>
             </h1>
-            <p className="max-w-2xl mx-auto text-lg text-muted-foreground mb-8">
+            
+            <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground mb-10 leading-relaxed">
               Kelola pemasukan, pengeluaran, dan budget bulanan Anda langsung
-              dari WhatsApp. Cepat, praktis, dan selalu ada di genggaman.
+              dari WhatsApp. Cepat, praktis, dan futuristik.
             </p>
-            <Button asChild size="lg">
-              <Link href="/register">Mulai Gratis</Link>
-            </Button>
+            
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Button asChild size="lg" className="h-12 px-8 text-lg bg-foreground text-background hover:bg-foreground/90 transition-colors rounded-full font-bold">
+                <Link href="/register">
+                  Mulai Sekarang <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="h-12 px-8 text-lg border-border hover:bg-accent hover:text-accent-foreground rounded-full backdrop-blur-sm">
+                <Link href="#how-it-works">Pelajari Cara Kerja</Link>
+              </Button>
+            </div>
           </div>
         </section>
 
         {/* Features Section */}
-        <section className="py-16 md:py-24 bg-white dark:bg-background">
+        <section id="features" className="py-24 relative">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold">Bagaimana Cara Kerjanya?</h2>
-              <p className="text-muted-foreground mt-2">
-                Cukup kirim pesan ke bot kami dengan format sederhana.
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Fitur Masa Depan</h2>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                Semua yang Anda butuhkan untuk mengatur keuangan, dikemas dalam
+                antarmuka chat yang familiar.
               </p>
             </div>
+            
             <div className="grid gap-8 md:grid-cols-3">
-              <Card>
+              <Card className="glass-card transition-transform duration-300 hover:scale-105 hover:bg-card/70 group">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <Wallet className="h-6 w-6 text-primary" />
-                    <span>Catat Transaksi Instan</span>
-                  </CardTitle>
-                  <CardDescription>
-                    Catat pemasukan atau pengeluaran kapan saja, di mana saja.
+                  <div className="h-12 w-12 rounded-xl bg-neon-cyan/10 flex items-center justify-center mb-4 group-hover:bg-neon-cyan/20 transition-colors">
+                    <Zap className="h-6 w-6 text-neon-cyan" />
+                  </div>
+                  <CardTitle className="text-xl">Pencatatan Cerdas</CardTitle>
+                  <CardDescription className="text-muted-foreground">
+                    Support <code>50k</code>, <code>1.5jt</code>. Typo? Cukup balas <code>undo</code>.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="font-semibold mb-2">Gunakan format:</p>
-                  <pre className="p-3 bg-slate-100 dark:bg-slate-800 rounded-md text-sm overflow-x-auto">
-                    <code>
-                      masuk/keluar {"<jumlah>"} [deskripsi] {"@<kategori>"}{" "}
-                      {"#<metode>"}
-                    </code>
-                  </pre>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Contoh:{" "}
-                    <code className="bg-slate-100 dark:bg-slate-800 p-1 rounded">
-                      keluar 25000 kopi @minuman #gopay
-                    </code>
-                  </p>
+                  <div className="p-3 bg-muted rounded-lg text-sm font-mono border border-border text-foreground">
+                    keluar 50k kopi
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="glass-card transition-transform duration-300 hover:scale-105 hover:bg-card/70 group">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <Target className="h-6 w-6 text-primary" />
-                    <span>Atur Budget Bulanan</span>
-                  </CardTitle>
-                  <CardDescription>
-                    Kendalikan pengeluaran Anda dengan mengatur budget per
-                    kategori.
+                  <div className="h-12 w-12 rounded-xl bg-neon-purple/10 flex items-center justify-center mb-4 group-hover:bg-neon-purple/20 transition-colors">
+                    <Smartphone className="h-6 w-6 text-neon-purple" />
+                  </div>
+                  <CardTitle className="text-xl">Debt Manager</CardTitle>
+                  <CardDescription className="text-muted-foreground">
+                    Catat hutang teman dan piutang Anda tanpa ribet.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="font-semibold mb-2">Gunakan format:</p>
-                  <pre className="p-3 bg-slate-100 dark:bg-slate-800 rounded-md text-sm overflow-x-auto">
-                    <code>
-                      budget {"<jumlah>"} {"@<kategori>"}
-                    </code>
-                  </pre>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Contoh:{" "}
-                    <code className="bg-slate-100 dark:bg-slate-800 p-1 rounded">
-                      budget 750000 @transportasi
-                    </code>
-                  </p>
+                  <div className="p-3 bg-muted rounded-lg text-sm font-mono border border-border text-foreground">
+                    hutang 100k @Budi
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="glass-card transition-transform duration-300 hover:scale-105 hover:bg-card/70 group">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <MessageSquarePlus className="h-6 w-6 text-primary" />
-                    <span>Perintah Sederhana</span>
-                  </CardTitle>
-                  <CardDescription>
-                    Lupa formatnya? Cukup ketik `bantuan` atau `help` untuk
-                    melihat semua perintah.
+                  <div className="h-12 w-12 rounded-xl bg-neon-pink/10 flex items-center justify-center mb-4 group-hover:bg-neon-pink/20 transition-colors">
+                    <Target className="h-6 w-6 text-neon-pink" />
+                  </div>
+                  <CardTitle className="text-xl">Laporan & Budget</CardTitle>
+                  <CardDescription className="text-muted-foreground">
+                    Cek laporan harian/bulanan dan sisa budget kapan saja.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="font-semibold mb-2">Fitur Lainnya:</p>
-                  <ul className="list-disc list-inside text-sm space-y-1">
-                    <li>Kategori dibuat otomatis.</li>
-                    <li>Metode pembayaran opsional.</li>
-                    <li>Balasan instan untuk setiap transaksi.</li>
-                  </ul>
+                  <div className="p-3 bg-muted rounded-lg text-sm font-mono border border-border text-foreground">
+                    laporan bulan ini
+                  </div>
                 </CardContent>
               </Card>
             </div>
+          </div>
+        </section>
+
+        {/* How It Works Section */}
+        <section id="how-it-works" className="py-24 bg-gradient-to-b from-transparent to-black/5 dark:to-black/20">
+          <div className="container mx-auto px-4">
+             <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Cara Kerja</h2>
+              <p className="text-muted-foreground">
+                Cukup 3 langkah mudah untuk memulai.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-12 text-center relative">
+              {/* Connector Lines (Desktop) */}
+              <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-border to-transparent -translate-y-1/2 -z-10" />
+
+              <div className="relative">
+                <div className="w-20 h-20 mx-auto bg-background border border-border rounded-full flex items-center justify-center text-2xl font-bold text-neon-cyan shadow-lg z-10 mb-6">
+                  1
+                </div>
+                <h3 className="text-xl font-bold mb-2">Daftar Akun</h3>
+                <p className="text-muted-foreground text-sm px-4">
+                  Buat akun gratis Anda melalui website ini dalam hitungan detik.
+                </p>
+              </div>
+
+              <div className="relative">
+                <div className="w-20 h-20 mx-auto bg-background border border-border rounded-full flex items-center justify-center text-2xl font-bold text-neon-purple shadow-lg z-10 mb-6">
+                  2
+                </div>
+                <h3 className="text-xl font-bold mb-2">Hubungkan WhatsApp</h3>
+                <p className="text-muted-foreground text-sm px-4">
+                  Scan QR code atau kirim pesan 'Halo' ke bot kami untuk verifikasi.
+                </p>
+              </div>
+
+              <div className="relative">
+                <div className="w-20 h-20 mx-auto bg-background border border-border rounded-full flex items-center justify-center text-2xl font-bold text-neon-pink shadow-lg z-10 mb-6">
+                  3
+                </div>
+                <h3 className="text-xl font-bold mb-2">Mulai Mencatat</h3>
+                <p className="text-muted-foreground text-sm px-4">
+                  Kirim transaksi Anda dan bot akan mencatatnya secara otomatis.
+                </p>
+              </div>
+            </div>
+            
+             <div className="mt-20 flex justify-center">
+                 <div className="relative p-1 rounded-2xl bg-gradient-to-br from-neon-cyan/50 to-neon-purple/50">
+                    <div className="bg-background/90 dark:bg-black/90 p-8 rounded-[14px] max-w-2xl w-full text-left border border-border">
+                        <div className="flex items-center gap-3 mb-6 border-b border-border pb-4">
+                             <div className="h-3 w-3 rounded-full bg-red-500"/>
+                             <div className="h-3 w-3 rounded-full bg-yellow-500"/>
+                             <div className="h-3 w-3 rounded-full bg-green-500"/>
+                             <span className="text-xs text-muted-foreground ml-2">WhatsApp Bot Preview</span>
+                        </div>
+                        <div className="space-y-4 font-mono text-sm">
+                            <div className="flex gap-4">
+                                <div className="bg-muted p-3 rounded-lg rounded-tl-none max-w-[80%]">
+                                    Halo! Saya GoTEK Bot. Apa yang ingin kamu catat hari ini?
+                                </div>
+                            </div>
+                             <div className="flex gap-4 justify-end">
+                                <div className="bg-neon-cyan/10 text-neon-cyan p-3 rounded-lg rounded-tr-none max-w-[80%] border border-neon-cyan/20">
+                                    keluar 50rb makan siang @makan
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="bg-muted p-3 rounded-lg rounded-tl-none max-w-[80%]">
+                                    ✅ Transaksi Berhasil!<br/>
+                                    <strong>Jenis:</strong> Pengeluaran<br/>
+                                    <strong>Jumlah:</strong> Rp 50.000<br/>
+                                    <strong>Kategori:</strong> Makan<br/>
+                                    <br/>
+                                    <em>Sisa budget 'Makan': Rp 450.000</em>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+             </div>
           </div>
         </section>
       </main>

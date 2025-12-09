@@ -40,6 +40,54 @@ model User {
   transactions Transaction[]
   categories   Category[]
   budgets      Budget[]
+  
+  // Relasi ke token reset password
+  resetTokens  ResetPasswordToken[]
+  
+  // Relasi ke hutang
+  debts        Debt[]
+}
+
+// 🔑 Model untuk token reset password
+model ResetPasswordToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// 📒 Enum untuk tipe hutang
+enum DebtType {
+  HUTANG   // Saya berhutang (Payable)
+  PIUTANG  // Orang lain berhutang (Receivable)
+}
+
+// 📒 Enum untuk status hutang
+enum DebtStatus {
+  UNPAID
+  PAID
+}
+
+// 📒 Model untuk mencatat Hutang & Piutang
+model Debt {
+  id          String   @id @default(uuid())
+  amount      Decimal  @db.Decimal(12, 2)
+  type        DebtType
+  status      DebtStatus @default(UNPAID)
+  person_name String   // Nama orang yang berhutang/di-hutangi
+  description String?
+  due_date    DateTime? 
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  user_id     String
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
 }
 
 // 🏷️ Model untuk kategori transaksi

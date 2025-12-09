@@ -487,7 +487,7 @@ export default function Dashboard() {
           {/* Judul */}
           <div className="flex items-center gap-3">
             <div className="flex flex-col">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
+              <h1 className="text-2xl sm:text-3xl font-bold">
                 Dashboard Keuangan
               </h1>
               <span className="text-sm text-muted-foreground hidden sm:inline">

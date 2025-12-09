@@ -41,11 +41,16 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Custom Futuristic Colors */
+  --color-neon-cyan: var(--neon-cyan);
+  --color-neon-purple: var(--neon-purple);
+  --color-neon-pink: var(--neon-pink);
 }
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+  --background: oklch(0.985 0 0); /* Clean white */
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -76,40 +81,60 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* Neon Accents for Light Mode */
+  --neon-cyan: oklch(0.6 0.15 240);
+  --neon-purple: oklch(0.55 0.2 300);
+  --neon-pink: oklch(0.65 0.22 340);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
+  /* Deep futuristic dark background */
+  --background: oklch(0.12 0.03 260);
+  --foreground: oklch(0.95 0.02 260);
+
+  --card: oklch(0.18 0.04 260);
+  --card-foreground: oklch(0.95 0.02 260);
+
+  --popover: oklch(0.15 0.04 260);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+
+  --primary: oklch(0.6 0.15 240); /* Neon Cyan as primary */
+  --primary-foreground: oklch(0.1 0.05 260);
+
+  --secondary: oklch(0.25 0.05 260);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+
+  --muted: oklch(0.25 0.05 260);
+  --muted-foreground: oklch(0.7 0.04 260);
+
+  --accent: oklch(0.25 0.05 260);
   --accent-foreground: oklch(0.985 0 0);
+
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --border: oklch(0.3 0.05 260);
+  --input: oklch(0.3 0.05 260);
+  --ring: oklch(0.6 0.15 240);
+
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
+
+  --sidebar: oklch(0.15 0.04 260);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary: oklch(0.6 0.15 240);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent: oklch(0.25 0.05 260);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-border: oklch(0.3 0.05 260);
+  --sidebar-ring: oklch(0.6 0.15 240);
+
+  /* Neon Accents */
+  --neon-cyan: oklch(0.75 0.18 220);
+  --neon-purple: oklch(0.65 0.25 300);
+  --neon-pink: oklch(0.7 0.25 340);
 }
 
 @layer base {
@@ -117,14 +142,40 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground selection:bg-neon-cyan/30 selection:text-neon-cyan;
+    background-image: radial-gradient(
+        circle at 15% 50%,
+        color-mix(in oklab, var(--neon-purple), transparent 95%) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 85% 30%,
+        color-mix(in oklab, var(--neon-cyan), transparent 95%) 0%,
+        transparent 50%
+      );
+    background-attachment: fixed;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-background/60 backdrop-blur-xl border border-black/5 dark:border-white/5;
+  }
+  .glass-card {
+    @apply bg-card/50 backdrop-blur-lg border border-black/5 dark:border-white/10 shadow-xl;
+  }
+  .text-glow {
+    text-shadow: 0 0 20px var(--neon-cyan);
+  }
+  .text-glow-purple {
+    text-shadow: 0 0 20px var(--neon-purple);
   }
 }
 
 /* 🌈 Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 /* Hilangkan tombol panah scrollbar (kiri/kanan/atas/bawah) */
@@ -135,34 +186,21 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--muted);
-  border-radius: 8px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--primary);
-  border-radius: 8px;
+  background: var(--muted-foreground);
+  border-radius: 99px;
+  opacity: 0.5;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.3 0 0);
+  background: var(--primary);
 }
 
 /* Firefox support */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--primary) var(--muted);
-}
-
-/* Dark mode scrollbar */
-.dark ::-webkit-scrollbar-track {
-  background: var(--secondary);
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: var(--primary);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.8 0 0);
+  scrollbar-color: var(--muted-foreground) transparent;
 }
