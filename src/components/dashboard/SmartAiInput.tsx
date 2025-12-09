@@ -51,9 +51,16 @@ export default function SmartAiInput({ onTransactionAdded, categories }: SmartAi
       if (!res.ok) throw new Error("Gagal menganalisa");
 
       const json = await res.json();
-      const data = json.data as ParsedTransaction;
       
-      setParsedData(data);
+      // The API now returns { data: ParsedTransaction[] }
+      const dataArr = json.data as ParsedTransaction[];
+      
+      if (!dataArr || dataArr.length === 0) {
+        throw new Error("Tidak ada transaksi yang terdeteksi.");
+      }
+      
+      const data = dataArr[0]; // Take the first one for now
+      setParsedData(data); // We might need to update state if we want to show 'next' or 'all'
 
       // Auto-match category
       let matchedCategoryId = "";

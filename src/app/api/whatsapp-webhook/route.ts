@@ -10,6 +10,7 @@ import {
 } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { z } from "zod";
+import { parseTransactionFromText } from "@/lib/gemini";
 
 const prisma = new PrismaClient();
 
@@ -522,7 +523,67 @@ export async function POST(request: NextRequest) {
     }
 
 
-    // --- 7. HANDLE HELP (Bantuan) ---
+    // --- 7. HYBRID AI FALLBACK (Jika bukan command standar, coba AI) ---
+    // Command standar yang sudah dihandle di atas: masuk, keluar, budget, laporan, cek, hapus/undo, hutang, piutang, lunas.
+    // Jika sampai sini, berarti belum ada yang match.
+
+    // Cek apakah ini pesan obrolan biasa atau transaksi natural
+    // Kita panggil AI.
+    const aiTransactions = await parseTransactionFromText(message);
+
+    if (aiTransactions && aiTransactions.length > 0) {
+      let reply = "✨ *Sistem AI (Gemini)*\n";
+      let count = 0;
+
+      for (const tx of aiTransactions) {
+        // Cari/Buat Kategori
+        let category = await prisma.category.findFirst({
+          where: {
+            user_id: user.id,
+            name: { equals: tx.category, mode: "insensitive" },
+          },
+        });
+
+        if (!category) {
+          category = await prisma.category.create({
+            data: { name: tx.category, user_id: user.id },
+          });
+        }
+
+        // Cek Budget if Expense
+        let budgetAlert = "";
+        if (tx.type === "EXPENSE") {
+          const alert = await checkBudgetStatus(user.id, category.id, tx.amount);
+          if (alert) budgetAlert = alert;
+        }
+
+        const typeEnum =
+          tx.type === "INCOME" ? TransactionType.INCOME : TransactionType.EXPENSE;
+
+        await prisma.transaction.create({
+          data: {
+            type: typeEnum,
+            amount: new Decimal(tx.amount),
+            description: tx.description,
+            user_id: user.id,
+            category_id: category.id,
+          },
+        });
+
+        const icon = tx.type === "INCOME" ? "📈" : "📉";
+        reply += `\n${icon} *${tx.category}*: Rp ${tx.amount.toLocaleString("id-ID")}`;
+        if (tx.description) reply += ` (${tx.description})`;
+        if (budgetAlert) reply += ` ${budgetAlert}`;
+        count++;
+      }
+
+      if (count > 0) {
+        reply += `\n\n✅ Berhasil mencatat ${count} transaksi.`;
+        return NextResponse.json({ message: reply });
+      }
+    }
+
+    // --- 8. HANDLE HELP (Bantuan) ---
     const helpMessage = `👋 *GoTEK Bot Helper*
 
 *1. 📝 Catat Transaksi*

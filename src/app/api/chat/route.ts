@@ -30,13 +30,19 @@ export async function POST(req: NextRequest) {
     // 2. Call Gemini
     const result = await parseTransactionFromText(message);
 
-    if (!result) {
+    if (!result || result.length === 0) {
       return NextResponse.json(
         { error: "Failed to process with AI" },
         { status: 500 }
       );
     }
 
+    // Return the array directly. Frontend will be updated to handle it.
+    // Or if we want to keep backward compatibility with "parsedData as ParsedTransaction",
+    // we could just return { data: result[0], all: result }.
+    // But better to return the full array in a new field or just data.
+    // For now, let's just assume SmartAiInput will be updated to read data[0] if it expects object,
+    // or we update SmartAiInput.
     return NextResponse.json({ data: result });
   } catch (error) {
     console.error("API Chat Error:", error);
