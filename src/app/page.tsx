@@ -8,14 +8,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Wallet,
   Target,
-  MessageSquarePlus,
   ArrowRight,
   Zap,
-  Shield,
   Smartphone,
 } from "lucide-react";
+
+// ... (keep surrounding code same if possible, but I need to do ReplaceFileContent well)
+
+// Fixing the imports first (removing Wallet, MessageSquarePlus, Shield) and then the unescaped chars in the body.
+// Since ReplaceFileContent handles a contiguous block, I might need two calls or one big one if they are close.
+// Imports are at the top, errors are at lines 214 and 256. They are far apart.
+// I'll do two edits.
+
 import { ModeToggle } from "@/components/mode-toggle";
 
 // Components
@@ -211,7 +216,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-xl font-bold mb-2">Hubungkan WhatsApp</h3>
                 <p className="text-muted-foreground text-sm px-4">
-                  Scan QR code atau kirim pesan 'Halo' ke bot kami untuk verifikasi.
+                  Scan QR code atau kirim pesan &apos;Halo&apos; ke bot kami untuk verifikasi.
                 </p>
               </div>
 
@@ -253,7 +258,7 @@ export default function HomePage() {
                                     <strong>Jumlah:</strong> Rp 50.000<br/>
                                     <strong>Kategori:</strong> Makan<br/>
                                     <br/>
-                                    <em>Sisa budget 'Makan': Rp 450.000</em>
+                                    <em>Sisa budget &apos;Makan&apos;: Rp 450.000</em>
                                 </div>
                             </div>
                         </div>
