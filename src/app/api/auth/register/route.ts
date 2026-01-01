@@ -9,6 +9,35 @@ import { signToken } from "@/lib/auth"; // kalau kamu sudah punya lib/auth (disa
 const prisma = new PrismaClient();
 const BCRYPT_SALT_ROUNDS = 10;
 
+/**
+ * Normalize phone number to WhatsApp JID format.
+ * Converts various input formats to: 62xxx@s.whatsapp.net
+ * @example "081234567890" -> "6281234567890@s.whatsapp.net"
+ * @example "+6281234567890" -> "6281234567890@s.whatsapp.net"
+ * @example "6281234567890" -> "6281234567890@s.whatsapp.net"
+ */
+function normalizePhoneToJid(phone: string): string {
+  // Remove all non-digit characters except + at the beginning
+  let cleaned = phone.replace(/[^\d+]/g, "");
+
+  // Remove leading + if exists
+  if (cleaned.startsWith("+")) {
+    cleaned = cleaned.substring(1);
+  }
+
+  // Convert leading 0 to 62 (Indonesia country code)
+  if (cleaned.startsWith("0")) {
+    cleaned = "62" + cleaned.substring(1);
+  }
+
+  // If somehow it doesn't start with 62, add it (for edge cases like just "81234567890")
+  if (!cleaned.startsWith("62") && cleaned.length >= 9 && cleaned.length <= 12) {
+    cleaned = "62" + cleaned;
+  }
+
+  return `${cleaned}@s.whatsapp.net`;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({} as any));
@@ -26,10 +55,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // normalisasi whatsapp_jid jadi bentuk lengkap jika user kirim angka
+    // normalisasi whatsapp_jid jadi bentuk lengkap (62xxx@s.whatsapp.net)
     const whatsapp_jid = rawPhone.includes("@")
       ? rawPhone
-      : `${rawPhone}@s.whatsapp.net`;
+      : normalizePhoneToJid(rawPhone);
 
     // cek duplicate email / whatsapp_jid
     const exists = await prisma.user.findFirst({
