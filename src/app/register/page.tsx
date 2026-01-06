@@ -1,4 +1,3 @@
-/* eslint-disable */
 "use client";
 
 import { useState } from "react";
@@ -15,8 +14,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner"; // BARU: Import toast dari sonner
+import { ArrowLeft, Loader2, LogIn, UserPlus } from "lucide-react";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -26,10 +25,9 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
-  // const [error, setError] = useState<string | null>(null); // DIHAPUS: State error tidak lagi diperlukan
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value;
+    const value = e.target.value;
     const cleanedValue = value.replace(/\D/g, "");
 
     if (cleanedValue.startsWith("08")) {
@@ -44,12 +42,12 @@ export default function RegisterPage() {
     e.preventDefault();
 
     if (!phone.startsWith("62")) {
-      toast.error("Nomor WhatsApp harus diawali dengan kode negara 62."); // DIUBAH: Gunakan toast untuk error
+      toast.error("Nomor WhatsApp harus diawali dengan kode negara 62.");
       return;
     }
 
     if (password !== confirm) {
-      toast.error("Password dan konfirmasi tidak cocok"); // DIUBAH: Gunakan toast untuk error
+      toast.error("Password dan konfirmasi tidak cocok");
       return;
     }
 
@@ -64,118 +62,176 @@ export default function RegisterPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data?.error || "Gagal melakukan pendaftaran"); // DIUBAH: Gunakan toast untuk error
+        toast.error(data?.error || "Gagal melakukan pendaftaran");
         setLoading(false);
         return;
       }
 
-      // BARU: Tampilkan notifikasi sukses sebelum redirect
       toast.success("Pendaftaran berhasil!", {
         description: "Anda akan segera dialihkan ke halaman dashboard.",
       });
 
-      // Redirect setelah jeda singkat agar user bisa membaca notifikasi
       setTimeout(() => {
         router.push("/dashboard");
       }, 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error("Terjadi kesalahan pada jaringan. Silakan coba lagi."); // DIUBAH: Gunakan toast untuk error
-    } finally {
-      // Pindahkan setLoading(false) dari blok try agar tidak dieksekusi sebelum redirect
-      // Biarkan loading sampai halaman berpindah
+      toast.error("Terjadi kesalahan pada jaringan. Silakan coba lagi.");
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl">Daftar Akun Baru</CardTitle>
-          <CardDescription>
-            Masukkan detail Anda di bawah untuk membuat akun.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {/* DIHAPUS: Komponen Alert tidak lagi diperlukan */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nama Lengkap</Label>
-              <Input
-                id="name"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="John Doe"
-                disabled={loading}
-              />
+      <div className="w-full max-w-md space-y-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          asChild
+          className="group transition-all duration-200 hover:bg-primary/10"
+        >
+          <Link href="/" className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            <span>Kembali ke Beranda</span>
+          </Link>
+        </Button>
+
+        <Card className="w-full shadow-lg border-0 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="text-center pb-2">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <UserPlus className="h-6 w-6 text-primary" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="anda@email.com"
+            <CardTitle className="text-2xl font-bold">Daftar Akun Baru</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Masukkan detail Anda di bawah untuk membuat akun.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nama Lengkap</Label>
+                <Input
+                  id="name"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="John Doe"
+                  disabled={loading}
+                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="anda@email.com"
+                  disabled={loading}
+                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Nomor WhatsApp</Label>
+                <Input
+                  id="phone"
+                  required
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  placeholder="Contoh: 081234567890"
+                  disabled={loading}
+                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    disabled={loading}
+                    className="transition-all focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm">Konfirmasi</Label>
+                  <Input
+                    id="confirm"
+                    type="password"
+                    required
+                    value={confirm}
+                    onChange={(e) => setConfirm(e.target.value)}
+                    placeholder="••••••••"
+                    disabled={loading}
+                    className="transition-all focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full font-semibold transition-all duration-200 hover:shadow-md" 
                 disabled={loading}
-              />
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Mohon Tunggu...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Daftar Sekarang
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+          
+          <div className="px-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">atau</span>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Nomor WhatsApp</Label>
-              <Input
-                id="phone"
-                required
-                value={phone}
-                onChange={handlePhoneChange}
-                placeholder="Contoh: 081234567890"
-                disabled={loading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm">Konfirmasi Password</Label>
-              <Input
-                id="confirm"
-                type="password"
-                required
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                disabled={loading}
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Mohon Tunggu...
-                </>
-              ) : (
-                "Daftar"
-              )}
+          </div>
+
+          <CardFooter className="flex flex-col gap-3 pt-6">
+            <p className="text-sm text-muted-foreground text-center">
+              Sudah punya akun?
+            </p>
+            <Button
+              variant="outline"
+              asChild
+              className="w-full group transition-all duration-200 hover:bg-primary hover:text-primary-foreground hover:border-primary"
+            >
+              <Link href="/login" className="flex items-center justify-center gap-2">
+                <LogIn className="h-4 w-4 transition-transform group-hover:scale-110" />
+                <span>Masuk ke Akun</span>
+              </Link>
             </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex justify-center text-sm">
-          <p>
-            Sudah punya akun?&nbsp;
-            <Link href="/login" className="font-semibold hover:underline">
-              Masuk di sini
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+          </CardFooter>
+        </Card>
+
+        <p className="text-center text-xs text-muted-foreground">
+          Dengan mendaftar, Anda menyetujui{" "}
+          <Link href="/terms" className="underline hover:text-primary transition-colors">
+            Syarat & Ketentuan
+          </Link>{" "}
+          dan{" "}
+          <Link href="/privacy" className="underline hover:text-primary transition-colors">
+            Kebijakan Privasi
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

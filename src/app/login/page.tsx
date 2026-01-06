@@ -1,11 +1,9 @@
-/* eslint-disable */ // <-- Sebaiknya dihapus dan perbaiki warning dari linter jika ada
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-// Import komponen dari shadcn/ui
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -17,20 +15,20 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
-import { toast } from "sonner"; // DIUBAH: Pastikan toast diimpor untuk notifikasi
+import { ArrowLeft, Loader2, LogIn, UserPlus } from "lucide-react";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  // const [error, setError] = useState(""); // DIHAPUS: Digantikan dengan toast
 
-  // BARU: Handler untuk konversi otomatis nomor telepon
+
+
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value;
-    const cleanedValue = value.replace(/\D/g, ""); // Hanya terima digit
+    const value = e.target.value;
+    const cleanedValue = value.replace(/\D/g, ""); 
 
     if (cleanedValue.startsWith("08")) {
       const convertedValue = "62" + cleanedValue.substring(1);
@@ -44,7 +42,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    // BARU: Validasi awalan nomor telepon
+   
     if (!phoneNumber.startsWith("62")) {
       toast.error("Nomor WhatsApp harus diawali dengan kode negara 62.");
       setLoading(false);
@@ -55,97 +53,152 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // <-- Ini menandakan kita mengandalkan cookie
+        credentials: "include",
         body: JSON.stringify({ phoneNumber, password }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        // DIUBAH: Gunakan toast untuk menampilkan error dari server
         toast.error(data.error || "Login gagal, periksa kembali data Anda.");
-        setLoading(false); // Hentikan loading jika gagal
+        setLoading(false); 
         return;
       }
 
-      // DIHAPUS: Penyimpanan di localStorage tidak lagi diperlukan jika menggunakan HttpOnly cookie
-      // localStorage.setItem("user", JSON.stringify(data.user));
-      // localStorage.setItem("token", data.token);
-
-      // BARU: Beri notifikasi sukses
       toast.success("Login berhasil!", {
         description: "Anda akan segera dialihkan ke dashboard.",
       });
 
-      // Beri jeda agar notifikasi terbaca sebelum redirect
       setTimeout(() => {
         router.push("/dashboard");
       }, 1000);
-    } catch (err: any) {
-      // DIUBAH: Gunakan toast untuk error jaringan
-      toast.error(err.message || "Terjadi kesalahan pada jaringan.");
-      setLoading(false); // Hentikan loading jika ada error
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Terjadi kesalahan pada jaringan.";
+      toast.error(errorMessage);
+      setLoading(false); 
     }
-    // DIHAPUS: finally block dihapus agar loading tetap aktif sampai redirect
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Login ke Akun Anda</CardTitle>
-          <CardDescription>
-            Masukkan nomor WhatsApp dan password Anda.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Nomor WhatsApp</Label>
-              <Input
-                id="phone"
-                type="text"
-                value={phoneNumber}
-                // DIUBAH: Menggunakan handler baru untuk konversi otomatis
-                onChange={handlePhoneChange}
-                placeholder="Contoh: 081234567890"
-                required
-                disabled={loading}
-              />
+      <div className="w-full max-w-sm space-y-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          asChild
+          className="group transition-all duration-200 hover:bg-primary/10"
+        >
+          <Link href="/" className="flex items-center gap-2">
+            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            <span>Kembali ke Beranda</span>
+          </Link>
+        </Button>
+
+        <Card className="w-full shadow-lg border-0 bg-card/80 backdrop-blur-sm">
+          <CardHeader className="text-center pb-2">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <LogIn className="h-6 w-6 text-primary" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Masukkan password Anda"
-                required
+            <CardTitle className="text-2xl font-bold">Login ke Akun Anda</CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Masukkan nomor WhatsApp dan password Anda.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Nomor WhatsApp</Label>
+                <Input
+                  id="phone"
+                  type="text"
+                  value={phoneNumber}
+                  onChange={handlePhoneChange}
+                  placeholder="Contoh: 081234567890"
+                  required
+                  disabled={loading}
+                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <Link 
+                    href="/forgot-password" 
+                    className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Lupa password?
+                  </Link>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Masukkan password Anda"
+                  required
+                  disabled={loading}
+                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full font-semibold transition-all duration-200 hover:shadow-md" 
                 disabled={loading}
-              />
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Login
+                  </>
+                )}
+              </Button>
+            </form>
+          </CardContent>
+          
+          <div className="px-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-2 text-muted-foreground">atau</span>
+              </div>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Memproses...
-                </>
-              ) : (
-                "Login"
-              )}
+          </div>
+
+          <CardFooter className="flex flex-col gap-3 pt-6">
+            <p className="text-sm text-muted-foreground text-center">
+              Belum punya akun?
+            </p>
+            <Button
+              variant="outline"
+              asChild
+              className="w-full group transition-all duration-200 hover:bg-primary hover:text-primary-foreground hover:border-primary"
+            >
+              <Link href="/register" className="flex items-center justify-center gap-2">
+                <UserPlus className="h-4 w-4 transition-transform group-hover:scale-110" />
+                <span>Daftar Akun Baru</span>
+              </Link>
             </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex justify-center text-sm">
-          <p>
-            Belum punya akun?&nbsp;
-            <Link href="/register" className="font-semibold hover:underline">
-              Daftar di sini
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+          </CardFooter>
+        </Card>
+
+        <p className="text-center text-xs text-muted-foreground">
+          Dengan login, Anda menyetujui{" "}
+          <Link href="/terms" className="underline hover:text-primary transition-colors">
+            Syarat & Ketentuan
+          </Link>{" "}
+          dan{" "}
+          <Link href="/privacy" className="underline hover:text-primary transition-colors">
+            Kebijakan Privasi
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
