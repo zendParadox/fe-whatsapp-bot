@@ -1,10 +1,7 @@
-// file: src/app/api/whatsapp-webhook/route.ts
-
 import { NextResponse, type NextRequest } from "next/server";
 import {
   PrismaClient,
   TransactionType,
-  PaymentMethodType,
   DebtType,
   DebtStatus
 } from "@prisma/client";
@@ -12,179 +9,15 @@ import { Decimal } from "@prisma/client/runtime/library";
 import { z } from "zod";
 import { parseTransactionFromText } from "@/lib/gemini";
 
+import { parseSmartAmount, parseTransactionMessage, parseDebtMessage } from "@/lib/whatsapp/parser";
+import { checkBudgetStatus } from "@/lib/whatsapp/service";
+
 const prisma = new PrismaClient();
 
 const webhookPayloadSchema = z.object({
   sender: z.string(),
   message: z.string(),
 });
-
-/**
- * Parses a string amount compatible with suffixes.
- * @example "50k" -> 50000
- * @example "1.5jt" -> 1500000
- * @example "50000" -> 50000
- */
-function parseSmartAmount(amountStr: string): number | null {
-  if (!amountStr) return null;
-  const lower = amountStr.toLowerCase();
-  let multiplier = 1;
-
-  if (lower.endsWith("k") || lower.endsWith("rb")) {
-    multiplier = 1000;
-  } else if (lower.endsWith("jt") || lower.endsWith("juta") || lower.endsWith("m")) {
-    multiplier = 1000000;
-  }
-
-  const cleanNum = parseFloat(lower.replace(/[^\d.,]/g, "").replace(",", "."));
-  if (isNaN(cleanNum)) return null;
-
-  return cleanNum * multiplier;
-}
-
-/**
- * Checks budget status for a specific category and month.
- * Returns a warning string if budget is exceeded or nearly exceeded.
- */
-async function checkBudgetStatus(userId: string, categoryId: string, amount: number) {
-  const now = new Date();
-  const currentMonth = now.getMonth() + 1;
-  const currentYear = now.getFullYear();
-
-  const budget = await prisma.budget.findUnique({
-    where: {
-      user_id_category_id_month_year: {
-        user_id: userId,
-        category_id: categoryId,
-        month: currentMonth,
-        year: currentYear,
-      },
-    },
-  });
-
-  if (!budget) return null;
-
-  // Calculate total expense for this category in current month
-  const startOfMonth = new Date(currentYear, currentMonth - 1, 1);
-  const endOfMonth = new Date(currentYear, currentMonth, 0);
-
-  const aggregates = await prisma.transaction.aggregate({
-    where: {
-      user_id: userId,
-      category_id: categoryId,
-      type: "EXPENSE",
-      created_at: {
-        gte: startOfMonth,
-        lte: endOfMonth,
-      },
-    },
-    _sum: {
-      amount: true,
-    },
-  });
-
-  const totalExpense = (aggregates._sum.amount?.toNumber() || 0) + amount; // Include current transaction
-  const budgetAmount = budget.amount.toNumber();
-
-  if (totalExpense > budgetAmount) {
-    const over = totalExpense - budgetAmount;
-    return `\n\n⚠️ *PERINGATAN:* Budget kategori ini telah terlampaui sebesar Rp ${over.toLocaleString("id-ID")}!`;
-  } else if (totalExpense > budgetAmount * 0.8) {
-    const remaining = budgetAmount - totalExpense;
-    return `\n\n📝 *Info:* Budget hampir habis. Sisa: Rp ${remaining.toLocaleString("id-ID")}`;
-  }
-
-  return null;
-}
-
-/**
- * Parses a WhatsApp message to extract transaction details.
- */
-function parseTransactionMessage(message: string) {
-  const parts = message.trim().split(" ");
-  if (parts.length < 2) return null;
-
-  const command = parts[0].toLowerCase();
-  const amount = parseSmartAmount(parts[1]);
-
-  if (amount === null || amount <= 0) return null;
-
-  let type: TransactionType;
-  if (["masuk", "income"].includes(command)) {
-    type = TransactionType.INCOME;
-  } else if (["keluar", "expense"].includes(command)) {
-    type = TransactionType.EXPENSE;
-  } else {
-    return null;
-  }
-
-  const categoryMatch = message.match(/@(\w+)/);
-  const category =
-    categoryMatch && categoryMatch[1]
-      ? categoryMatch[1].toLowerCase()
-      : "lainnya";
-
-  // Detect payment method (prefixed with '#')
-  const paymentMethodMatch = message.match(/#(\w+)/);
-  const paymentMethodString = paymentMethodMatch
-    ? paymentMethodMatch[1].toUpperCase()
-    : "CASH";
-
-  // Validate and convert string to PaymentMethodType enum
-  let paymentMethod: PaymentMethodType = PaymentMethodType.CASH; // Default
-  if (
-    Object.values(PaymentMethodType).includes(
-      paymentMethodString as PaymentMethodType
-    )
-  ) {
-    paymentMethod = paymentMethodString as PaymentMethodType;
-  }
-
-  const description = message
-    .replace(new RegExp(`^${command}`, "i"), "")
-    .replace(parts[1], "")
-    .replace(/@\w+/g, "")
-    .replace(/#\w+/g, "")
-    .trim() || "Transaksi WhatsApp";
-
-  return { type, amount, description, category, paymentMethod };
-}
-
-/**
- * Parses Debt message
- * Format: hutang 50k @Budi beli pulsa
- */
-function parseDebtMessage(message: string) {
-  const parts = message.trim().split(" ");
-  if (parts.length < 3) return null; // cmd amount @person
-
-  const command = parts[0].toLowerCase();
-  const amount = parseSmartAmount(parts[1]);
-  
-  if (amount === null || amount <= 0) return null;
-
-  let type: DebtType;
-  if (command === "hutang") {
-      type = DebtType.HUTANG;
-  } else if (command === "piutang") {
-      type = DebtType.PIUTANG;
-  } else {
-      return null;
-  }
-
-  const personMatch = message.match(/@(\w+)/);
-  const personName = personMatch && personMatch[1] ? personMatch[1] : null;
-
-  if (!personName) return null;
-
-  const description = message
-      .replace(new RegExp(`^${command}`, "i"), "")
-      .replace(parts[1], "")
-      .replace(/@\w+/g, "")
-      .trim() || "Catatan Hutang";
-
-  return { type, amount, personName, description };
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -210,7 +43,7 @@ export async function POST(request: NextRequest) {
     const args = message.trim().split(" ");
     const command = args[0].toLowerCase();
 
-    // --- 1. HANDLE TRANSACTIONS (Masuk/Keluar) ---
+
     if (["masuk", "income", "keluar", "expense"].includes(command)) {
       const parsedData = parseTransactionMessage(message);
 
@@ -234,7 +67,7 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Check Budget if Expense
+      
       let budgetAlert = "";
       if (parsedData.type === "EXPENSE") {
         const alert = await checkBudgetStatus(user.id, category.id, parsedData.amount);
@@ -264,7 +97,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: reply });
     }
 
-    // --- 2. HANDLE BUDGET SETTING ---
+
     if (command === "budget" || command === "anggaran") {
       const amount = parseSmartAmount(args[1]);
       const categoryNameMatch = message.match(/@(\w+)/);
@@ -318,7 +151,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // --- 3. REPORTS (Laporan) ---
+    
     if (command === "laporan" || command === "report") {
         const type = args[1]?.toLowerCase();
         
@@ -363,7 +196,7 @@ export async function POST(request: NextRequest) {
         }
     }
 
-    // --- 4. CHECK BUDGET (Cek Budget) ---
+   
     if (command === "cek" && (args[1] === "budget" || args[1] === "anggaran")) {
         const now = new Date();
         const currentMonth = now.getMonth() + 1;
@@ -405,7 +238,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: reply });
     }
 
-    // --- 5. UNDO (Hapus Transaksi Terakhir) ---
+  
     if (command === "hapus" || command === "undo" || command === "batal") {
         const lastTx = await prisma.transaction.findFirst({
             where: { user_id: user.id },
@@ -428,7 +261,7 @@ export async function POST(request: NextRequest) {
         });
     }
 
-    // --- 6. DEBT MANAGER (Hutang/Piutang) ---
+
     if (command === "hutang" || command === "piutang") {
         const parsedData = parseDebtMessage(message);
         
@@ -496,7 +329,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ message: "❌ Sebutkan nama orang yang lunas.\nContoh: `lunas @Budi`" });
         }
 
-        // Find UNPAID debts for this person
+       
         const unpaidDebts = await prisma.debt.findMany({
             where: { 
                 user_id: user.id, 
@@ -509,7 +342,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ message: `⚠️ Tidak ada hutang/piutang aktif dengan nama *${personName}*.` });
         }
 
-        // Mark all as paid
+        
         await prisma.debt.updateMany({
             where: {
                 user_id: user.id,
@@ -523,12 +356,7 @@ export async function POST(request: NextRequest) {
     }
 
 
-    // --- 7. HYBRID AI FALLBACK (Jika bukan command standar, coba AI) ---
-    // Command standar yang sudah dihandle di atas: masuk, keluar, budget, laporan, cek, hapus/undo, hutang, piutang, lunas.
-    // Jika sampai sini, berarti belum ada yang match.
-
-    // Cek apakah ini pesan obrolan biasa atau transaksi natural
-    // Kita panggil AI.
+    
     const aiTransactions = await parseTransactionFromText(message);
 
     if (aiTransactions && aiTransactions.length > 0) {
@@ -536,7 +364,7 @@ export async function POST(request: NextRequest) {
       let count = 0;
 
       for (const tx of aiTransactions) {
-        // Cari/Buat Kategori
+        
         let category = await prisma.category.findFirst({
           where: {
             user_id: user.id,
@@ -550,7 +378,7 @@ export async function POST(request: NextRequest) {
           });
         }
 
-        // Cek Budget if Expense
+      
         let budgetAlert = "";
         if (tx.type === "EXPENSE") {
           const alert = await checkBudgetStatus(user.id, category.id, tx.amount);
@@ -583,7 +411,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // --- 8. HANDLE HELP (Bantuan) ---
+    
     const helpMessage = `👋 *GoTEK Bot Helper*
 
 *1. 📝 Catat Transaksi*
