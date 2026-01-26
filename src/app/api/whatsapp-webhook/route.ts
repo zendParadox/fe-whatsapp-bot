@@ -43,7 +43,9 @@ export async function POST(request: NextRequest) {
         normalizedSender = `${dirty}@s.whatsapp.net`;
     } else {
         // Jika sudah ada suffix, pastikan prefix nomornya benar
-        let [num, suffix] = normalizedSender.split("@");
+        const parts = normalizedSender.split("@");
+        let num = parts[0];
+        const suffix = parts[1];
 
         // FIX: Hapus device identifier jika ada (misal 628xxx:1 -> 628xxx)
         if (num.includes(":")) {
