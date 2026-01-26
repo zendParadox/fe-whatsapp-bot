@@ -75,14 +75,14 @@ export async function POST(request: NextRequest) {
     }
 
     // hash password
-    const hashed = hashSync(password, BCRYPT_SALT_ROUNDS);
+    // const hashed = hashSync(password, BCRYPT_SALT_ROUNDS);
 
     // create user
     const user = await prisma.user.create({
       data: {
         email,
         name,
-        password: hashed,
+        password: password,
         whatsapp_jid,
       },
     });
