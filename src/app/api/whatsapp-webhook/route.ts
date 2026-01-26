@@ -29,11 +29,42 @@ export async function POST(request: NextRequest) {
     }
 
     const { sender, message } = validation.data;
+
+    // Normalisasi sender agar selalu format: 628xxx@s.whatsapp.net
+    let normalizedSender = sender;
+    if (!normalizedSender.includes("@s.whatsapp.net")) {
+        // Hapus karakter non-digit
+        let dirty = normalizedSender.replace(/\D/g, "");
+        // Ubah 08xxx jadi 628xxx
+        if (dirty.startsWith("0")) dirty = "62" + dirty.substring(1);
+        // Pastikan prefix 62
+        if (!dirty.startsWith("62")) dirty = "62" + dirty;
+        
+        normalizedSender = `${dirty}@s.whatsapp.net`;
+    } else {
+        // Jika sudah ada suffix, pastikan prefix nomornya benar
+        let [num, suffix] = normalizedSender.split("@");
+
+        // FIX: Hapus device identifier jika ada (misal 628xxx:1 -> 628xxx)
+        if (num.includes(":")) {
+            num = num.split(":")[0];
+        }
+
+        let dirty = num.replace(/\D/g, "");
+         if (dirty.startsWith("0")) dirty = "62" + dirty.substring(1);
+         if (!dirty.startsWith("62")) dirty = "62" + dirty;
+
+         normalizedSender = `${dirty}@${suffix}`;
+    }
+
+    console.log(`Webhook received sender: ${sender} -> Normalized: ${normalizedSender}`);
+
     const user = await prisma.user.findUnique({
-      where: { whatsapp_jid: sender },
+      where: { whatsapp_jid: normalizedSender },
     });
 
     if (!user) {
+      console.log(`❌ User not found for sender: ${normalizedSender}`);
       return NextResponse.json({
         message:
           "❌ Nomor Anda belum terdaftar. Silakan daftar terlebih dahulu di https://fe-whatsapp-bot.vercel.app/register",
