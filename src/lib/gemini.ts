@@ -1,8 +1,15 @@
 /*eslint-disable*/
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const apiKey = process.env.GEMINI_API_KEY || "";
-const genAI = new GoogleGenerativeAI(apiKey);
+// Support multiple API keys for rotation (comma-separated)
+const apiKeysString = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "";
+const apiKeys = apiKeysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
+
+// Track which key index to use (in-memory, resets on server restart)
+let currentKeyIndex = 0;
+
+// Track failed keys to avoid retrying them in the same request cycle
+const failedKeysInCycle = new Set<number>();
 
 export interface ParsedTransaction {
   amount: number;
@@ -12,22 +19,57 @@ export interface ParsedTransaction {
   confidence: number;
 }
 
+/**
+ * Get a Gemini AI client with the current API key
+ */
+function getGeminiClient(): GoogleGenerativeAI | null {
+  if (apiKeys.length === 0) {
+    console.error("❌ No Gemini API keys configured!");
+    return null;
+  }
+  
+  const key = apiKeys[currentKeyIndex];
+  return new GoogleGenerativeAI(key);
+}
+
+/**
+ * Rotate to the next available API key
+ * Returns true if successfully rotated, false if all keys exhausted
+ */
+function rotateApiKey(): boolean {
+  failedKeysInCycle.add(currentKeyIndex);
+  
+  // Find next available key that hasn't failed in this cycle
+  for (let i = 0; i < apiKeys.length; i++) {
+    const nextIndex = (currentKeyIndex + 1 + i) % apiKeys.length;
+    if (!failedKeysInCycle.has(nextIndex)) {
+      currentKeyIndex = nextIndex;
+      console.log(`🔄 Rotated to Gemini API key #${currentKeyIndex + 1} of ${apiKeys.length}`);
+      return true;
+    }
+  }
+  
+  console.error("❌ All Gemini API keys exhausted in this cycle!");
+  return false;
+}
+
+/**
+ * Reset the failed keys tracker (call at start of new request)
+ */
+function resetFailedKeys(): void {
+  failedKeysInCycle.clear();
+}
+
 export async function parseTransactionFromText(
   text: string
 ): Promise<ParsedTransaction[] | null> {
-  if (!apiKey) {
-    console.error("❌ GEMINI_API_KEY is missing in environment variables!");
+  if (apiKeys.length === 0) {
+    console.error("❌ GEMINI_API_KEYS is missing in environment variables!");
     return null;
   }
 
-  // User requested gemini-2.5-flash, but as of now 2.0-flash-exp is the latest preview. 
-  // Falling back to 1.5-flash for stability if 2.0 fails, but let's try 1.5-flash or 2.0-flash-exp.
-  // I will use 1.5-flash as it is most stable, but if user insists on 2.0 features we can use gemini-2.0-flash-exp.
-  // For now, I will use "gemini-1.5-flash" because "gemini-2.5-flash" definitely causes 404/400 errors.
-  const model = genAI.getGenerativeModel({
-    model: "gemini-2.5-flash", // Reverted to known working model
-    generationConfig: { responseMimeType: "application/json" },
-  });
+  // Reset failed keys at start of new request
+  resetFailedKeys();
 
   const prompt = `
     Analyze the following financial text and extract ALL transactions mentioned into a JSON list.
@@ -52,24 +94,65 @@ export async function parseTransactionFromText(
     - If multiple items are mentioned (e.g. "beli A dan beli B"), return multiple objects in the array.
   `;
 
-  try {
-    console.log("SENDING PROMPT TO GEMINI...", text);
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const textResponse = response.text();
-    console.log("GEMINI RAW RESPONSE:", textResponse);
+  // Try with key rotation on 429 errors
+  let attempts = 0;
+  const maxAttempts = apiKeys.length;
+
+  while (attempts < maxAttempts) {
+    attempts++;
     
-    const jsonStr = textResponse.replace(/```json|```/g, "").trim();
-    // Handle case where AI returns single object instead of array
-    let data = JSON.parse(jsonStr);
-    if (!Array.isArray(data)) {
+    const genAI = getGeminiClient();
+    if (!genAI) return null;
+
+    try {
+      console.log(`SENDING PROMPT TO GEMINI (key #${currentKeyIndex + 1})...`, text);
+      
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        generationConfig: { responseMimeType: "application/json" },
+      });
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const textResponse = response.text();
+      console.log("GEMINI RAW RESPONSE:", textResponse);
+      
+      const jsonStr = textResponse.replace(/```json|```/g, "").trim();
+      let data = JSON.parse(jsonStr);
+      if (!Array.isArray(data)) {
         data = [data];
+      }
+      
+      return data as ParsedTransaction[];
+      
+    } catch (error: any) {
+      const statusCode = error?.status || error?.response?.status;
+      const isRateLimited = statusCode === 429 || 
+        error?.message?.includes("429") || 
+        error?.message?.includes("Too Many Requests") ||
+        error?.message?.includes("quota");
+
+      if (isRateLimited) {
+        console.warn(`⚠️ Rate limit hit on key #${currentKeyIndex + 1}. Attempting rotation...`);
+        
+        if (rotateApiKey()) {
+          // Wait a bit before retry with new key
+          await new Promise(resolve => setTimeout(resolve, 500));
+          continue; // Retry with next key
+        } else {
+          // All keys exhausted
+          console.error("❌ All API keys rate limited!");
+          return null;
+        }
+      }
+
+      // Non-rate-limit error, don't retry
+      console.error("❌ Gemini Parse Error Details:", error);
+      if (error?.message) console.error("Error Message:", error.message);
+      return null;
     }
-    
-    return data as ParsedTransaction[];
-  } catch (error: any) {
-    console.error("❌ Gemini Parse Error Details:", error);
-    if (error?.message) console.error("Error Message:", error.message);
-    return null;
   }
+
+  console.error("❌ Max retry attempts reached");
+  return null;
 }
