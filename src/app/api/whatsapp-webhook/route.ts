@@ -30,34 +30,24 @@ export async function POST(request: NextRequest) {
 
     const { sender, message } = validation.data;
 
-    // Normalisasi sender agar selalu format: 628xxx@s.whatsapp.net
+    // Normalisasi sender agar selalu format: 628xxx (raw)
     let normalizedSender = sender;
-    if (!normalizedSender.includes("@s.whatsapp.net")) {
-        // Hapus karakter non-digit
-        let dirty = normalizedSender.replace(/\D/g, "");
-        // Ubah 08xxx jadi 628xxx
-        if (dirty.startsWith("0")) dirty = "62" + dirty.substring(1);
-        // Pastikan prefix 62
-        if (!dirty.startsWith("62")) dirty = "62" + dirty;
-        
-        normalizedSender = `${dirty}@s.whatsapp.net`;
-    } else {
-        // Jika sudah ada suffix, pastikan prefix nomornya benar
-        const parts = normalizedSender.split("@");
-        let num = parts[0];
-        const suffix = parts[1];
-
-        // FIX: Hapus device identifier jika ada (misal 628xxx:1 -> 628xxx)
-        if (num.includes(":")) {
-            num = num.split(":")[0];
-        }
-
-        let dirty = num.replace(/\D/g, "");
-         if (dirty.startsWith("0")) dirty = "62" + dirty.substring(1);
-         if (!dirty.startsWith("62")) dirty = "62" + dirty;
-
-         normalizedSender = `${dirty}@${suffix}`;
+    
+    // Ekstrak bagian nomor saja dari format apapun (@s.whatsapp.net, @lid, dll)
+    if (normalizedSender.includes("@")) {
+      normalizedSender = normalizedSender.split("@")[0];
     }
+    
+    // Hapus device identifier jika ada (misal 628xxx:1 -> 628xxx)
+    if (normalizedSender.includes(":")) {
+      normalizedSender = normalizedSender.split(":")[0];
+    }
+    
+    // Bersihkan dan normalisasi ke format 62xxx
+    let dirty = normalizedSender.replace(/\D/g, "");
+    if (dirty.startsWith("0")) dirty = "62" + dirty.substring(1);
+    if (!dirty.startsWith("62") && dirty.length >= 9) dirty = "62" + dirty;
+    normalizedSender = dirty;
 
     console.log(`Webhook received sender: ${sender} -> Normalized: ${normalizedSender}`);
 

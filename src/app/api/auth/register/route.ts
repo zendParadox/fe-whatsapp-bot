@@ -10,15 +10,24 @@ const prisma = new PrismaClient();
 const BCRYPT_SALT_ROUNDS = 10;
 
 /**
- * Normalize phone number to WhatsApp JID format.
- * Converts various input formats to: 62xxx@s.whatsapp.net
- * @example "081234567890" -> "6281234567890@s.whatsapp.net"
- * @example "+6281234567890" -> "6281234567890@s.whatsapp.net"
- * @example "6281234567890" -> "6281234567890@s.whatsapp.net"
+ * Normalize phone number to raw format.
+ * Converts various input formats to: 62xxx (raw number)
+ * @example "081234567890" -> "6281234567890"
+ * @example "+6281234567890" -> "6281234567890"
+ * @example "6281234567890" -> "6281234567890"
+ * @example "6281234567890@s.whatsapp.net" -> "6281234567890"
  */
-function normalizePhoneToJid(phone: string): string {
+function normalizePhoneToRaw(phone: string): string {
+  // Remove @xxx suffix if exists
+  let cleaned = phone.includes("@") ? phone.split("@")[0] : phone;
+  
+  // Remove device identifier if exists (e.g., 628xxx:1 -> 628xxx)
+  if (cleaned.includes(":")) {
+    cleaned = cleaned.split(":")[0];
+  }
+
   // Remove all non-digit characters except + at the beginning
-  let cleaned = phone.replace(/[^\d+]/g, "");
+  cleaned = cleaned.replace(/[^\d+]/g, "");
 
   // Remove leading + if exists
   if (cleaned.startsWith("+")) {
@@ -35,7 +44,7 @@ function normalizePhoneToJid(phone: string): string {
     cleaned = "62" + cleaned;
   }
 
-  return `${cleaned}@s.whatsapp.net`;
+  return cleaned;
 }
 
 export async function POST(request: NextRequest) {
@@ -55,10 +64,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // normalisasi whatsapp_jid jadi bentuk lengkap (62xxx@s.whatsapp.net)
-    const whatsapp_jid = rawPhone.includes("@")
-      ? rawPhone
-      : normalizePhoneToJid(rawPhone);
+    // normalisasi whatsapp_jid jadi bentuk raw (62xxx)
+    const whatsapp_jid = normalizePhoneToRaw(rawPhone);
 
     // cek duplicate email / whatsapp_jid
     const exists = await prisma.user.findFirst({

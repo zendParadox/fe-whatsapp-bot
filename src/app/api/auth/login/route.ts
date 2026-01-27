@@ -10,10 +10,37 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET ?? "";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? "7d";
 
-function normalizeJid(input: string) {
+/**
+ * Normalize phone input to raw format (62xxx)
+ */
+function normalizePhone(input: string): string {
   if (!input) return "";
-  const s = String(input).trim();
-  return s.includes("@") ? s : `${s}@s.whatsapp.net`;
+  let cleaned = String(input).trim();
+  
+  // Remove @xxx suffix if exists
+  if (cleaned.includes("@")) {
+    cleaned = cleaned.split("@")[0];
+  }
+  
+  // Remove device identifier if exists (e.g., 628xxx:1 -> 628xxx)
+  if (cleaned.includes(":")) {
+    cleaned = cleaned.split(":")[0];
+  }
+  
+  // Remove all non-digit characters
+  cleaned = cleaned.replace(/\D/g, "");
+  
+  // Convert leading 0 to 62 (Indonesia country code)
+  if (cleaned.startsWith("0")) {
+    cleaned = "62" + cleaned.substring(1);
+  }
+  
+  // If doesn't start with 62, add it
+  if (!cleaned.startsWith("62") && cleaned.length >= 9) {
+    cleaned = "62" + cleaned;
+  }
+  
+  return cleaned;
 }
 
 export async function POST(request: NextRequest) {
@@ -36,7 +63,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const whatsapp_jid = normalizeJid(raw);
+    const whatsapp_jid = normalizePhone(raw);
 
     const user = await prisma.user.findUnique({ where: { whatsapp_jid } });
     if (!user)
