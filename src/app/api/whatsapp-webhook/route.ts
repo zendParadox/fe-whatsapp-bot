@@ -30,26 +30,94 @@ export async function POST(request: NextRequest) {
 
     const { sender, message } = validation.data;
 
-    // Normalisasi sender agar selalu format: 628xxx (raw)
-    let normalizedSender = sender;
-    
-    // Ekstrak bagian nomor saja dari format apapun (@s.whatsapp.net, @lid, dll)
-    if (normalizedSender.includes("@")) {
-      normalizedSender = normalizedSender.split("@")[0];
+    // Ekstrak bagian nomor/LID saja dari format apapun
+    let rawSender = sender;
+    if (rawSender.includes("@")) {
+      rawSender = rawSender.split("@")[0];
     }
-    
     // Hapus device identifier jika ada (misal 628xxx:1 -> 628xxx)
-    if (normalizedSender.includes(":")) {
-      normalizedSender = normalizedSender.split(":")[0];
+    if (rawSender.includes(":")) {
+      rawSender = rawSender.split(":")[0];
     }
-    
-    // Bersihkan dan normalisasi ke format 62xxx
-    let dirty = normalizedSender.replace(/\D/g, "");
-    if (dirty.startsWith("0")) dirty = "62" + dirty.substring(1);
-    if (!dirty.startsWith("62") && dirty.length >= 9) dirty = "62" + dirty;
-    normalizedSender = dirty;
+    rawSender = rawSender.replace(/\D/g, "");
 
-    console.log(`Webhook received sender: ${sender} -> Normalized: ${normalizedSender}`);
+    // Deteksi apakah ini LID (Linked ID) - LID biasanya > 15 digit dan tidak dimulai dengan 62/08
+    const isLid = rawSender.length > 15 || (!rawSender.startsWith("62") && !rawSender.startsWith("0") && rawSender.length > 10);
+    
+    let normalizedSender = rawSender;
+    let lidValue: string | null = null;
+
+    if (isLid) {
+      lidValue = rawSender;
+      console.log(`🔗 Detected LID format: ${lidValue}`);
+      
+      // Cari mapping LID -> phone di database
+      const mapping = await prisma.lidMapping.findUnique({
+        where: { lid: lidValue }
+      });
+
+      if (mapping) {
+        normalizedSender = mapping.phone;
+        console.log(`✅ Found LID mapping: ${lidValue} -> ${normalizedSender}`);
+      } else {
+        // Tidak ada mapping - cek apakah user sedang mendaftarkan nomornya
+        const trimmedMessage = message.trim();
+        
+        // Jika pesan berupa nomor telepon (format: 08xxx atau 62xxx atau +62xxx)
+        const phoneRegex = /^(\+?62|0)[0-9]{8,12}$/;
+        if (phoneRegex.test(trimmedMessage.replace(/[\s-]/g, ""))) {
+          // User mengirim nomor telepon - simpan mapping
+          let phoneToSave = trimmedMessage.replace(/[\s\-\+]/g, "");
+          if (phoneToSave.startsWith("0")) {
+            phoneToSave = "62" + phoneToSave.substring(1);
+          }
+          if (!phoneToSave.startsWith("62")) {
+            phoneToSave = "62" + phoneToSave;
+          }
+
+          // Cari user dengan nomor tersebut
+          const existingUser = await prisma.user.findUnique({
+            where: { whatsapp_jid: phoneToSave }
+          });
+
+          if (existingUser) {
+            // Simpan mapping
+            await prisma.lidMapping.create({
+              data: {
+                lid: lidValue,
+                phone: phoneToSave,
+                user_id: existingUser.id
+              }
+            });
+
+            console.log(`✅ Created LID mapping: ${lidValue} -> ${phoneToSave}`);
+            return NextResponse.json({
+              message: `✅ *Berhasil!*\n\nNomor *${phoneToSave}* telah terhubung dengan akun Anda.\n\nSekarang Anda bisa menggunakan bot dari WhatsApp Web/Desktop! 🎉`
+            });
+          } else {
+            return NextResponse.json({
+              message: `❌ Nomor *${phoneToSave}* belum terdaftar.\n\nSilakan daftar dulu di:\nhttps://gotek.vercel.app/register`
+            });
+          }
+        }
+
+        // Tidak ada mapping dan bukan nomor telepon - minta user daftarkan nomornya
+        console.log(`⚠️ No LID mapping found for: ${lidValue}`);
+        return NextResponse.json({
+          message: `🔗 *Perangkat Tertaut Terdeteksi*\n\nAnda sedang menggunakan WhatsApp Web/Desktop.\n\nUntuk menghubungkan akun, silakan *balas pesan ini dengan nomor telepon Anda* yang sudah terdaftar.\n\nContoh: \`081234567890\``
+        });
+      }
+    } else {
+      // Bukan LID - normalisasi nomor telepon biasa
+      if (normalizedSender.startsWith("0")) {
+        normalizedSender = "62" + normalizedSender.substring(1);
+      }
+      if (!normalizedSender.startsWith("62") && normalizedSender.length >= 9) {
+        normalizedSender = "62" + normalizedSender;
+      }
+    }
+
+    console.log(`Webhook received sender: ${sender} -> Normalized: ${normalizedSender}${isLid ? ' (via LID mapping)' : ''}`);
 
     const user = await prisma.user.findUnique({
       where: { whatsapp_jid: normalizedSender },
@@ -59,7 +127,15 @@ export async function POST(request: NextRequest) {
       console.log(`❌ User not found for sender: ${normalizedSender}`);
       return NextResponse.json({
         message:
-          "❌ Nomor Anda belum terdaftar. Silakan daftar terlebih dahulu di https://fe-whatsapp-bot.vercel.app/register",
+          "❌ Nomor Anda belum terdaftar. Silakan daftar terlebih dahulu di https://gotek.vercel.app/register",
+      });
+    }
+
+    // Update LID mapping dengan user_id jika belum ada
+    if (lidValue) {
+      await prisma.lidMapping.updateMany({
+        where: { lid: lidValue, user_id: null },
+        data: { user_id: user.id }
       });
     }
 
