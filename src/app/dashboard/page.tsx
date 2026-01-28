@@ -59,6 +59,7 @@ import { Label } from "@/components/ui/label";
 import { Edit, Trash } from "lucide-react";
 import RecentTransactionsCard from "@/components/dashboard/RecentTransactionsCard";
 import SmartAiInput from "@/components/dashboard/SmartAiInput";
+import WhatsAppBotBanner from "@/components/dashboard/WhatsAppBotBanner";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -541,6 +542,9 @@ export default function Dashboard() {
           </div>
         </div>
       </header>
+
+      {/* WhatsApp Bot Welcome Banner */}
+      <WhatsAppBotBanner />
 
       {/* Smart Analysis Input */}
       <SmartAiInput 
