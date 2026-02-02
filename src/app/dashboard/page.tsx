@@ -59,6 +59,8 @@ import { Edit, Trash } from "lucide-react";
 import RecentTransactionsCard from "@/components/dashboard/RecentTransactionsCard";
 import SmartAiInput from "@/components/dashboard/SmartAiInput";
 import WhatsAppBotBanner from "@/components/dashboard/WhatsAppBotBanner";
+import AiAnalysisButton from "@/components/dashboard/AiAnalysisButton";
+import AiAnalysisModal from "@/components/dashboard/AiAnalysisModal";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -232,6 +234,36 @@ export default function Dashboard() {
   const [addingCategory, setAddingCategory] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const router = useRouter();
+
+  // AI Analysis modal state
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiMonthName, setAiMonthName] = useState("");
+  const [aiYear, setAiYear] = useState(0);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  // Fetch AI analysis
+  async function fetchAiAnalysis() {
+    setIsAiLoading(true);
+    setAiError(null);
+    setIsAiModalOpen(true);
+    try {
+      const res = await fetch("/api/ai-analysis");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Gagal memuat analisis");
+      }
+      const data = await res.json();
+      setAiAnalysis(data.analysis);
+      setAiMonthName(data.monthName);
+      setAiYear(data.year);
+    } catch (err: any) {
+      setAiError(err.message);
+    } finally {
+      setIsAiLoading(false);
+    }
+  }
 
   // Fetch user profile
   useEffect(() => {
@@ -557,6 +589,22 @@ export default function Dashboard() {
       <SmartAiInput 
         categories={categories} 
         onTransactionAdded={() => setRefreshKey(k => k + 1)} 
+      />
+
+      {/* AI Analysis Button */}
+      <div className="flex justify-center sm:justify-start">
+        <AiAnalysisButton onClick={fetchAiAnalysis} isLoading={isAiLoading} />
+      </div>
+
+      {/* AI Analysis Modal */}
+      <AiAnalysisModal
+        open={isAiModalOpen}
+        onOpenChange={setIsAiModalOpen}
+        analysis={aiAnalysis}
+        monthName={aiMonthName}
+        year={aiYear}
+        isLoading={isAiLoading}
+        error={aiError}
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
