@@ -35,7 +35,9 @@ model User {
   name         String?
   password     String
   whatsapp_jid String?  @unique
+  avatar_url   String?  // URL foto profil di Supabase Storage
   created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt @default(now())
 
   transactions Transaction[]
   categories   Category[]

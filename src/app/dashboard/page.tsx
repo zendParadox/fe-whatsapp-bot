@@ -36,8 +36,7 @@ import {
 } from "recharts";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-// import { LogoutButton } from "@/components/ui/logout-button";
-import LogoutButton from "@/components/ui/LogoutButton";
+import ProfileMenu from "@/components/dashboard/ProfileMenu";
 import {
   Dialog,
   DialogContent,
@@ -97,6 +96,11 @@ interface DashboardData {
   };
   trendData: { name: string; Pemasukan: number; Pengeluaran: number }[];
   budgetData: { category: string; budget: number; actual: number }[];
+}
+
+interface UserProfile {
+  name: string | null;
+  avatar_url: string | null;
 }
 
 const PIE_CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
@@ -226,13 +230,24 @@ export default function Dashboard() {
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const router = useRouter();
 
-  // toast/snackbar state
-  // const [toast, setToast] = useState<null | {
-  //   message: string;
-  //   type?: "success" | "error";
-  // }>(null);
+  // Fetch user profile
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const res = await fetch("/api/profile");
+        if (res.ok) {
+          const data = await res.json();
+          setUserProfile(data.user);
+        }
+      } catch {
+        // Silently fail
+      }
+    }
+    fetchProfile();
+  }, []);
 
   const handleApplyFilter = () => {
     setActiveDateRange(selectedDateRange);
@@ -303,7 +318,6 @@ export default function Dashboard() {
     if (tx.category && typeof tx.category !== "string") {
       categoryId = (tx.category as any).id ?? "";
     } else {
-      // jika category hanya string (nama), coba cari id dari nama
       if (typeof tx.category === "string" && categories.length > 0) {
         const match = categories.find((c) => c.name === tx.category);
         categoryId = match ? (match.id as string) : "";
@@ -434,7 +448,6 @@ export default function Dashboard() {
       // re-fetch categories atau push ke state
       await fetchCategories();
 
-      // isi form dengan category baru
       setForm((s) => ({
         ...s,
         categoryId: created.id ?? created.name,
@@ -451,13 +464,6 @@ export default function Dashboard() {
       setAddingCategory(false);
     }
   }
-
-  // auto-hide toast after 3s
-  // useEffect(() => {
-  //   if (!toast) return;
-  //   const t = setTimeout(() => toast(null), 3000);
-  //   return () => clearTimeout(t);
-  // }, [toast]);
 
   if (isLoading)
     return (
@@ -500,15 +506,13 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Mobile: FAB logout (ikon-only) */}
-          <div className="md:hidden flex items-center">
-            {/* beri margin kiri agar tidak menempel ke pinggir */}
-            <div className="mr-1">
-              <LogoutButton
-                variant="icon"
-                className="bg-white/90 dark:bg-slate-800/90"
-              />
-            </div>
+          {/* Mobile: Profile Menu */}
+          <div className="md:hidden">
+            <ProfileMenu 
+              variant="icon" 
+              userName={userProfile?.name}
+              avatarUrl={userProfile?.avatar_url}
+            />
           </div>
 
           {/* Desktop controls */}
@@ -522,8 +526,12 @@ export default function Dashboard() {
               Terapkan
             </Button>
 
-            {/* Logout full button */}
-            <LogoutButton variant="full" />
+            {/* Profile Menu with Logout */}
+            <ProfileMenu 
+              variant="full" 
+              userName={userProfile?.name}
+              avatarUrl={userProfile?.avatar_url}
+            />
           </div>
         </div>
 
@@ -538,7 +546,6 @@ export default function Dashboard() {
             <Button onClick={handleApplyFilter} className="flex-1">
               Terapkan
             </Button>
-            {/* spacing kanan agar FAB tidak overlap */}
           </div>
         </div>
       </header>
