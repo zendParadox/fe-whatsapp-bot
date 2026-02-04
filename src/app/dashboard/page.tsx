@@ -882,6 +882,24 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Footer */}
+      <footer className="mt-12 py-6 border-t text-center text-sm text-muted-foreground">
+        <p>
+          © {new Date().getFullYear()} GoTEK. All rights reserved.
+        </p>
+        <p className="mt-2">
+          Jika ada kendala, hubungi{" "}
+          <a 
+            href="https://t.me/rafliramadhaniii" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-neon-cyan hover:underline font-medium"
+          >
+            Telegram Support
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }
