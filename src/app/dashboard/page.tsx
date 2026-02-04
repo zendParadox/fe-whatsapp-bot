@@ -531,7 +531,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <div className="flex flex-col">
               <h1 className="text-2xl sm:text-3xl font-bold">
-                Dashboard Keuangan
+                GoTEK
               </h1>
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 Ringkasan & laporan keuangan Anda
@@ -882,6 +882,24 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Footer */}
+      <footer className="mt-12 py-6 border-t text-center text-sm text-muted-foreground">
+        <p>
+          © {new Date().getFullYear()} GoTEK. All rights reserved.
+        </p>
+        <p className="mt-2">
+          Jika ada kendala, hubungi{" "}
+          <a 
+            href="https://t.me/rafliramadhaniii" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-neon-cyan hover:underline font-medium"
+          >
+            Telegram Support
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }
