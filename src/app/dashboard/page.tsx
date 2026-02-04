@@ -531,7 +531,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3">
             <div className="flex flex-col">
               <h1 className="text-2xl sm:text-3xl font-bold">
-                Dashboard Keuangan
+                GoTEK
               </h1>
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 Ringkasan & laporan keuangan Anda
