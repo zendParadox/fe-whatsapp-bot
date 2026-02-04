@@ -36,8 +36,7 @@ import {
 } from "recharts";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-// import { LogoutButton } from "@/components/ui/logout-button";
-import LogoutButton from "@/components/ui/LogoutButton";
+import ProfileMenu from "@/components/dashboard/ProfileMenu";
 import {
   Dialog,
   DialogContent,
@@ -60,6 +59,9 @@ import { Edit, Trash } from "lucide-react";
 import RecentTransactionsCard from "@/components/dashboard/RecentTransactionsCard";
 import SmartAiInput from "@/components/dashboard/SmartAiInput";
 import WhatsAppBotBanner from "@/components/dashboard/WhatsAppBotBanner";
+import AiAnalysisButton from "@/components/dashboard/AiAnalysisButton";
+import AiAnalysisModal from "@/components/dashboard/AiAnalysisModal";
+import BudgetCard from "@/components/dashboard/BudgetCard";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -97,6 +99,11 @@ interface DashboardData {
   };
   trendData: { name: string; Pemasukan: number; Pengeluaran: number }[];
   budgetData: { category: string; budget: number; actual: number }[];
+}
+
+interface UserProfile {
+  name: string | null;
+  avatar_url: string | null;
 }
 
 const PIE_CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
@@ -226,13 +233,54 @@ export default function Dashboard() {
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const router = useRouter();
 
-  // toast/snackbar state
-  // const [toast, setToast] = useState<null | {
-  //   message: string;
-  //   type?: "success" | "error";
-  // }>(null);
+  // AI Analysis modal state
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<string | null>(null);
+  const [aiMonthName, setAiMonthName] = useState("");
+  const [aiYear, setAiYear] = useState(0);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  // Fetch AI analysis
+  async function fetchAiAnalysis() {
+    setIsAiLoading(true);
+    setAiError(null);
+    setIsAiModalOpen(true);
+    try {
+      const res = await fetch("/api/ai-analysis");
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Gagal memuat analisis");
+      }
+      const data = await res.json();
+      setAiAnalysis(data.analysis);
+      setAiMonthName(data.monthName);
+      setAiYear(data.year);
+    } catch (err: any) {
+      setAiError(err.message);
+    } finally {
+      setIsAiLoading(false);
+    }
+  }
+
+  // Fetch user profile
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const res = await fetch("/api/profile");
+        if (res.ok) {
+          const data = await res.json();
+          setUserProfile(data.user);
+        }
+      } catch {
+        // Silently fail
+      }
+    }
+    fetchProfile();
+  }, []);
 
   const handleApplyFilter = () => {
     setActiveDateRange(selectedDateRange);
@@ -303,7 +351,6 @@ export default function Dashboard() {
     if (tx.category && typeof tx.category !== "string") {
       categoryId = (tx.category as any).id ?? "";
     } else {
-      // jika category hanya string (nama), coba cari id dari nama
       if (typeof tx.category === "string" && categories.length > 0) {
         const match = categories.find((c) => c.name === tx.category);
         categoryId = match ? (match.id as string) : "";
@@ -434,7 +481,6 @@ export default function Dashboard() {
       // re-fetch categories atau push ke state
       await fetchCategories();
 
-      // isi form dengan category baru
       setForm((s) => ({
         ...s,
         categoryId: created.id ?? created.name,
@@ -451,13 +497,6 @@ export default function Dashboard() {
       setAddingCategory(false);
     }
   }
-
-  // auto-hide toast after 3s
-  // useEffect(() => {
-  //   if (!toast) return;
-  //   const t = setTimeout(() => toast(null), 3000);
-  //   return () => clearTimeout(t);
-  // }, [toast]);
 
   if (isLoading)
     return (
@@ -500,15 +539,13 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Mobile: FAB logout (ikon-only) */}
-          <div className="md:hidden flex items-center">
-            {/* beri margin kiri agar tidak menempel ke pinggir */}
-            <div className="mr-1">
-              <LogoutButton
-                variant="icon"
-                className="bg-white/90 dark:bg-slate-800/90"
-              />
-            </div>
+          {/* Mobile: Profile Menu */}
+          <div className="md:hidden">
+            <ProfileMenu 
+              variant="icon" 
+              userName={userProfile?.name}
+              avatarUrl={userProfile?.avatar_url}
+            />
           </div>
 
           {/* Desktop controls */}
@@ -522,8 +559,12 @@ export default function Dashboard() {
               Terapkan
             </Button>
 
-            {/* Logout full button */}
-            <LogoutButton variant="full" />
+            {/* Profile Menu with Logout */}
+            <ProfileMenu 
+              variant="full" 
+              userName={userProfile?.name}
+              avatarUrl={userProfile?.avatar_url}
+            />
           </div>
         </div>
 
@@ -538,7 +579,6 @@ export default function Dashboard() {
             <Button onClick={handleApplyFilter} className="flex-1">
               Terapkan
             </Button>
-            {/* spacing kanan agar FAB tidak overlap */}
           </div>
         </div>
       </header>
@@ -550,6 +590,22 @@ export default function Dashboard() {
       <SmartAiInput 
         categories={categories} 
         onTransactionAdded={() => setRefreshKey(k => k + 1)} 
+      />
+
+      {/* AI Analysis Button */}
+      <div className="flex justify-center sm:justify-start">
+        <AiAnalysisButton onClick={fetchAiAnalysis} isLoading={isAiLoading} />
+      </div>
+
+      {/* AI Analysis Modal */}
+      <AiAnalysisModal
+        open={isAiModalOpen}
+        onOpenChange={setIsAiModalOpen}
+        analysis={aiAnalysis}
+        monthName={aiMonthName}
+        year={aiYear}
+        isLoading={isAiLoading}
+        error={aiError}
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -653,26 +709,16 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
-        <Card className="lg:col-span-2  overflow-x-auto">
-          <CardHeader>
-            <CardTitle>Status Budget</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {budgetData.length > 0 ? (
-              budgetData.map((item) => (
-                <BudgetStatus
-                  key={item.category}
-                  item={item}
-                  formatter={formatCurrency}
-                />
-              ))
-            ) : (
-              <div className="text-sm text-muted-foreground">
-                Anda belum mengatur budget.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-2">
+          <BudgetCard
+            budgetData={budgetData}
+            categories={categories}
+            month={activeDateRange?.from ? activeDateRange.from.getMonth() + 1 : new Date().getMonth() + 1}
+            year={activeDateRange?.from ? activeDateRange.from.getFullYear() : new Date().getFullYear()}
+            onBudgetChange={() => setRefreshKey(k => k + 1)}
+            formatter={formatCurrency}
+          />
+        </div>
         <div className="lg:col-span-3 overflow-x-auto">
           <RecentTransactionsCard
             currentPeriod={currentPeriod}

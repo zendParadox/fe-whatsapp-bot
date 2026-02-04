@@ -1,15 +1,17 @@
+import { Edit, Trash } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import { Button } from "../ui/button";
 import {
   AlertDialog,
   AlertDialogTrigger,
   AlertDialogContent,
+  AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogCancel,
   AlertDialogAction,
-} from "@radix-ui/react-alert-dialog";
-import { Edit, Trash } from "lucide-react";
-import React, { useState, useMemo } from "react";
-import { Button } from "../ui/button";
-import { AlertDialogHeader } from "../ui/alert-dialog";
+} from "../ui/alert-dialog";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
 import {
   Table,
@@ -119,32 +121,25 @@ export default function RecentTransactionsCard({
                               <AlertDialogTitle>
                                 Apakah anda yakin ingin menghapus data ini?
                               </AlertDialogTitle>
-                            </AlertDialogHeader>
-
-                            <div className="mt-2">
-                              <p className="text-sm text-muted-foreground">
+                              <AlertDialogDescription>
                                 Transaksi tanggal{" "}
                                 {new Date(tx.created_at).toLocaleDateString(
                                   "id-ID"
                                 )}{" "}
                                 - {getCategoryName(tx.category)} -{" "}
                                 {formatCurrency(Number(tx.amount))}
-                              </p>
-                            </div>
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
 
-                            <div className="mt-4 flex justify-end gap-2">
-                              <AlertDialogCancel asChild>
-                                <Button variant="outline">Batal</Button>
-                              </AlertDialogCancel>
-                              <AlertDialogAction asChild>
-                                <Button
-                                  variant="destructive"
-                                  onClick={() => handleDeleteConfirmed(tx)}
-                                  disabled={isDeleting}>
-                                  {isDeleting ? "Menghapus..." : "Hapus"}
-                                </Button>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batal</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteConfirmed(tx)}
+                                disabled={isDeleting}
+                                className="bg-destructive text-white hover:bg-destructive/90">
+                                {isDeleting ? "Menghapus..." : "Hapus"}
                               </AlertDialogAction>
-                            </div>
+                            </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
                       </div>
