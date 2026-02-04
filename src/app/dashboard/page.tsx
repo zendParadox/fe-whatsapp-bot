@@ -61,6 +61,7 @@ import SmartAiInput from "@/components/dashboard/SmartAiInput";
 import WhatsAppBotBanner from "@/components/dashboard/WhatsAppBotBanner";
 import AiAnalysisButton from "@/components/dashboard/AiAnalysisButton";
 import AiAnalysisModal from "@/components/dashboard/AiAnalysisModal";
+import BudgetCard from "@/components/dashboard/BudgetCard";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -708,26 +709,16 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
-        <Card className="lg:col-span-2  overflow-x-auto">
-          <CardHeader>
-            <CardTitle>Status Budget</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {budgetData.length > 0 ? (
-              budgetData.map((item) => (
-                <BudgetStatus
-                  key={item.category}
-                  item={item}
-                  formatter={formatCurrency}
-                />
-              ))
-            ) : (
-              <div className="text-sm text-muted-foreground">
-                Anda belum mengatur budget.
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-2">
+          <BudgetCard
+            budgetData={budgetData}
+            categories={categories}
+            month={activeDateRange?.from ? activeDateRange.from.getMonth() + 1 : new Date().getMonth() + 1}
+            year={activeDateRange?.from ? activeDateRange.from.getFullYear() : new Date().getFullYear()}
+            onBudgetChange={() => setRefreshKey(k => k + 1)}
+            formatter={formatCurrency}
+          />
+        </div>
         <div className="lg:col-span-3 overflow-x-auto">
           <RecentTransactionsCard
             currentPeriod={currentPeriod}
