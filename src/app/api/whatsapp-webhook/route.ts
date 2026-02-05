@@ -43,14 +43,14 @@ export async function POST(request: NextRequest) {
 
     // Deteksi apakah ini LID (Linked ID) - LID biasanya > 15 digit dan tidak dimulai dengan 62/08
     const isLid = rawSender.length > 15 || (!rawSender.startsWith("62") && !rawSender.startsWith("0") && rawSender.length > 10);
-    
+
     let normalizedSender = rawSender;
     let lidValue: string | null = null;
 
     if (isLid) {
       lidValue = rawSender;
       console.log(`🔗 Detected LID format: ${lidValue}`);
-      
+
       // Cari mapping LID -> phone di database
       const mapping = await prisma.lidMapping.findUnique({
         where: { lid: lidValue }
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       } else {
         // Tidak ada mapping - cek apakah user sedang mendaftarkan nomornya
         const trimmedMessage = message.trim();
-        
+
         // Jika pesan berupa nomor telepon (format: 08xxx atau 62xxx atau +62xxx)
         const phoneRegex = /^(\+?62|0)[0-9]{8,12}$/;
         if (phoneRegex.test(trimmedMessage.replace(/[\s-]/g, ""))) {
@@ -139,6 +139,14 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Handler untuk sapaan "Halo GoTEK Bot!"
+    const trimmedMessage = message.trim().toLowerCase();
+    if (trimmedMessage === "halo gotek bot!" || trimmedMessage === "halo gotek bot") {
+      return NextResponse.json({
+        message: `👋 *Halo ${user.name || "Sobat GoTEK"}!*\n\nSelamat datang di GoTEK Bot! 🤖\n\nSaya siap membantu Anda mencatat keuangan dengan mudah.\n\nKetik *help* untuk melihat panduan penggunaan. 🚀`
+      });
+    }
+
     const args = message.trim().split(" ");
     const command = args[0].toLowerCase();
 
@@ -166,7 +174,7 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      
+
       let budgetAlert = "";
       if (parsedData.type === "EXPENSE") {
         const alert = await checkBudgetStatus(user.id, category.id, parsedData.amount);
@@ -186,7 +194,7 @@ export async function POST(request: NextRequest) {
 
       const formattedAmount = `Rp ${parsedData.amount.toLocaleString("id-ID")}`;
       const typeText = parsedData.type === "INCOME" ? "Pemasukan" : "Pengeluaran";
-      
+
       let reply = `✅ *${typeText} Tercatat!*`;
       reply += `\n💰 Nominal: ${formattedAmount}`;
       reply += `\n📂 Kategori: ${category.name}`;
@@ -250,212 +258,212 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    
+
     if (command === "laporan" || command === "report") {
-        const type = args[1]?.toLowerCase();
-        
-        if (type === "hari" || type === "today" || type === "harian") {
-             const startOfDay = new Date();
-             startOfDay.setHours(0,0,0,0);
-             const endOfDay = new Date();
-             endOfDay.setHours(23,59,59,999);
+      const type = args[1]?.toLowerCase();
 
-             const transactions = await prisma.transaction.findMany({
-                where: {
-                    user_id: user.id,
-                    created_at: { gte: startOfDay, lte: endOfDay }
-                }
-             });
+      if (type === "hari" || type === "today" || type === "harian") {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
 
-             const income = transactions.filter(t => t.type === "INCOME").reduce((acc, t) => acc + t.amount.toNumber(), 0);
-             const expense = transactions.filter(t => t.type === "EXPENSE").reduce((acc, t) => acc + t.amount.toNumber(), 0);
+        const transactions = await prisma.transaction.findMany({
+          where: {
+            user_id: user.id,
+            created_at: { gte: startOfDay, lte: endOfDay }
+          }
+        });
 
-             return NextResponse.json({
-                message: `📊 *Laporan Hari Ini*\n\n📈 Pemasukan: Rp ${income.toLocaleString("id-ID")}\n📉 Pengeluaran: Rp ${expense.toLocaleString("id-ID")}\n\nBalance: Rp ${(income - expense).toLocaleString("id-ID")}`
-             });
+        const income = transactions.filter(t => t.type === "INCOME").reduce((acc, t) => acc + t.amount.toNumber(), 0);
+        const expense = transactions.filter(t => t.type === "EXPENSE").reduce((acc, t) => acc + t.amount.toNumber(), 0);
 
-        } else if (type === "bulan" || type === "month" || type === "bulanan") {
-             const now = new Date();
-             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-             const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        return NextResponse.json({
+          message: `📊 *Laporan Hari Ini*\n\n📈 Pemasukan: Rp ${income.toLocaleString("id-ID")}\n📉 Pengeluaran: Rp ${expense.toLocaleString("id-ID")}\n\nBalance: Rp ${(income - expense).toLocaleString("id-ID")}`
+        });
 
-             const transactions = await prisma.transaction.findMany({
-                where: {
-                    user_id: user.id,
-                    created_at: { gte: startOfMonth, lte: endOfMonth }
-                }
-             });
-
-             const income = transactions.filter(t => t.type === "INCOME").reduce((acc, t) => acc + t.amount.toNumber(), 0);
-             const expense = transactions.filter(t => t.type === "EXPENSE").reduce((acc, t) => acc + t.amount.toNumber(), 0);
-
-             return NextResponse.json({
-                message: `📊 *Laporan Bulan Ini*\n\n📈 Pemasukan: Rp ${income.toLocaleString("id-ID")}\n📉 Pengeluaran: Rp ${expense.toLocaleString("id-ID")}\n\nBalance: Rp ${(income - expense).toLocaleString("id-ID")}`
-             });
-        }
-    }
-
-   
-    if (command === "cek" && (args[1] === "budget" || args[1] === "anggaran")) {
+      } else if (type === "bulan" || type === "month" || type === "bulanan") {
         const now = new Date();
-        const currentMonth = now.getMonth() + 1;
-        
-        const budgets = await prisma.budget.findMany({
-            where: { user_id: user.id, month: currentMonth, year: now.getFullYear() },
-            include: { category: true }
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+        const transactions = await prisma.transaction.findMany({
+          where: {
+            user_id: user.id,
+            created_at: { gte: startOfMonth, lte: endOfMonth }
+          }
         });
 
-        if (budgets.length === 0) {
-            return NextResponse.json({ message: "⚠️ Anda belum mengatur budget untuk bulan ini." });
-        }
+        const income = transactions.filter(t => t.type === "INCOME").reduce((acc, t) => acc + t.amount.toNumber(), 0);
+        const expense = transactions.filter(t => t.type === "EXPENSE").reduce((acc, t) => acc + t.amount.toNumber(), 0);
 
-        let reply = "📊 *Status Budget Bulan Ini*\n";
-        
-        for (const b of budgets) {
-             const aggregations = await prisma.transaction.aggregate({
-                 where: {
-                     user_id: user.id,
-                     category_id: b.category_id,
-                     type: "EXPENSE",
-                     created_at: {
-                         gte: new Date(now.getFullYear(), now.getMonth(), 1),
-                         lte: new Date(now.getFullYear(), now.getMonth() + 1, 0)
-                     }
-                 },
-                 _sum: { amount: true }
-             });
-
-             const used = aggregations._sum.amount?.toNumber() || 0;
-             const total = b.amount.toNumber();
-             const percent = Math.round((used / total) * 100);
-             const icon = percent > 100 ? "🔴" : percent > 80 ? "🟡" : "🟢";
-
-             reply += `\n${icon} *${b.category.name}*: ${percent}%`;
-             reply += `\n   (Rp ${used.toLocaleString("id-ID")} / Rp ${total.toLocaleString("id-ID")})`;
-        }
-
-        return NextResponse.json({ message: reply });
+        return NextResponse.json({
+          message: `📊 *Laporan Bulan Ini*\n\n📈 Pemasukan: Rp ${income.toLocaleString("id-ID")}\n📉 Pengeluaran: Rp ${expense.toLocaleString("id-ID")}\n\nBalance: Rp ${(income - expense).toLocaleString("id-ID")}`
+        });
+      }
     }
 
-  
+
+    if (command === "cek" && (args[1] === "budget" || args[1] === "anggaran")) {
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1;
+
+      const budgets = await prisma.budget.findMany({
+        where: { user_id: user.id, month: currentMonth, year: now.getFullYear() },
+        include: { category: true }
+      });
+
+      if (budgets.length === 0) {
+        return NextResponse.json({ message: "⚠️ Anda belum mengatur budget untuk bulan ini." });
+      }
+
+      let reply = "📊 *Status Budget Bulan Ini*\n";
+
+      for (const b of budgets) {
+        const aggregations = await prisma.transaction.aggregate({
+          where: {
+            user_id: user.id,
+            category_id: b.category_id,
+            type: "EXPENSE",
+            created_at: {
+              gte: new Date(now.getFullYear(), now.getMonth(), 1),
+              lte: new Date(now.getFullYear(), now.getMonth() + 1, 0)
+            }
+          },
+          _sum: { amount: true }
+        });
+
+        const used = aggregations._sum.amount?.toNumber() || 0;
+        const total = b.amount.toNumber();
+        const percent = Math.round((used / total) * 100);
+        const icon = percent > 100 ? "🔴" : percent > 80 ? "🟡" : "🟢";
+
+        reply += `\n${icon} *${b.category.name}*: ${percent}%`;
+        reply += `\n   (Rp ${used.toLocaleString("id-ID")} / Rp ${total.toLocaleString("id-ID")})`;
+      }
+
+      return NextResponse.json({ message: reply });
+    }
+
+
     if (command === "hapus" || command === "undo" || command === "batal") {
-        const lastTx = await prisma.transaction.findFirst({
-            where: { user_id: user.id },
-            orderBy: { created_at: "desc" }
-        });
+      const lastTx = await prisma.transaction.findFirst({
+        where: { user_id: user.id },
+        orderBy: { created_at: "desc" }
+      });
 
-        if (!lastTx) {
-            return NextResponse.json({ message: "⚠️ Tidak ada transaksi yang bisa dihapus." });
-        }
+      if (!lastTx) {
+        return NextResponse.json({ message: "⚠️ Tidak ada transaksi yang bisa dihapus." });
+      }
 
-        const isToday = new Date().toDateString() === lastTx.created_at.toDateString();
-        if (!isToday) {
-             return NextResponse.json({ message: "⚠️ Hanya bisa menghapus transaksi hari ini." });
-        }
+      const isToday = new Date().toDateString() === lastTx.created_at.toDateString();
+      if (!isToday) {
+        return NextResponse.json({ message: "⚠️ Hanya bisa menghapus transaksi hari ini." });
+      }
 
-        await prisma.transaction.delete({ where: { id: lastTx.id } });
+      await prisma.transaction.delete({ where: { id: lastTx.id } });
 
-        return NextResponse.json({ 
-            message: `🗑️ Transaksi terakhir dihapus:\nRp ${lastTx.amount.toNumber().toLocaleString("id-ID")} (${lastTx.description})`
-        });
+      return NextResponse.json({
+        message: `🗑️ Transaksi terakhir dihapus:\nRp ${lastTx.amount.toNumber().toLocaleString("id-ID")} (${lastTx.description})`
+      });
     }
 
 
     if (command === "hutang" || command === "piutang") {
-        const parsedData = parseDebtMessage(message);
-        
-        if (!parsedData) {
-             return NextResponse.json({ 
-                 message: `❌ Format salah.\n\nContoh:\n\`${command} 50k @Budi beli pulsa\``
-             });
+      const parsedData = parseDebtMessage(message);
+
+      if (!parsedData) {
+        return NextResponse.json({
+          message: `❌ Format salah.\n\nContoh:\n\`${command} 50k @Budi beli pulsa\``
+        });
+      }
+
+      await prisma.debt.create({
+        data: {
+          user_id: user.id,
+          type: parsedData.type,
+          amount: new Decimal(parsedData.amount),
+          person_name: parsedData.personName,
+          description: parsedData.description,
+          status: DebtStatus.UNPAID
         }
+      });
 
-        await prisma.debt.create({
-            data: {
-                user_id: user.id,
-                type: parsedData.type,
-                amount: new Decimal(parsedData.amount),
-                person_name: parsedData.personName,
-                description: parsedData.description,
-                status: DebtStatus.UNPAID
-            }
-        });
+      const typeLabel = parsedData.type === DebtType.HUTANG ? "Hutang ke" : "Piutang ke";
 
-        const typeLabel = parsedData.type === DebtType.HUTANG ? "Hutang ke" : "Piutang ke";
-        
-        return NextResponse.json({ 
-            message: `📒 *Catat ${command.charAt(0).toUpperCase() + command.slice(1)} Berhasil!*\n\nAnda memiliki ${typeLabel} *${parsedData.personName}*\nJumlah: Rp ${parsedData.amount.toLocaleString("id-ID")}\nDesc: ${parsedData.description}`
-        });
+      return NextResponse.json({
+        message: `📒 *Catat ${command.charAt(0).toUpperCase() + command.slice(1)} Berhasil!*\n\nAnda memiliki ${typeLabel} *${parsedData.personName}*\nJumlah: Rp ${parsedData.amount.toLocaleString("id-ID")}\nDesc: ${parsedData.description}`
+      });
     }
 
     if (command === "cek" && (args[1] === "hutang" || args[1] === "piutang")) {
-        const debts = await prisma.debt.findMany({
-            where: { user_id: user.id, status: DebtStatus.UNPAID },
-            orderBy: { created_at: "desc" }
+      const debts = await prisma.debt.findMany({
+        where: { user_id: user.id, status: DebtStatus.UNPAID },
+        orderBy: { created_at: "desc" }
+      });
+
+      if (debts.length === 0) {
+        return NextResponse.json({ message: "🎉 Tidak ada hutang/piutang yang belum lunas!" });
+      }
+
+      let reply = "📒 *Daftar Hutang & Piutang Belum Lunas*\n";
+
+      const hutangList = debts.filter(d => d.type === DebtType.HUTANG);
+      const piutangList = debts.filter(d => d.type === DebtType.PIUTANG);
+
+      if (hutangList.length > 0) {
+        reply += "\n🔴 *HUTANG (Anda Pinjam)*\n";
+        hutangList.forEach(d => {
+          reply += `- Rp ${d.amount.toNumber().toLocaleString("id-ID")} ke *${d.person_name}* (${d.description})\n`;
         });
+      }
 
-        if (debts.length === 0) {
-            return NextResponse.json({ message: "🎉 Tidak ada hutang/piutang yang belum lunas!" });
-        }
+      if (piutangList.length > 0) {
+        reply += "\n🟢 *PIUTANG (Orang Pinjam)*\n";
+        piutangList.forEach(d => {
+          reply += `- Rp ${d.amount.toNumber().toLocaleString("id-ID")} dari *${d.person_name}* (${d.description})\n`;
+        });
+      }
 
-        let reply = "📒 *Daftar Hutang & Piutang Belum Lunas*\n";
-
-        const hutangList = debts.filter(d => d.type === DebtType.HUTANG);
-        const piutangList = debts.filter(d => d.type === DebtType.PIUTANG);
-
-        if (hutangList.length > 0) {
-            reply += "\n🔴 *HUTANG (Anda Pinjam)*\n";
-            hutangList.forEach(d => {
-                reply += `- Rp ${d.amount.toNumber().toLocaleString("id-ID")} ke *${d.person_name}* (${d.description})\n`;
-            });
-        }
-
-        if (piutangList.length > 0) {
-            reply += "\n🟢 *PIUTANG (Orang Pinjam)*\n";
-            piutangList.forEach(d => {
-                reply += `- Rp ${d.amount.toNumber().toLocaleString("id-ID")} dari *${d.person_name}* (${d.description})\n`;
-            });
-        }
-        
-        return NextResponse.json({ message: reply });
+      return NextResponse.json({ message: reply });
     }
 
     if (command === "lunas" || command === "bayar") {
-        const personMatch = message.match(/@(\w+)/);
-        const personName = personMatch && personMatch[1] ? personMatch[1] : null;
+      const personMatch = message.match(/@(\w+)/);
+      const personName = personMatch && personMatch[1] ? personMatch[1] : null;
 
-        if (!personName) {
-            return NextResponse.json({ message: "❌ Sebutkan nama orang yang lunas.\nContoh: `lunas @Budi`" });
+      if (!personName) {
+        return NextResponse.json({ message: "❌ Sebutkan nama orang yang lunas.\nContoh: `lunas @Budi`" });
+      }
+
+
+      const unpaidDebts = await prisma.debt.findMany({
+        where: {
+          user_id: user.id,
+          person_name: { equals: personName, mode: "insensitive" },
+          status: DebtStatus.UNPAID
         }
+      });
 
-       
-        const unpaidDebts = await prisma.debt.findMany({
-            where: { 
-                user_id: user.id, 
-                person_name: { equals: personName, mode: "insensitive" },
-                status: DebtStatus.UNPAID 
-            }
-        });
+      if (unpaidDebts.length === 0) {
+        return NextResponse.json({ message: `⚠️ Tidak ada hutang/piutang aktif dengan nama *${personName}*.` });
+      }
 
-        if (unpaidDebts.length === 0) {
-            return NextResponse.json({ message: `⚠️ Tidak ada hutang/piutang aktif dengan nama *${personName}*.` });
-        }
 
-        
-        await prisma.debt.updateMany({
-            where: {
-                user_id: user.id,
-                person_name: { equals: personName, mode: "insensitive" },
-                status: DebtStatus.UNPAID
-            },
-            data: { status: DebtStatus.PAID }
-        });
+      await prisma.debt.updateMany({
+        where: {
+          user_id: user.id,
+          person_name: { equals: personName, mode: "insensitive" },
+          status: DebtStatus.UNPAID
+        },
+        data: { status: DebtStatus.PAID }
+      });
 
-        return NextResponse.json({ message: `✅ Semua hutang/piutang dengan *${personName}* telah ditandai LUNAS! 🎉` });
+      return NextResponse.json({ message: `✅ Semua hutang/piutang dengan *${personName}* telah ditandai LUNAS! 🎉` });
     }
 
 
-    
+
     const aiTransactions = await parseTransactionFromText(message);
 
     if (aiTransactions && aiTransactions.length > 0) {
@@ -463,7 +471,7 @@ export async function POST(request: NextRequest) {
       let count = 0;
 
       for (const tx of aiTransactions) {
-        
+
         let category = await prisma.category.findFirst({
           where: {
             user_id: user.id,
@@ -477,7 +485,7 @@ export async function POST(request: NextRequest) {
           });
         }
 
-      
+
         let budgetAlert = "";
         if (tx.type === "EXPENSE") {
           const alert = await checkBudgetStatus(user.id, category.id, tx.amount);
@@ -510,7 +518,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    
+
     const helpMessage = `👋 *GoTEK Bot Helper*
 
 *1. 📝 Catat Transaksi*
