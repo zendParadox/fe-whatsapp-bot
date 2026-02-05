@@ -469,52 +469,68 @@ export async function POST(request: NextRequest) {
     if (aiTransactions && aiTransactions.length > 0) {
       let reply = "✨ *Sistem AI (Gemini)*\n";
       let count = 0;
+      let errors: string[] = [];
 
       for (const tx of aiTransactions) {
+        try {
+          console.log(`📝 Processing transaction: ${tx.description} (${tx.amount})`);
 
-        let category = await prisma.category.findFirst({
-          where: {
-            user_id: user.id,
-            name: { equals: tx.category, mode: "insensitive" },
-          },
-        });
-
-        if (!category) {
-          category = await prisma.category.create({
-            data: { name: tx.category, user_id: user.id },
+          let category = await prisma.category.findFirst({
+            where: {
+              user_id: user.id,
+              name: { equals: tx.category, mode: "insensitive" },
+            },
           });
+
+          if (!category) {
+            category = await prisma.category.create({
+              data: { name: tx.category, user_id: user.id },
+            });
+            console.log(`✅ Created category: ${tx.category}`);
+          }
+
+          let budgetAlert = "";
+          if (tx.type === "EXPENSE") {
+            const alert = await checkBudgetStatus(user.id, category.id, tx.amount);
+            if (alert) budgetAlert = alert;
+          }
+
+          const typeEnum =
+            tx.type === "INCOME" ? TransactionType.INCOME : TransactionType.EXPENSE;
+
+          await prisma.transaction.create({
+            data: {
+              type: typeEnum,
+              amount: new Decimal(tx.amount),
+              description: tx.description,
+              user_id: user.id,
+              category_id: category.id,
+            },
+          });
+
+          const icon = tx.type === "INCOME" ? "📈" : "📉";
+          reply += `\n${icon} *${tx.category}*: Rp ${tx.amount.toLocaleString("id-ID")}`;
+          if (tx.description) reply += ` (${tx.description})`;
+          if (budgetAlert) reply += ` ${budgetAlert}`;
+          count++;
+          console.log(`✅ Transaction saved: ${tx.description}`);
+        } catch (txError: any) {
+          console.error(`❌ Error processing transaction:`, tx, txError);
+          errors.push(`${tx.description}: ${txError.message}`);
         }
-
-
-        let budgetAlert = "";
-        if (tx.type === "EXPENSE") {
-          const alert = await checkBudgetStatus(user.id, category.id, tx.amount);
-          if (alert) budgetAlert = alert;
-        }
-
-        const typeEnum =
-          tx.type === "INCOME" ? TransactionType.INCOME : TransactionType.EXPENSE;
-
-        await prisma.transaction.create({
-          data: {
-            type: typeEnum,
-            amount: new Decimal(tx.amount),
-            description: tx.description,
-            user_id: user.id,
-            category_id: category.id,
-          },
-        });
-
-        const icon = tx.type === "INCOME" ? "📈" : "📉";
-        reply += `\n${icon} *${tx.category}*: Rp ${tx.amount.toLocaleString("id-ID")}`;
-        if (tx.description) reply += ` (${tx.description})`;
-        if (budgetAlert) reply += ` ${budgetAlert}`;
-        count++;
       }
 
       if (count > 0) {
         reply += `\n\n✅ Berhasil mencatat ${count} transaksi.`;
+        if (errors.length > 0) {
+          reply += `\n⚠️ ${errors.length} transaksi gagal.`;
+        }
         return NextResponse.json({ message: reply });
+      } else if (errors.length > 0) {
+        console.error("❌ All transactions failed:", errors);
+        return NextResponse.json({
+          message: `❌ Gagal mencatat transaksi:\n${errors.join('\n')}`
+        });
       }
     }
 
