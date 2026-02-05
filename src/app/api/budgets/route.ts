@@ -1,4 +1,4 @@
-/*eslint-disable*/
+
 import { NextResponse, type NextRequest } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { cookies } from "next/headers";

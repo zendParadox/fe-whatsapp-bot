@@ -101,6 +101,7 @@ export default function AvatarUpload({
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) handleFileSelect(file);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -119,9 +120,8 @@ export default function AvatarUpload({
     <div className="flex flex-col items-center gap-4">
       {/* Avatar Container */}
       <div
-        className={`relative group cursor-pointer transition-all duration-300 ${
-          isDragging ? "scale-105" : ""
-        }`}
+        className={`relative group cursor-pointer transition-all duration-300 ${isDragging ? "scale-105" : ""
+          }`}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -129,11 +129,10 @@ export default function AvatarUpload({
       >
         {/* Avatar Image or Initials */}
         <div
-          className={`w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 transition-all duration-300 ${
-            isDragging
+          className={`w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden border-4 transition-all duration-300 ${isDragging
               ? "border-emerald-500 shadow-lg shadow-emerald-500/30"
               : "border-white dark:border-slate-700 shadow-lg"
-          }`}
+            }`}
         >
           {displayUrl ? (
             /* eslint-disable-next-line @next/next/no-img-element */

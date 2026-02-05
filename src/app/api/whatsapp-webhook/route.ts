@@ -469,7 +469,7 @@ export async function POST(request: NextRequest) {
     if (aiTransactions && aiTransactions.length > 0) {
       let reply = "✨ *Sistem AI (Gemini)*\n";
       let count = 0;
-      let errors: string[] = [];
+      const errors: string[] = [];
 
       for (const tx of aiTransactions) {
         try {
@@ -514,9 +514,10 @@ export async function POST(request: NextRequest) {
           if (budgetAlert) reply += ` ${budgetAlert}`;
           count++;
           console.log(`✅ Transaction saved: ${tx.description}`);
-        } catch (txError: any) {
+        } catch (txError) {
           console.error(`❌ Error processing transaction:`, tx, txError);
-          errors.push(`${tx.description}: ${txError.message}`);
+          const errorMessage = txError instanceof Error ? txError.message : String(txError);
+          errors.push(`${tx.description}: ${errorMessage}`);
         }
       }
 

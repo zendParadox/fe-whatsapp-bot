@@ -33,6 +33,7 @@ interface FormItem {
 export default function SmartAiInput({ onTransactionAdded, categories }: SmartAiInputProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [parsedTransactions, setParsedTransactions] = useState<ParsedTransaction[]>([]);
   const [formItems, setFormItems] = useState<FormItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -72,11 +73,11 @@ export default function SmartAiInput({ onTransactionAdded, categories }: SmartAi
 
       const json = await res.json();
       const dataArr = json.data as ParsedTransaction[];
-      
+
       if (!dataArr || dataArr.length === 0) {
         throw new Error("Tidak ada transaksi yang terdeteksi.");
       }
-      
+
       setParsedTransactions(dataArr);
 
       const items: FormItem[] = dataArr.map((data) => {
@@ -124,7 +125,7 @@ export default function SmartAiInput({ onTransactionAdded, categories }: SmartAi
 
   async function handleSaveAll() {
     if (formItems.length === 0) return;
-    
+
     setIsSaving(true);
     let successCount = 0;
     let failCount = 0;
@@ -231,9 +232,9 @@ export default function SmartAiInput({ onTransactionAdded, categories }: SmartAi
                 }}
               />
               <div className="absolute bottom-3 right-3">
-                <Button 
-                  size="sm" 
-                  onClick={handleAnalyze} 
+                <Button
+                  size="sm"
+                  onClick={handleAnalyze}
                   disabled={isLoading || !input.trim()}
                   className="bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 border border-neon-cyan/20"
                 >
@@ -248,9 +249,9 @@ export default function SmartAiInput({ onTransactionAdded, categories }: SmartAi
                   <h4 className="font-semibold text-sm text-muted-foreground">
                     Preview Transaksi ({formItems.length} item)
                   </h4>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={handleClearAll}
                     className="text-muted-foreground hover:text-foreground"
                   >
@@ -261,45 +262,45 @@ export default function SmartAiInput({ onTransactionAdded, categories }: SmartAi
 
                 <div className="space-y-3 max-h-[400px] overflow-y-auto">
                   {formItems.map((item, index) => (
-                    <div 
-                      key={index} 
+                    <div
+                      key={index}
                       className="bg-muted/40 p-4 rounded-lg border border-border space-y-3"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-medium text-muted-foreground">
                           Transaksi #{index + 1}
                         </span>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-6 w-6 text-red-500 hover:text-red-600"
                           onClick={() => removeFormItem(index)}
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1">
                           <Label className="text-xs">Jumlah</Label>
-                          <Input 
-                            value={item.amount} 
+                          <Input
+                            value={item.amount}
                             onChange={(e) => updateFormItem(index, "amount", e.target.value)}
                             className="h-9"
                           />
                         </div>
                         <div className="space-y-1">
                           <Label className="text-xs">Keterangan</Label>
-                          <Input 
-                            value={item.description} 
+                          <Input
+                            value={item.description}
                             onChange={(e) => updateFormItem(index, "description", e.target.value)}
                             className="h-9"
                           />
                         </div>
                         <div className="space-y-1 sm:col-span-1">
                           <Label className="text-xs">Tipe</Label>
-                          <Select 
-                            value={item.type} 
+                          <Select
+                            value={item.type}
                             onValueChange={(v) => updateFormItem(index, "type", v)}
                           >
                             <SelectTrigger className="h-9 w-full">
@@ -313,8 +314,8 @@ export default function SmartAiInput({ onTransactionAdded, categories }: SmartAi
                         </div>
                         <div className="space-y-1 sm:col-span-1">
                           <Label className="text-xs">Kategori</Label>
-                          <Select 
-                            value={item.categoryId} 
+                          <Select
+                            value={item.categoryId}
                             onValueChange={(v) => updateFormItem(index, "categoryId", v)}
                           >
                             <SelectTrigger className="h-9 w-full">

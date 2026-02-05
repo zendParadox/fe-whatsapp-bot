@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,8 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Sparkles } from "lucide-react";
 
 interface AiAnalysisModalProps {
   open: boolean;
@@ -34,7 +32,7 @@ export default function AiAnalysisModal({
   const renderContent = (content: string) => {
     // Split by lines and process
     const lines = content.split("\n");
-    
+
     return lines.map((line, index) => {
       // Headers
       if (line.startsWith("## ")) {
@@ -44,7 +42,7 @@ export default function AiAnalysisModal({
           </h2>
         );
       }
-      
+
       // Bullet points
       if (line.startsWith("- ") || line.startsWith("• ")) {
         return (
@@ -53,7 +51,7 @@ export default function AiAnalysisModal({
           </li>
         );
       }
-      
+
       // Numbered lists
       if (/^\d+\. /.test(line)) {
         return (
@@ -62,24 +60,24 @@ export default function AiAnalysisModal({
           </li>
         );
       }
-      
+
       // Bold text
       if (line.includes("**")) {
         const parts = line.split(/\*\*(.*?)\*\*/g);
         return (
           <p key={index} className="mb-2">
-            {parts.map((part, i) => 
+            {parts.map((part, i) =>
               i % 2 === 1 ? <strong key={i}>{part}</strong> : part
             )}
           </p>
         );
       }
-      
+
       // Empty lines
       if (line.trim() === "") {
         return <br key={index} />;
       }
-      
+
       // Regular paragraphs
       return (
         <p key={index} className="mb-2">
