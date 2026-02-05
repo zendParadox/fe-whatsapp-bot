@@ -64,6 +64,7 @@ import AiAnalysisModal from "@/components/dashboard/AiAnalysisModal";
 import BudgetCard from "@/components/dashboard/BudgetCard";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 // --- INTERFACE & KONSTANTA ---
 interface CategoryObj {
@@ -530,9 +531,11 @@ export default function Dashboard() {
           {/* Judul */}
           <div className="flex items-center gap-3">
             <div className="flex flex-col">
-              <h1 className="text-2xl sm:text-3xl font-bold">
-                GoTEK
-              </h1>
+              <Link href="/" className="flex items-center gap-2 text-xl font-bold tracking-tighter">
+          <h1 className="bg-gradient-to-r text-3xl from-neon-cyan to-neon-purple bg-clip-text text-transparent dark:text-glow">
+            GoTEK
+          </h1>
+        </Link>
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 Ringkasan & laporan keuangan Anda
               </span>

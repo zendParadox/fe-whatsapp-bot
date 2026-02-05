@@ -14,6 +14,9 @@ import {
   Zap,
   Smartphone,
   Sparkles,
+  PieChart,
+  Wallet,
+  Brain,
 } from "lucide-react";
 
 // ... (keep surrounding code same if possible, but I need to do ReplaceFileContent well)
@@ -68,6 +71,17 @@ function AppFooter() {
         </div>
         <p className="text-muted-foreground mb-4">
           Kelola keuangan dengan cara masa depan.
+        </p>
+        <p className="text-sm text-muted-foreground mb-4">
+          Jika ada kendala, hubungi{" "}
+          <a 
+            href="https://t.me/rafliramadhaniii" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-neon-cyan hover:underline font-medium"
+          >
+            Telegram Support
+          </a>
         </p>
         <p className="text-sm text-zinc-500">
           &copy; {new Date().getFullYear()} GoTEK. All rights reserved.
@@ -139,15 +153,15 @@ export default function HomePage() {
                   <div className="h-12 w-12 rounded-xl bg-neon-cyan/10 flex items-center justify-center mb-4 group-hover:bg-neon-cyan/20 transition-colors">
                     <Sparkles className="h-6 w-6 text-neon-cyan" />
                   </div>
-                  <CardTitle className="text-xl">AI Transaction Parser</CardTitle>
+                  <CardTitle className="text-xl">Multi-Transaction AI</CardTitle>
                   <CardDescription className="text-muted-foreground">
-                    Didukung oleh <strong>Gemini AI</strong>. Ketik &quot;Makan 25rb&quot;, kami yang urus sisanya.
+                    Didukung oleh <strong>Gemini AI</strong>. Ketik beberapa transaksi sekaligus, kami yang urus sisanya.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="p-3 bg-muted rounded-lg text-sm font-mono border border-border text-foreground">
-                    &quot;habis beli kopi 50k&quot; <br/>
-                    Scan: <span className="text-green-500">Kopi (50.000)</span>
+                    &quot;beli bensin 15k dan makan siang 18k&quot; <br/>
+                    → <span className="text-green-500">2 transaksi tercatat</span>
                   </div>
                 </CardContent>
               </Card>
@@ -155,16 +169,16 @@ export default function HomePage() {
               <Card className="glass-card transition-transform duration-300 hover:scale-105 hover:bg-card/70 group">
                 <CardHeader>
                   <div className="h-12 w-12 rounded-xl bg-neon-purple/10 flex items-center justify-center mb-4 group-hover:bg-neon-purple/20 transition-colors">
-                    <Smartphone className="h-6 w-6 text-neon-purple" />
+                    <Wallet className="h-6 w-6 text-neon-purple" />
                   </div>
-                  <CardTitle className="text-xl">Debt Manager</CardTitle>
+                  <CardTitle className="text-xl">Budget Management</CardTitle>
                   <CardDescription className="text-muted-foreground">
-                    Catat hutang teman dan piutang Anda tanpa ribet.
+                    Kelola budget per kategori. Lihat progress real-time dan tetap on track.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="p-3 bg-muted rounded-lg text-sm font-mono border border-border text-foreground">
-                    hutang 100k @Budi
+                    Makan: <span className="text-yellow-500">Rp 350k / 500k (70%)</span>
                   </div>
                 </CardContent>
               </Card>
@@ -172,16 +186,16 @@ export default function HomePage() {
               <Card className="glass-card transition-transform duration-300 hover:scale-105 hover:bg-card/70 group">
                 <CardHeader>
                   <div className="h-12 w-12 rounded-xl bg-neon-pink/10 flex items-center justify-center mb-4 group-hover:bg-neon-pink/20 transition-colors">
-                    <Target className="h-6 w-6 text-neon-pink" />
+                    <Brain className="h-6 w-6 text-neon-pink" />
                   </div>
-                  <CardTitle className="text-xl">Laporan & Budget</CardTitle>
+                  <CardTitle className="text-xl">AI Financial Analysis</CardTitle>
                   <CardDescription className="text-muted-foreground">
-                    Cek laporan harian/bulanan dan sisa budget kapan saja.
+                    Dapatkan insight keuangan bulanan dari Gemini AI secara otomatis.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="p-3 bg-muted rounded-lg text-sm font-mono border border-border text-foreground">
-                    laporan bulan ini
+                    <span className="text-neon-cyan">"Pengeluaran food naik 15%..."</span>
                   </div>
                 </CardContent>
               </Card>
@@ -219,7 +233,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-xl font-bold mb-2">Hubungkan WhatsApp</h3>
                 <p className="text-muted-foreground text-sm px-4">
-                  Scan QR code atau kirim pesan &apos;Halo&apos; ke bot kami untuk verifikasi.
+                  Kirim pesan &apos;Halo&apos; ke bot kami untuk verifikasi.
                 </p>
               </div>
 
@@ -251,17 +265,16 @@ export default function HomePage() {
                             </div>
                              <div className="flex gap-4 justify-end">
                                 <div className="bg-neon-cyan/10 text-neon-cyan p-3 rounded-lg rounded-tr-none max-w-[80%] border border-neon-cyan/20">
-                                    keluar 50rb makan siang @makan
+                                    beli bensin 15k dan makan siang 18k
                                 </div>
                             </div>
                             <div className="flex gap-4">
                                 <div className="bg-muted p-3 rounded-lg rounded-tl-none max-w-[80%]">
-                                    ✅ Transaksi Berhasil!<br/>
-                                    <strong>Jenis:</strong> Pengeluaran<br/>
-                                    <strong>Jumlah:</strong> Rp 50.000<br/>
-                                    <strong>Kategori:</strong> Makan<br/>
+                                    ✅ 2 Transaksi Berhasil!<br/>
+                                    <strong>1. Bensin:</strong> Rp 15.000<br/>
+                                    <strong>2. Makan Siang:</strong> Rp 18.000<br/>
                                     <br/>
-                                    <em>Sisa budget &apos;Makan&apos;: Rp 450.000</em>
+                                    <em>Total: Rp 33.000</em>
                                 </div>
                             </div>
                         </div>
