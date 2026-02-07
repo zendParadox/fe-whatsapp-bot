@@ -1,36 +1,206 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🤖 GoTEK - Financial Tracker with WhatsApp Bot
 
-## Getting Started
+<p align="center">
+  <img src="https://img.shields.io/badge/version-1.5.0-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/Next.js-15.5.9-black.svg" alt="Next.js">
+  <img src="https://img.shields.io/badge/TypeScript-5.0-blue.svg" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Prisma-6.x-2D3748.svg" alt="Prisma">
+</p>
 
-First, run the development server:
+Aplikasi pencatat keuangan pribadi berbasis web dengan integrasi **WhatsApp Bot** untuk mencatat transaksi via chat. Dilengkapi AI Parser (Gemini) untuk memahami pesan natural language.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## ✨ Fitur Utama
+
+### 📊 Dashboard
+
+- Ringkasan pemasukan & pengeluaran
+- Grafik keuangan interaktif
+- Widget budget tracker
+- **Hutang & Piutang Tracker** (BARU!)
+
+### 📱 WhatsApp Bot
+
+Catat keuangan langsung dari WhatsApp:
+
+```
+keluar 50k kopi @minuman
+masuk 1.5jt gaji @kerja
+hutang 100k @Budi modal
+cek budget
+laporan bulan
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 🎯 Budget Management
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Set budget per kategori
+- Alert ketika budget hampir habis
+- Visual progress bar
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 📒 Hutang & Piutang
 
-## Learn More
+- Catat hutang (Anda pinjam) dan piutang (orang pinjam)
+- Tandai lunas dengan mudah
+- Summary net balance
 
-To learn more about Next.js, take a look at the following resources:
+### 🤖 AI Parser (Gemini)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Bot memahami pesan natural language:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+"hari ini makan siang 35rb, bensin 50rb, pulsa 25rb"
+```
 
-## Deploy on Vercel
+Otomatis diparse menjadi 3 transaksi!
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 🔐 Authentication
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Register & Login dengan JWT
+- Forgot Password via WhatsApp
+- Middleware protection
+
+## 🛠️ Tech Stack
+
+| Layer    | Technology                       |
+| -------- | -------------------------------- |
+| Frontend | Next.js 15, React 19, TypeScript |
+| Styling  | Tailwind CSS, Shadcn/UI          |
+| Backend  | Next.js API Routes               |
+| Database | PostgreSQL (Supabase)            |
+| ORM      | Prisma                           |
+| Auth     | JWT, bcrypt                      |
+| AI       | Google Gemini API                |
+| Bot      | Golang + WhatsApp Web API        |
+
+## 📁 Project Structure
+
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── auth/           # Login, register, forgot-password
+│   │   ├── transactions/   # CRUD transaksi
+│   │   ├── budgets/        # Budget management
+│   │   ├── debts/          # Hutang & piutang
+│   │   ├── whatsapp-webhook/  # Webhook dari bot
+│   │   └── ai-analysis/    # AI financial analysis
+│   ├── dashboard/          # Main dashboard
+│   ├── profile/            # User profile
+│   └── login/, register/   # Auth pages
+├── components/
+│   ├── ui/                 # Shadcn components
+│   └── dashboard/          # Dashboard widgets
+└── lib/
+    ├── auth.ts             # Auth utilities
+    ├── gemini.ts           # Gemini AI parser
+    └── whatsapp/           # Bot utilities
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL database (Supabase recommended)
+- Google Gemini API key
+- Golang WhatsApp Bot (optional)
+
+### Installation
+
+1. **Clone repository**
+
+   ```bash
+   git clone https://github.com/your-username/fe-whatsapp-bot.git
+   cd fe-whatsapp-bot
+   ```
+
+2. **Install dependencies**
+
+   ```bash
+   npm install
+   ```
+
+3. **Setup environment**
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Fill in your `.env`:
+
+   ```env
+   DATABASE_URL="postgresql://..."
+   JWT_SECRET="your-secret-key"
+   GEMINI_API_KEY="your-gemini-api-key"
+   GOLANG_BOT_URL="https://your-bot-url.com"
+   ```
+
+4. **Setup database**
+
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
+
+5. **Run development server**
+
+   ```bash
+   npm run dev
+   ```
+
+6. Open [http://localhost:3000](http://localhost:3000)
+
+## 📱 WhatsApp Bot Commands
+
+| Command          | Description     | Example                    |
+| ---------------- | --------------- | -------------------------- |
+| `masuk/keluar`   | Catat transaksi | `keluar 50k kopi @minuman` |
+| `hutang/piutang` | Catat hutang    | `hutang 100k @Budi modal`  |
+| `cek hutang`     | Lihat daftar    | `cek hutang`               |
+| `lunas`          | Tandai lunas    | `lunas @Budi`              |
+| `budget`         | Set budget      | `budget 1jt @makan`        |
+| `cek budget`     | Lihat status    | `cek budget`               |
+| `laporan hari`   | Laporan harian  | `laporan hari`             |
+| `laporan bulan`  | Laporan bulanan | `laporan bulan`            |
+| `undo`           | Hapus terakhir  | `undo`                     |
+| `help`           | Panduan         | `help`                     |
+
+## 🌐 Deployment
+
+### Vercel (Recommended)
+
+1. Push ke GitHub
+2. Import di [Vercel](https://vercel.com)
+3. Set environment variables
+4. Deploy!
+
+### Database (Supabase)
+
+1. Create project di [Supabase](https://supabase.com)
+2. Copy connection string ke `DATABASE_URL`
+
+## 📄 API Endpoints
+
+| Method   | Endpoint                    | Description       |
+| -------- | --------------------------- | ----------------- |
+| POST     | `/api/auth/login`           | User login        |
+| POST     | `/api/auth/register`        | User register     |
+| POST     | `/api/auth/forgot-password` | Request reset     |
+| POST     | `/api/auth/reset-password`  | Reset password    |
+| GET/POST | `/api/transactions`         | CRUD transactions |
+| GET/POST | `/api/budgets`              | CRUD budgets      |
+| GET/POST | `/api/debts`                | CRUD debts        |
+| POST     | `/api/whatsapp-webhook`     | Bot webhook       |
+
+## 🤝 Contributing
+
+Pull requests are welcome! For major changes, please open an issue first.
+
+## 📝 License
+
+[MIT](LICENSE)
+
+---
+
+<p align="center">
+  Made with ❤️ by <a href="https://github.com/zendParadox">zendParadox</a>
+</p>
