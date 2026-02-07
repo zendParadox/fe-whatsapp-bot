@@ -141,9 +141,11 @@ export async function POST(request: NextRequest) {
 
     // Handler untuk sapaan "Halo GoTEK Bot!"
     const trimmedMessage = message.trim().toLowerCase();
-    if (trimmedMessage === "halo gotek bot!" || trimmedMessage === "halo gotek bot") {
+    if (trimmedMessage === "halo gotek bot!" || trimmedMessage === "halo gotek bot" || trimmedMessage === "hi" || trimmedMessage === "halo" || trimmedMessage === "hai") {
+      const hour = new Date().getHours();
+      const greeting = hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 18 ? "Selamat sore" : "Selamat malam";
       return NextResponse.json({
-        message: `👋 *Halo ${user.name || "Sobat GoTEK"}!*\n\nSelamat datang di GoTEK Bot! 🤖\n\nSaya siap membantu Anda mencatat keuangan dengan mudah.\n\nKetik *help* untuk melihat panduan penggunaan. 🚀`
+        message: `👋 *${greeting}, ${user.name || "Sobat GoTEK"}!*\n\n🤖 Saya *GoTEK Bot* - asisten pencatat keuangan Anda!\n\n📊 *Quick Stats Hari Ini:*\n_Loading data..._\n\n💡 *Tips:* Ketik *"help"* untuk panduan lengkap atau langsung catat transaksi:\n\`keluar 50k kopi @minuman\`\n\n🚀 Mulai catat keuanganmu sekarang!`
       });
     }
 
@@ -151,13 +153,13 @@ export async function POST(request: NextRequest) {
     const command = args[0].toLowerCase();
 
 
-    if (["masuk", "income", "keluar", "expense"].includes(command)) {
+    if (["masuk", "income", "keluar", "expense", "in", "out"].includes(command)) {
       const parsedData = parseTransactionMessage(message);
 
       if (!parsedData) {
         return NextResponse.json({
           message:
-            "❌ Format salah.\n\nContoh:\n`keluar 50k kopi @minuman #gopay`\n`masuk 1.5jt gaji #bank`",
+            "❌ *Format tidak dikenali*\n\n📌 *Format yang benar:*\n\`keluar 50k kopi @minuman\`\n\`masuk 1.5jt gaji @pekerjaan\`\n\n📝 *Penjelasan:*\n• \`keluar/masuk\` = Tipe transaksi\n• \`50k/1.5jt\` = Jumlah (k=ribu, jt=juta)\n• \`kopi\` = Keterangan\n• \`@minuman\` = Kategori\n• \`#gopay\` = Metode bayar (opsional)\n\n💡 *Contoh lain:*\n\`keluar 25k bakso @makan #cash\`\n\`masuk 500k freelance @kerja\`",
         });
       }
 
@@ -194,12 +196,23 @@ export async function POST(request: NextRequest) {
 
       const formattedAmount = `Rp ${parsedData.amount.toLocaleString("id-ID")}`;
       const typeText = parsedData.type === "INCOME" ? "Pemasukan" : "Pengeluaran";
+      const typeEmoji = parsedData.type === "INCOME" ? "📈" : "📉";
+      const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
 
-      let reply = `✅ *${typeText} Tercatat!*`;
-      reply += `\n💰 Nominal: ${formattedAmount}`;
-      reply += `\n📂 Kategori: ${category.name}`;
-      reply += `\n📝 Desc: ${parsedData.description}`;
-      reply += budgetAlert;
+      let reply = `${typeEmoji} *${typeText} Tercatat!*\n`;
+      reply += `━━━━━━━━━━━━━━━━━\n`;
+      reply += `💰 *Nominal:* ${formattedAmount}\n`;
+      reply += `📂 *Kategori:* ${category.name}\n`;
+      reply += `📝 *Keterangan:* ${parsedData.description}\n`;
+      if (parsedData.paymentMethod) {
+        reply += `💳 *Metode:* ${parsedData.paymentMethod}\n`;
+      }
+      reply += `📅 *Tanggal:* ${dateStr}\n`;
+      reply += `━━━━━━━━━━━━━━━━━`;
+      if (budgetAlert) {
+        reply += `\n\n${budgetAlert}`;
+      }
+      reply += `\n\n💡 _Ketik \"undo\" untuk membatalkan_`;
 
       return NextResponse.json({ message: reply });
     }
@@ -213,7 +226,7 @@ export async function POST(request: NextRequest) {
       if (!amount || !categoryName) {
         return NextResponse.json({
           message:
-            "❌ Format budget salah.\n\nContoh:\n`budget 1jt @makan`",
+            "❌ *Format Budget Salah*\n\n📌 *Format yang benar:*\n\`budget 1jt @makan\`\n\n📝 *Penjelasan:*\n• \`budget\` = Perintah set budget\n• \`1jt\` = Jumlah budget\n• \`@makan\` = Nama kategori\n\n💡 *Contoh lain:*\n\`budget 500k @transportasi\`\n\`budget 2jt @belanja\`",
         });
       }
 
@@ -253,8 +266,11 @@ export async function POST(request: NextRequest) {
         },
       });
 
+      const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      const monthName = monthNames[currentMonth - 1];
+
       return NextResponse.json({
-        message: `✅ Budget *@${category.name}* untuk bulan ini berhasil diatur ke Rp ${amount.toLocaleString("id-ID")}`,
+        message: `🎯 *Budget Berhasil Diatur!*\n━━━━━━━━━━━━━━━━━\n📂 *Kategori:* ${category.name}\n💰 *Anggaran:* Rp ${amount.toLocaleString("id-ID")}\n📅 *Periode:* ${monthName} ${currentYear}\n━━━━━━━━━━━━━━━━━\n\n💡 _Ketik \"cek budget\" untuk lihat status_`,
       });
     }
 
@@ -272,34 +288,84 @@ export async function POST(request: NextRequest) {
           where: {
             user_id: user.id,
             created_at: { gte: startOfDay, lte: endOfDay }
-          }
+          },
+          include: { category: true }
         });
 
         const income = transactions.filter(t => t.type === "INCOME").reduce((acc, t) => acc + t.amount.toNumber(), 0);
         const expense = transactions.filter(t => t.type === "EXPENSE").reduce((acc, t) => acc + t.amount.toNumber(), 0);
+        const balance = income - expense;
+        const balanceEmoji = balance >= 0 ? "💚" : "💔";
+        const txCount = transactions.length;
+        const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
 
-        return NextResponse.json({
-          message: `📊 *Laporan Hari Ini*\n\n📈 Pemasukan: Rp ${income.toLocaleString("id-ID")}\n📉 Pengeluaran: Rp ${expense.toLocaleString("id-ID")}\n\nBalance: Rp ${(income - expense).toLocaleString("id-ID")}`
-        });
+        let reply = `📊 *Laporan Hari Ini*\n📅 ${dateStr}\n━━━━━━━━━━━━━━━━━\n`;
+        reply += `📈 *Pemasukan:* Rp ${income.toLocaleString("id-ID")}\n`;
+        reply += `📉 *Pengeluaran:* Rp ${expense.toLocaleString("id-ID")}\n`;
+        reply += `━━━━━━━━━━━━━━━━━\n`;
+        reply += `${balanceEmoji} *Balance:* Rp ${balance.toLocaleString("id-ID")}\n`;
+        reply += `📝 *Total Transaksi:* ${txCount} transaksi\n`;
+        
+        if (txCount > 0) {
+          reply += `\n📋 *Detail Terakhir:*\n`;
+          const lastTx = transactions.slice(-3).reverse();
+          lastTx.forEach(t => {
+            const icon = t.type === "INCOME" ? "➕" : "➖";
+            reply += `${icon} Rp ${t.amount.toNumber().toLocaleString("id-ID")} - ${t.description}\n`;
+          });
+        }
+
+        return NextResponse.json({ message: reply });
 
       } else if (type === "bulan" || type === "month" || type === "bulanan") {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        const monthName = monthNames[now.getMonth()];
 
         const transactions = await prisma.transaction.findMany({
           where: {
             user_id: user.id,
             created_at: { gte: startOfMonth, lte: endOfMonth }
-          }
+          },
+          include: { category: true }
         });
 
         const income = transactions.filter(t => t.type === "INCOME").reduce((acc, t) => acc + t.amount.toNumber(), 0);
         const expense = transactions.filter(t => t.type === "EXPENSE").reduce((acc, t) => acc + t.amount.toNumber(), 0);
+        const balance = income - expense;
+        const balanceEmoji = balance >= 0 ? "💚" : "💔";
+        const savingRate = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
 
-        return NextResponse.json({
-          message: `📊 *Laporan Bulan Ini*\n\n📈 Pemasukan: Rp ${income.toLocaleString("id-ID")}\n📉 Pengeluaran: Rp ${expense.toLocaleString("id-ID")}\n\nBalance: Rp ${(income - expense).toLocaleString("id-ID")}`
-        });
+        let reply = `📊 *Laporan Bulan ${monthName}*\n━━━━━━━━━━━━━━━━━\n`;
+        reply += `📈 *Total Pemasukan:*\nRp ${income.toLocaleString("id-ID")}\n\n`;
+        reply += `📉 *Total Pengeluaran:*\nRp ${expense.toLocaleString("id-ID")}\n━━━━━━━━━━━━━━━━━\n`;
+        reply += `${balanceEmoji} *Balance:* Rp ${balance.toLocaleString("id-ID")}\n`;
+        reply += `📊 *Saving Rate:* ${savingRate}%\n\n`;
+        
+        // Top 3 pengeluaran per kategori
+        const expensesByCategory = transactions
+          .filter(t => t.type === "EXPENSE")
+          .reduce((acc, t) => {
+            const catName = t.category?.name || "Lainnya";
+            acc[catName] = (acc[catName] || 0) + t.amount.toNumber();
+            return acc;
+          }, {} as Record<string, number>);
+        
+        const topExpenses = Object.entries(expensesByCategory)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3);
+        
+        if (topExpenses.length > 0) {
+          reply += `🔥 *Top Pengeluaran:*\n`;
+          topExpenses.forEach(([cat, amt], i) => {
+            const medals = ['🥇', '🥈', '🥉'];
+            reply += `${medals[i]} ${cat}: Rp ${amt.toLocaleString("id-ID")}\n`;
+          });
+        }
+
+        return NextResponse.json({ message: reply });
       }
     }
 
@@ -307,6 +373,7 @@ export async function POST(request: NextRequest) {
     if (command === "cek" && (args[1] === "budget" || args[1] === "anggaran")) {
       const now = new Date();
       const currentMonth = now.getMonth() + 1;
+      const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
       const budgets = await prisma.budget.findMany({
         where: { user_id: user.id, month: currentMonth, year: now.getFullYear() },
@@ -314,10 +381,12 @@ export async function POST(request: NextRequest) {
       });
 
       if (budgets.length === 0) {
-        return NextResponse.json({ message: "⚠️ Anda belum mengatur budget untuk bulan ini." });
+        return NextResponse.json({ 
+          message: `⚠️ *Belum Ada Budget*\n\nAnda belum mengatur budget untuk bulan ${monthNames[currentMonth - 1]}.\n\n💡 *Cara set budget:*\n\`budget 1jt @makan\`\n\`budget 500k @transportasi\`` 
+        });
       }
 
-      let reply = "📊 *Status Budget Bulan Ini*\n";
+      let reply = `🎯 *Status Budget ${monthNames[currentMonth - 1]}*\n━━━━━━━━━━━━━━━━━\n`;
 
       for (const b of budgets) {
         const aggregations = await prisma.transaction.aggregate({
@@ -335,12 +404,30 @@ export async function POST(request: NextRequest) {
 
         const used = aggregations._sum.amount?.toNumber() || 0;
         const total = b.amount.toNumber();
+        const remaining = total - used;
         const percent = Math.round((used / total) * 100);
-        const icon = percent > 100 ? "🔴" : percent > 80 ? "🟡" : "🟢";
+        
+        let statusIcon, statusBar;
+        if (percent > 100) {
+          statusIcon = "🔴";
+          statusBar = "▓▓▓▓▓▓▓▓▓▓ OVER!";
+        } else if (percent > 80) {
+          statusIcon = "🟡";
+          const filled = Math.round(percent / 10);
+          statusBar = "▓".repeat(filled) + "░".repeat(10 - filled);
+        } else {
+          statusIcon = "🟢";
+          const filled = Math.round(percent / 10);
+          statusBar = "▓".repeat(filled) + "░".repeat(10 - filled);
+        }
 
-        reply += `\n${icon} *${b.category.name}*: ${percent}%`;
-        reply += `\n   (Rp ${used.toLocaleString("id-ID")} / Rp ${total.toLocaleString("id-ID")})`;
+        reply += `\n${statusIcon} *${b.category.name}*\n`;
+        reply += `   ${statusBar} ${percent}%\n`;
+        reply += `   💸 Terpakai: Rp ${used.toLocaleString("id-ID")}\n`;
+        reply += `   💰 Sisa: Rp ${remaining.toLocaleString("id-ID")}\n`;
       }
+
+      reply += `\n💡 _Ketik \"laporan bulan\" untuk detail lengkap_`;
 
       return NextResponse.json({ message: reply });
     }
@@ -349,22 +436,28 @@ export async function POST(request: NextRequest) {
     if (command === "hapus" || command === "undo" || command === "batal") {
       const lastTx = await prisma.transaction.findFirst({
         where: { user_id: user.id },
-        orderBy: { created_at: "desc" }
+        orderBy: { created_at: "desc" },
+        include: { category: true }
       });
 
       if (!lastTx) {
-        return NextResponse.json({ message: "⚠️ Tidak ada transaksi yang bisa dihapus." });
+        return NextResponse.json({ message: "⚠️ *Tidak Ada Transaksi*\n\nTidak ada transaksi yang bisa dihapus. Mulai catat transaksi baru!" });
       }
 
       const isToday = new Date().toDateString() === lastTx.created_at.toDateString();
       if (!isToday) {
-        return NextResponse.json({ message: "⚠️ Hanya bisa menghapus transaksi hari ini." });
+        return NextResponse.json({ 
+          message: `⚠️ *Tidak Bisa Dihapus*\n\nTransaksi terakhir sudah bukan hari ini.\nHanya transaksi hari ini yang bisa di-undo.\n\n📝 *Transaksi terakhir:*\nRp ${lastTx.amount.toNumber().toLocaleString("id-ID")} - ${lastTx.description}\n(Tanggal: ${lastTx.created_at.toLocaleDateString('id-ID')})` 
+        });
       }
 
       await prisma.transaction.delete({ where: { id: lastTx.id } });
 
+      const typeEmoji = lastTx.type === "INCOME" ? "📈" : "📉";
+      const typeText = lastTx.type === "INCOME" ? "Pemasukan" : "Pengeluaran";
+
       return NextResponse.json({
-        message: `🗑️ Transaksi terakhir dihapus:\nRp ${lastTx.amount.toNumber().toLocaleString("id-ID")} (${lastTx.description})`
+        message: `🗑️ *Transaksi Dihapus!*\n━━━━━━━━━━━━━━━━━\n${typeEmoji} *Tipe:* ${typeText}\n💰 *Nominal:* Rp ${lastTx.amount.toNumber().toLocaleString("id-ID")}\n📂 *Kategori:* ${lastTx.category?.name || '-'}\n📝 *Keterangan:* ${lastTx.description}\n━━━━━━━━━━━━━━━━━\n\n✅ Transaksi sudah dibatalkan`
       });
     }
 
@@ -373,8 +466,10 @@ export async function POST(request: NextRequest) {
       const parsedData = parseDebtMessage(message);
 
       if (!parsedData) {
+        const exampleType = command === "hutang" ? "hutang" : "piutang";
+        const explanation = command === "hutang" ? "Anda meminjam uang dari orang lain" : "Orang lain meminjam uang dari Anda";
         return NextResponse.json({
-          message: `❌ Format salah.\n\nContoh:\n\`${command} 50k @Budi beli pulsa\``
+          message: `❌ *Format ${command.charAt(0).toUpperCase() + command.slice(1)} Salah*\n\n📌 *Format yang benar:*\n\`${exampleType} 50k @Budi beli pulsa\`\n\n📝 *Penjelasan:*\n• \`${exampleType}\` = ${explanation}\n• \`50k\` = Jumlah (k=ribu, jt=juta)\n• \`@Budi\` = Nama orang\n• \`beli pulsa\` = Keterangan\n\n💡 *Contoh lain:*\n\`${exampleType} 1jt @Ani modal usaha\`\n\`${exampleType} 200k @Doni bayar makan\``
         });
       }
 
@@ -389,10 +484,13 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      const typeLabel = parsedData.type === DebtType.HUTANG ? "Hutang ke" : "Piutang ke";
+      const isHutang = parsedData.type === DebtType.HUTANG;
+      const emoji = isHutang ? "🔴" : "🟢";
+      const typeLabel = isHutang ? "HUTANG" : "PIUTANG";
+      const relation = isHutang ? "Anda meminjam dari" : "Anda meminjamkan ke";
 
       return NextResponse.json({
-        message: `📒 *Catat ${command.charAt(0).toUpperCase() + command.slice(1)} Berhasil!*\n\nAnda memiliki ${typeLabel} *${parsedData.personName}*\nJumlah: Rp ${parsedData.amount.toLocaleString("id-ID")}\nDesc: ${parsedData.description}`
+        message: `${emoji} *${typeLabel} Tercatat!*\n━━━━━━━━━━━━━━━━━\n👤 *${relation}:* ${parsedData.personName}\n💰 *Jumlah:* Rp ${parsedData.amount.toLocaleString("id-ID")}\n📝 *Keterangan:* ${parsedData.description}\n📅 *Tanggal:* ${new Date().toLocaleDateString('id-ID')}\n━━━━━━━━━━━━━━━━━\n\n💡 _Ketik \"cek hutang\" untuk lihat daftar_\n💡 _Ketik \"lunas @${parsedData.personName}\" jika sudah dibayar_`
       });
     }
 
@@ -403,27 +501,48 @@ export async function POST(request: NextRequest) {
       });
 
       if (debts.length === 0) {
-        return NextResponse.json({ message: "🎉 Tidak ada hutang/piutang yang belum lunas!" });
+        return NextResponse.json({ 
+          message: "🎉 *Selamat!*\n\nTidak ada hutang/piutang yang belum lunas!\n\nKeuangan Anda bersih! 💚" 
+        });
       }
-
-      let reply = "📒 *Daftar Hutang & Piutang Belum Lunas*\n";
 
       const hutangList = debts.filter(d => d.type === DebtType.HUTANG);
       const piutangList = debts.filter(d => d.type === DebtType.PIUTANG);
+      const totalHutang = hutangList.reduce((acc, d) => acc + d.amount.toNumber(), 0);
+      const totalPiutang = piutangList.reduce((acc, d) => acc + d.amount.toNumber(), 0);
+
+      let reply = `📒 *Daftar Hutang & Piutang*\n━━━━━━━━━━━━━━━━━\n`;
 
       if (hutangList.length > 0) {
-        reply += "\n🔴 *HUTANG (Anda Pinjam)*\n";
-        hutangList.forEach(d => {
-          reply += `- Rp ${d.amount.toNumber().toLocaleString("id-ID")} ke *${d.person_name}* (${d.description})\n`;
+        reply += `\n🔴 *HUTANG* (Anda Pinjam)\n`;
+        reply += `💰 Total: Rp ${totalHutang.toLocaleString("id-ID")}\n\n`;
+        hutangList.forEach((d, i) => {
+          reply += `${i + 1}. *${d.person_name}*\n`;
+          reply += `   Rp ${d.amount.toNumber().toLocaleString("id-ID")}\n`;
+          if (d.description) reply += `   📝 ${d.description}\n`;
         });
       }
 
       if (piutangList.length > 0) {
-        reply += "\n🟢 *PIUTANG (Orang Pinjam)*\n";
-        piutangList.forEach(d => {
-          reply += `- Rp ${d.amount.toNumber().toLocaleString("id-ID")} dari *${d.person_name}* (${d.description})\n`;
+        if (hutangList.length > 0) reply += `\n`;
+        reply += `🟢 *PIUTANG* (Orang Pinjam ke Anda)\n`;
+        reply += `💰 Total: Rp ${totalPiutang.toLocaleString("id-ID")}\n\n`;
+        piutangList.forEach((d, i) => {
+          reply += `${i + 1}. *${d.person_name}*\n`;
+          reply += `   Rp ${d.amount.toNumber().toLocaleString("id-ID")}\n`;
+          if (d.description) reply += `   📝 ${d.description}\n`;
         });
       }
+
+      reply += `\n━━━━━━━━━━━━━━━━━\n`;
+      reply += `📊 *Summary:*\n`;
+      reply += `🔴 Hutang: Rp ${totalHutang.toLocaleString("id-ID")} (${hutangList.length} orang)\n`;
+      reply += `🟢 Piutang: Rp ${totalPiutang.toLocaleString("id-ID")} (${piutangList.length} orang)\n`;
+      
+      const netBalance = totalPiutang - totalHutang;
+      const netEmoji = netBalance >= 0 ? "💚" : "💔";
+      reply += `${netEmoji} Net: Rp ${netBalance.toLocaleString("id-ID")}\n`;
+      reply += `\n💡 _Ketik \"lunas @Nama\" jika sudah dibayar_`;
 
       return NextResponse.json({ message: reply });
     }
@@ -433,9 +552,10 @@ export async function POST(request: NextRequest) {
       const personName = personMatch && personMatch[1] ? personMatch[1] : null;
 
       if (!personName) {
-        return NextResponse.json({ message: "❌ Sebutkan nama orang yang lunas.\nContoh: `lunas @Budi`" });
+        return NextResponse.json({ 
+          message: "❌ *Format Lunas Salah*\n\n📌 *Format yang benar:*\n\`lunas @Budi\`\n\n📝 *Penjelasan:*\nSebutkan nama orang yang hutang/piutangnya sudah dibayar.\n\n💡 _Ketik \"cek hutang\" untuk lihat daftar_" 
+        });
       }
-
 
       const unpaidDebts = await prisma.debt.findMany({
         where: {
@@ -446,9 +566,14 @@ export async function POST(request: NextRequest) {
       });
 
       if (unpaidDebts.length === 0) {
-        return NextResponse.json({ message: `⚠️ Tidak ada hutang/piutang aktif dengan nama *${personName}*.` });
+        return NextResponse.json({ 
+          message: `⚠️ *Tidak Ditemukan*\n\nTidak ada hutang/piutang aktif dengan nama *${personName}*.\n\n💡 _Cek penulisan nama atau ketik \"cek hutang\"_` 
+        });
       }
 
+      const totalAmount = unpaidDebts.reduce((acc, d) => acc + d.amount.toNumber(), 0);
+      const hasHutang = unpaidDebts.some(d => d.type === DebtType.HUTANG);
+      const hasPiutang = unpaidDebts.some(d => d.type === DebtType.PIUTANG);
 
       await prisma.debt.updateMany({
         where: {
@@ -459,7 +584,14 @@ export async function POST(request: NextRequest) {
         data: { status: DebtStatus.PAID }
       });
 
-      return NextResponse.json({ message: `✅ Semua hutang/piutang dengan *${personName}* telah ditandai LUNAS! 🎉` });
+      let typeInfo = "";
+      if (hasHutang && hasPiutang) typeInfo = "hutang & piutang";
+      else if (hasHutang) typeInfo = "hutang";
+      else typeInfo = "piutang";
+
+      return NextResponse.json({ 
+        message: `✅ *LUNAS!*\n━━━━━━━━━━━━━━━━━\n👤 *Nama:* ${personName}\n💰 *Total:* Rp ${totalAmount.toLocaleString("id-ID")}\n📒 *Jenis:* ${unpaidDebts.length} ${typeInfo}\n━━━━━━━━━━━━━━━━━\n\n🎉 Semua ${typeInfo} dengan *${personName}* sudah lunas!` 
+      });
     }
 
 
@@ -536,29 +668,44 @@ export async function POST(request: NextRequest) {
     }
 
 
-    const helpMessage = `👋 *GoTEK Bot Helper*
+    const helpMessage = `🤖 *GoTEK Bot - Panduan Lengkap*
+━━━━━━━━━━━━━━━━━
 
-*1. 📝 Catat Transaksi*
-Format: \`masuk/keluar <jumlah> [desc] @<kategori> #<metode>\`
+📝 *CATAT TRANSAKSI*
+\`keluar 50k kopi @minuman\`
+\`masuk 1.5jt gaji @kerja\`
+\`out 25k bakso @makan #gopay\`
 
-*2. 📒 Hutang & Piutang* (BARU!)
-- Hutang: \`hutang 50k @Budi\`
-- Piutang: \`piutang 100k @Ani\`
-- Cek: \`cek hutang\`
-- Lunas: \`lunas @Budi\`
+━━━━━━━━━━━━━━━━━
+📒 *HUTANG & PIUTANG*
+\`hutang 100k @Budi modal\`
+\`piutang 50k @Ani pulsa\`
+\`cek hutang\` - Lihat daftar
+\`lunas @Budi\` - Tandai lunas
 
-*3. 🎯 Budget*
-- Set: \`budget 1jt @makan\`
-- Cek: \`cek budget\`
+━━━━━━━━━━━━━━━━━
+🎯 *BUDGET*
+\`budget 1jt @makan\`
+\`cek budget\` - Lihat status
 
-*4. 📊 Laporan*
-- \`laporan hari ini\`
-- \`laporan bulan ini\`
+━━━━━━━━━━━━━━━━━
+📊 *LAPORAN*
+\`laporan hari\` - Hari ini
+\`laporan bulan\` - Bulan ini
 
-*5. ↩️ Koreksi*
-- \`undo\` / \`hapus\` (Hapus transaksi terakhir)
+━━━━━━━━━━━━━━━━━
+↩️ *KOREKSI*
+\`undo\` atau \`hapus\`
+(Hapus transaksi terakhir)
 
-Selalu gunakan format yang benar! 🚀`;
+━━━━━━━━━━━━━━━━━
+💡 *TIPS:*
+• Format jumlah: 50k, 1.5jt, 500rb
+• @ = kategori/nama orang
+• # = metode bayar (opsional)
+• AI otomatis deteksi pesan biasa!
+
+🌐 Dashboard: gotek.vercel.app`;
 
     return NextResponse.json({ message: helpMessage });
 

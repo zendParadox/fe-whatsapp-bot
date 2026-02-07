@@ -1,45 +1,51 @@
-/*eslint-disable*/
-// middleware.ts (root project) or app/middleware.ts
+// middleware.ts - Protects routes from unauthorized access
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyToken } from "@/lib/auth"; // pastikan path ini benar
+import { verifyToken } from "@/lib/auth";
 
-// Jika ingin menambahkan path lain yang dilindungi, tambahkan ke matcher di export
+// Routes yang memerlukan autentikasi
+const protectedRoutes = ["/dashboard", "/profile"];
+
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   const pathname = url.pathname;
+  // Cek apakah path dimulai dengan salah satu protected routes
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
 
-  // protect semua route yang dimulai dengan /dashboard (ubah sesuai kebutuhan)
-  if (pathname.startsWith("/dashboard")) {
+  if (isProtectedRoute) {
     try {
-      // ambil cookie token
+      // Ambil cookie token
       const token = req.cookies.get("token")?.value;
+      
       if (!token) {
         url.pathname = "/unauthorized";
         return NextResponse.redirect(url);
       }
 
-      // verifikasi token (harus synchronous atau promise)
+      // Verifikasi token
       const payload = verifyToken(token);
+      
       if (!payload || !payload.userId) {
         url.pathname = "/unauthorized";
         return NextResponse.redirect(url);
       }
 
-      // allowed: lanjutkan
+      // Token valid, lanjutkan
       return NextResponse.next();
-    } catch (err) {
-      // bila error verifikasi, redirect ke unauthorized
+    } catch {
+      // Error verifikasi, redirect ke unauthorized
       url.pathname = "/unauthorized";
       return NextResponse.redirect(url);
     }
   }
 
-  // untuk route lain, lanjut
+  // Route lain, lanjutkan
   return NextResponse.next();
 }
 
-// Atur matcher kalau meletakkan middleware di tempat lain atau ingin membatasi
+// Matcher untuk routes yang perlu dicek middleware
 export const config = {
-  matcher: ["/dashboard/:path*", "/app/protected/:path*"], // modifikasi sesuai kebutuhan
+  matcher: ["/dashboard/:path*", "/profile/:path*"],
 };

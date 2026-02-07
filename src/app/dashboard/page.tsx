@@ -62,6 +62,7 @@ import WhatsAppBotBanner from "@/components/dashboard/WhatsAppBotBanner";
 import AiAnalysisButton from "@/components/dashboard/AiAnalysisButton";
 import AiAnalysisModal from "@/components/dashboard/AiAnalysisModal";
 import BudgetCard from "@/components/dashboard/BudgetCard";
+import DebtCard from "@/components/dashboard/DebtCard";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -712,7 +713,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           <BudgetCard
             budgetData={budgetData}
             categories={categories}
@@ -721,6 +722,7 @@ export default function Dashboard() {
             onBudgetChange={() => setRefreshKey(k => k + 1)}
             formatter={formatCurrency}
           />
+          <DebtCard onDataChange={() => setRefreshKey(k => k + 1)} />
         </div>
         <div className="lg:col-span-3 overflow-x-auto">
           <RecentTransactionsCard
