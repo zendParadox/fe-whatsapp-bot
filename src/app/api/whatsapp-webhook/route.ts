@@ -153,68 +153,132 @@ export async function POST(request: NextRequest) {
     const command = args[0].toLowerCase();
 
 
-    if (["masuk", "income", "keluar", "expense", "in", "out"].includes(command)) {
-      const parsedData = parseTransactionMessage(message);
+    // Multi-Transaction Handler: supports single or multiple transactions separated by newline
+    const transactionCommands = ["masuk", "income", "keluar", "expense", "in", "out"];
+    const lines = message.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    
+    // Check if ANY line starts with a transaction command
+    const transactionLines = lines.filter(line => {
+      const firstWord = line.split(" ")[0].toLowerCase();
+      return transactionCommands.includes(firstWord);
+    });
 
-      if (!parsedData) {
-        return NextResponse.json({
-          message:
-            "❌ *Format tidak dikenali*\n\n📌 *Format yang benar:*\n\`keluar [jumlah] [keterangan] @[kategori] #[metode]\`\n\n� *Contoh:*\n\`keluar 18k beli sabun @kebutuhan pribadi #transfer bca\`\n\`masuk 5jt gaji bulan ini @pekerjaan\`\n\n📝 *Tips:*\n• Kategori & metode bisa lebih dari 1 kata\n• Metode bayar (#) opsional\n• Ketik *penjelasan detail* untuk panduan lengkap",
-        });
+    if (transactionLines.length > 0) {
+      const results: { success: boolean; icon: string; text: string }[] = [];
+      let totalIncome = 0;
+      let totalExpense = 0;
+      let successCount = 0;
+      const budgetAlerts: string[] = [];
+
+      for (const line of transactionLines) {
+        const parsedData = parseTransactionMessage(line);
+        
+        if (!parsedData) {
+          results.push({
+            success: false,
+            icon: "❌",
+            text: `"${line.substring(0, 30)}${line.length > 30 ? '...' : ''}" - Format tidak valid`
+          });
+          continue;
+        }
+
+        try {
+          let category = await prisma.category.findFirst({
+            where: {
+              user_id: user.id,
+              name: { equals: parsedData.category, mode: "insensitive" },
+            },
+          });
+
+          if (!category) {
+            category = await prisma.category.create({
+              data: { name: parsedData.category, user_id: user.id },
+            });
+          }
+
+          // Check budget for expense
+          if (parsedData.type === "EXPENSE") {
+            const alert = await checkBudgetStatus(user.id, category.id, parsedData.amount);
+            if (alert) budgetAlerts.push(`${category.name}: ${alert}`);
+            totalExpense += parsedData.amount;
+          } else {
+            totalIncome += parsedData.amount;
+          }
+
+          await prisma.transaction.create({
+            data: {
+              type: parsedData.type,
+              amount: new Decimal(parsedData.amount),
+              description: parsedData.description,
+              user_id: user.id,
+              category_id: category.id,
+              // payment_method: parsedData.type === "EXPENSE" ? parsedData.paymentMethod : null, // Temporarily disabled
+            },
+          });
+
+          const icon = parsedData.type === "INCOME" ? "📈" : "📉";
+          const formattedAmt = `Rp ${parsedData.amount.toLocaleString("id-ID")}`;
+          results.push({
+            success: true,
+            icon,
+            text: `${formattedAmt} - ${parsedData.description} (${category.name})`
+          });
+          successCount++;
+        } catch (err) {
+          console.error("Transaction error:", err);
+          results.push({
+            success: false,
+            icon: "❌",
+            text: `"${parsedData.description}" - Gagal disimpan`
+          });
+        }
       }
 
-      let category = await prisma.category.findFirst({
-        where: {
-          user_id: user.id,
-          name: { equals: parsedData.category, mode: "insensitive" },
-        },
-      });
-
-      if (!category) {
-        category = await prisma.category.create({
-          data: { name: parsedData.category, user_id: user.id },
-        });
-      }
-
-
-      let budgetAlert = "";
-      if (parsedData.type === "EXPENSE") {
-        const alert = await checkBudgetStatus(user.id, category.id, parsedData.amount);
-        if (alert) budgetAlert = alert;
-      }
-
-      await prisma.transaction.create({
-        data: {
-          type: parsedData.type,
-          amount: new Decimal(parsedData.amount),
-          description: parsedData.description,
-          user_id: user.id,
-          category_id: category.id,
-          payment_method: parsedData.type === "EXPENSE" ? parsedData.paymentMethod : null,
-        },
-      });
-
-      const formattedAmount = `Rp ${parsedData.amount.toLocaleString("id-ID")}`;
-      const typeText = parsedData.type === "INCOME" ? "Pemasukan" : "Pengeluaran";
-      const typeEmoji = parsedData.type === "INCOME" ? "📈" : "📉";
+      // Build response
       const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
-
-      let reply = `${typeEmoji} *${typeText} Tercatat!*\n`;
-      reply += `━━━━━━━━━━━━━━━━━\n`;
-      reply += `💰 *Nominal:* ${formattedAmount}\n`;
-      reply += `📂 *Kategori:* ${category.name}\n`;
-      reply += `📝 *Keterangan:* ${parsedData.description}\n`;
-      if (parsedData.paymentMethod) {
-        reply += `💳 *Metode:* ${parsedData.paymentMethod}\n`;
+      
+      if (transactionLines.length === 1 && successCount === 1) {
+        // Single transaction - use original format
+        const r = results[0];
+        const parsedData = parseTransactionMessage(transactionLines[0])!;
+        const typeText = parsedData.type === "INCOME" ? "Pemasukan" : "Pengeluaran";
+        
+        let reply = `${r.icon} *${typeText} Tercatat!*\n`;
+        reply += `━━━━━━━━━━━━━━━━━\n`;
+        reply += `💰 *Nominal:* Rp ${parsedData.amount.toLocaleString("id-ID")}\n`;
+        reply += `📂 *Kategori:* ${parsedData.category}\n`;
+        reply += `📝 *Keterangan:* ${parsedData.description}\n`;
+        reply += ` *Tanggal:* ${dateStr}\n`;
+        reply += `━━━━━━━━━━━━━━━━━`;
+        if (budgetAlerts.length > 0) {
+          reply += `\n\n${budgetAlerts.join('\n')}`;
+        }
+        reply += `\n\n💡 _Ketik "undo" untuk membatalkan_`;
+        
+        return NextResponse.json({ message: reply });
+      } else {
+        // Multi transaction - show summary
+        let reply = `📋 *Multi-Transaksi Tercatat!*\n`;
+        reply += `📅 ${dateStr}\n`;
+        reply += `━━━━━━━━━━━━━━━━━\n\n`;
+        
+        // List all results
+        results.forEach((r) => {
+          reply += `${r.icon} ${r.text}\n`;
+        });
+        
+        reply += `\n━━━━━━━━━━━━━━━━━\n`;
+        reply += `📊 *Ringkasan:*\n`;
+        reply += `✅ Berhasil: ${successCount}/${transactionLines.length} transaksi\n`;
+        if (totalIncome > 0) reply += `📈 Total Masuk: Rp ${totalIncome.toLocaleString("id-ID")}\n`;
+        if (totalExpense > 0) reply += `📉 Total Keluar: Rp ${totalExpense.toLocaleString("id-ID")}\n`;
+        
+        if (budgetAlerts.length > 0) {
+          reply += `\n⚠️ *Peringatan Budget:*\n${budgetAlerts.join('\n')}`;
+        }
+        
+        return NextResponse.json({ message: reply });
       }
-      reply += `📅 *Tanggal:* ${dateStr}\n`;
-      reply += `━━━━━━━━━━━━━━━━━`;
-      if (budgetAlert) {
-        reply += `\n\n${budgetAlert}`;
-      }
-      reply += `\n\n💡 _Ketik \"undo\" untuk membatalkan_`;
-
-      return NextResponse.json({ message: reply });
     }
 
 
@@ -672,12 +736,12 @@ export async function POST(request: NextRequest) {
       const detailedHelp = `📖 *PANDUAN LENGKAP GOTEK BOT*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-� *1. CATAT PENGELUARAN*
-Format: \`keluar [jumlah] [keterangan] @[kategori] #[metode]\`
+🔹 *1. CATAT PENGELUARAN*
+Format: \`keluar [jumlah] [keterangan] @[kategori]\`
 
 *Contoh:*
-• \`keluar 18k beli sabun mandi @kebutuhan pribadi #transfer bca\`
-• \`keluar 50k makan siang @makan #gopay\`
+• \`keluar 18k beli sabun mandi @kebutuhan pribadi\`
+• \`keluar 50k makan siang @makan\`
 • \`keluar 100k belanja @kebutuhan rumah\`
 
 📝 *Penjelasan:*
@@ -685,7 +749,6 @@ Format: \`keluar [jumlah] [keterangan] @[kategori] #[metode]\`
 - \`18k\` = Rp 18.000 (k=ribu, jt=juta, rb=ribu)
 - \`beli sabun mandi\` = keterangan transaksi
 - \`@kebutuhan pribadi\` = kategori (bisa lebih dari 1 kata!)
-- \`#transfer bca\` = metode bayar (opsional, bisa lebih dari 1 kata!)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🔹 *2. CATAT PEMASUKAN*
@@ -724,6 +787,15 @@ Format: \`masuk [jumlah] [keterangan] @[kategori]\`
 • 500rb = Rp 500.000
 • 25000 = Rp 25.000
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 *MULTI-TRANSAKSI:*
+Kirim beberapa transaksi sekaligus dalam satu pesan!
+Pisahkan dengan enter/newline:
+
+\`keluar 18k beli sabun @pribadi
+keluar 50k makan siang @makan
+masuk 100k uang jajan @bonus\`
+
 🤖 Atau kirim pesan biasa, AI akan otomatis mendeteksi transaksi!
 
 🌐 Dashboard: gotek.vercel.app`;
@@ -736,7 +808,7 @@ Format: \`masuk [jumlah] [keterangan] @[kategori]\`
 ━━━━━━━━━━━━━━━━━
 
 📝 *CATAT TRANSAKSI*
-\`keluar 18k sabun @kebutuhan pribadi #transfer bca\`
+\`keluar 18k sabun @kebutuhan pribadi\`
 \`masuk 5jt gaji @pekerjaan\`
 
 📒 *HUTANG/PIUTANG*
@@ -751,7 +823,7 @@ Format: \`masuk [jumlah] [keterangan] @[kategori]\`
 
 ━━━━━━━━━━━━━━━━━
 💡 *TIPS:*
-• Kategori & metode bisa multi-kata
+• Kategori bisa multi-kata
 • Format: 50k, 1.5jt, 500rb
 • Ketik *penjelasan detail* untuk panduan lengkap
 
