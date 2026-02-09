@@ -7,7 +7,7 @@ import {
 } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { z } from "zod";
-import { parseTransactionFromText } from "@/lib/gemini";
+import { parseTransactionWithAI } from "@/lib/ai-provider";
 
 import { parseSmartAmount, parseTransactionMessage, parseDebtMessage } from "@/lib/whatsapp/parser";
 import { checkBudgetStatus } from "@/lib/whatsapp/service";
@@ -660,7 +660,7 @@ export async function POST(request: NextRequest) {
 
 
 
-    const aiTransactions = await parseTransactionFromText(message);
+    const aiTransactions = await parseTransactionWithAI(message);
 
     if (aiTransactions && aiTransactions.length > 0) {
       let reply = "✨ *Sistem AI (Gemini)*\n";
