@@ -151,8 +151,8 @@ model Transaction {
   description String?
   created_at  DateTime @default(now())
 
-  // DIUBAH: Tambahkan kolom payment_method
-  payment_method PaymentMethodType? // Opsional, agar tidak error pada data lama & transaksi INCOME
+  // DIUBAH: payment_method sekarang String untuk mendukung metode bayar dinamis
+  payment_method String? // Opsional, mendukung input bebas seperti "transfer bca", "gopay", dll
 
   user_id String
   user    User   @relation(fields: [user_id], references: [id], onDelete: Cascade)

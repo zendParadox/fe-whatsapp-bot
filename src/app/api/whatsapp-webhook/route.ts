@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
       if (!parsedData) {
         return NextResponse.json({
           message:
-            "❌ *Format tidak dikenali*\n\n📌 *Format yang benar:*\n\`keluar 50k kopi @minuman\`\n\`masuk 1.5jt gaji @pekerjaan\`\n\n📝 *Penjelasan:*\n• \`keluar/masuk\` = Tipe transaksi\n• \`50k/1.5jt\` = Jumlah (k=ribu, jt=juta)\n• \`kopi\` = Keterangan\n• \`@minuman\` = Kategori\n• \`#gopay\` = Metode bayar (opsional)\n\n💡 *Contoh lain:*\n\`keluar 25k bakso @makan #cash\`\n\`masuk 500k freelance @kerja\`",
+            "❌ *Format tidak dikenali*\n\n📌 *Format yang benar:*\n\`keluar [jumlah] [keterangan] @[kategori] #[metode]\`\n\n� *Contoh:*\n\`keluar 18k beli sabun @kebutuhan pribadi #transfer bca\`\n\`masuk 5jt gaji bulan ini @pekerjaan\`\n\n📝 *Tips:*\n• Kategori & metode bisa lebih dari 1 kata\n• Metode bayar (#) opsional\n• Ketik *penjelasan detail* untuk panduan lengkap",
         });
       }
 
@@ -667,45 +667,95 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Command: penjelasan detail / tutorial
+    if (trimmedMessage === "penjelasan detail" || trimmedMessage === "tutorial" || trimmedMessage === "panduan") {
+      const detailedHelp = `📖 *PANDUAN LENGKAP GOTEK BOT*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    const helpMessage = `🤖 *GoTEK Bot - Panduan Lengkap*
+� *1. CATAT PENGELUARAN*
+Format: \`keluar [jumlah] [keterangan] @[kategori] #[metode]\`
+
+*Contoh:*
+• \`keluar 18k beli sabun mandi @kebutuhan pribadi #transfer bca\`
+• \`keluar 50k makan siang @makan #gopay\`
+• \`keluar 100k belanja @kebutuhan rumah\`
+
+📝 *Penjelasan:*
+- \`keluar\` = tipe pengeluaran (bisa juga: expense, out)
+- \`18k\` = Rp 18.000 (k=ribu, jt=juta, rb=ribu)
+- \`beli sabun mandi\` = keterangan transaksi
+- \`@kebutuhan pribadi\` = kategori (bisa lebih dari 1 kata!)
+- \`#transfer bca\` = metode bayar (opsional, bisa lebih dari 1 kata!)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔹 *2. CATAT PEMASUKAN*
+Format: \`masuk [jumlah] [keterangan] @[kategori]\`
+
+*Contoh:*
+• \`masuk 5jt gaji bulan februari @pekerjaan\`
+• \`masuk 500k uang freelance @kerja sampingan\`
+• \`masuk 1.5jt bonus tahunan @bonus\`
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+� *3. HUTANG & PIUTANG*
+• \`hutang 100k @Budi pinjam modal\` - Anda pinjam dari Budi
+• \`piutang 50k @Ani buat pulsa\` - Ani pinjam dari Anda
+• \`cek hutang\` - Lihat semua hutang/piutang
+• \`lunas @Budi\` - Tandai lunas
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔹 *4. BUDGET*
+• \`budget 1jt @makan\` - Set budget kategori
+• \`cek budget\` - Lihat status budget
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+� *5. LAPORAN*
+• \`laporan hari\` - Ringkasan hari ini
+• \`laporan bulan\` - Ringkasan bulan ini
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔹 *6. KOREKSI*
+• \`undo\` atau \`hapus\` - Batalkan transaksi terakhir
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 *FORMAT JUMLAH:*
+• 50k = Rp 50.000
+• 1.5jt = Rp 1.500.000
+• 500rb = Rp 500.000
+• 25000 = Rp 25.000
+
+🤖 Atau kirim pesan biasa, AI akan otomatis mendeteksi transaksi!
+
+🌐 Dashboard: gotek.vercel.app`;
+
+      return NextResponse.json({ message: detailedHelp });
+    }
+
+
+    const helpMessage = `🤖 *GoTEK Bot - Panduan Singkat*
 ━━━━━━━━━━━━━━━━━
 
 📝 *CATAT TRANSAKSI*
-\`keluar 50k kopi @minuman\`
-\`masuk 1.5jt gaji @kerja\`
-\`out 25k bakso @makan #gopay\`
+\`keluar 18k sabun @kebutuhan pribadi #transfer bca\`
+\`masuk 5jt gaji @pekerjaan\`
 
-━━━━━━━━━━━━━━━━━
-📒 *HUTANG & PIUTANG*
+📒 *HUTANG/PIUTANG*
 \`hutang 100k @Budi modal\`
-\`piutang 50k @Ani pulsa\`
-\`cek hutang\` - Lihat daftar
-\`lunas @Budi\` - Tandai lunas
+\`cek hutang\` | \`lunas @Budi\`
 
-━━━━━━━━━━━━━━━━━
-🎯 *BUDGET*
-\`budget 1jt @makan\`
-\`cek budget\` - Lihat status
+🎯 *BUDGET & LAPORAN*
+\`budget 1jt @makan\` | \`cek budget\`
+\`laporan hari\` | \`laporan bulan\`
 
-━━━━━━━━━━━━━━━━━
-📊 *LAPORAN*
-\`laporan hari\` - Hari ini
-\`laporan bulan\` - Bulan ini
-
-━━━━━━━━━━━━━━━━━
-↩️ *KOREKSI*
-\`undo\` atau \`hapus\`
-(Hapus transaksi terakhir)
+↩️ \`undo\` - Batalkan transaksi
 
 ━━━━━━━━━━━━━━━━━
 💡 *TIPS:*
-• Format jumlah: 50k, 1.5jt, 500rb
-• @ = kategori/nama orang
-• # = metode bayar (opsional)
-• AI otomatis deteksi pesan biasa!
+• Kategori & metode bisa multi-kata
+• Format: 50k, 1.5jt, 500rb
+• Ketik *penjelasan detail* untuk panduan lengkap
 
-🌐 Dashboard: gotek.vercel.app`;
+🌐 https://gotek.vercel.app`;
 
     return NextResponse.json({ message: helpMessage });
 

@@ -1,4 +1,4 @@
-import { PaymentMethodType, TransactionType, DebtType } from "@prisma/client";
+import { TransactionType, DebtType } from "@prisma/client";
 
 /**
  * Parses a string amount compatible with suffixes.
@@ -24,6 +24,13 @@ export function parseSmartAmount(amountStr: string): number | null {
 }
 
 
+/**
+ * Parses transaction message with support for multi-word categories and payment methods.
+ * Format: keluar 18k beli sabun mandi @kebutuhan pribadi #transfer bca
+ * 
+ * @example "keluar 50k kopi @minuman" -> { type: EXPENSE, amount: 50000, category: "minuman" }
+ * @example "keluar 18k sabun @kebutuhan pribadi #transfer bca" -> { category: "kebutuhan pribadi", paymentMethod: "transfer bca" }
+ */
 export function parseTransactionMessage(message: string) {
   const parts = message.trim().split(" ");
   if (parts.length < 2) return null;
@@ -34,42 +41,34 @@ export function parseTransactionMessage(message: string) {
   if (amount === null || amount <= 0) return null;
 
   let type: TransactionType;
-  if (["masuk", "income"].includes(command)) {
+  if (["masuk", "income", "in"].includes(command)) {
     type = TransactionType.INCOME;
-  } else if (["keluar", "expense"].includes(command)) {
+  } else if (["keluar", "expense", "out"].includes(command)) {
     type = TransactionType.EXPENSE;
   } else {
     return null;
   }
 
-  const categoryMatch = message.match(/@(\w+)/);
-  const category =
-    categoryMatch && categoryMatch[1]
-      ? categoryMatch[1].toLowerCase()
-      : "lainnya";
+  // Match multi-word category: @kategori sampai # atau akhir string
+  // Regex: @(text) sampai sebelum # atau end of line
+  const categoryMatch = message.match(/@([^#]+?)(?:\s*#|$)/);
+  const category = categoryMatch?.[1]?.trim().toLowerCase() || "lainnya";
 
-  const paymentMethodMatch = message.match(/#(\w+)/);
-  const paymentMethodString = paymentMethodMatch
-    ? paymentMethodMatch[1].toUpperCase()
-    : "CASH";
-  let paymentMethod: PaymentMethodType = PaymentMethodType.CASH;
-  if (
-    Object.values(PaymentMethodType).includes(
-      paymentMethodString as PaymentMethodType
-    )
-  ) {
-    paymentMethod = paymentMethodString as PaymentMethodType;
-  }
+  // Match multi-word payment method: #metode bayar sampai akhir string
+  const paymentMethodMatch = message.match(/#(.+)$/);
+  const paymentMethod = paymentMethodMatch?.[1]?.trim() || null;
 
+  // Extract description: hapus command, amount, @category, dan #payment
   const description = message
-    .replace(new RegExp(`^${command}`, "i"), "")
-    .replace(parts[1], "")
-    .replace(/@\w+/g, "")
-    .replace(/#\w+/g, "")
+    .replace(new RegExp(`^${command}\\s+`, "i"), "") // hapus command
+    .replace(new RegExp(`^${parts[1]}\\s*`, "i"), "") // hapus amount
+    .replace(/@[^#]+(?=\s*#|$)/, "") // hapus @category (multi-word)
+    .replace(/#.+$/, "") // hapus #payment (multi-word)
     .trim() || "Transaksi WhatsApp";
 
   return { type, amount, description, category, paymentMethod };
 }
+
 
 /**
  * Parses Debt message
