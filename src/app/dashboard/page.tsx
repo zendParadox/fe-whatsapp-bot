@@ -223,6 +223,7 @@ export default function Dashboard() {
     amount: "",
     categoryId: "",
     description: "",
+    createdAt: "", // ISO date string for editing
   });
   const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -320,7 +321,6 @@ export default function Dashboard() {
     }
 
     fetchData();
-    fetchData();
   }, [activeDateRange, refreshKey]);
 
   // fetch categories (sekali saat mount)
@@ -366,6 +366,7 @@ export default function Dashboard() {
       amount: String(tx.amount),
       categoryId: categoryId,
       description: tx.description ?? "",
+      createdAt: new Date(tx.created_at).toISOString().split('T')[0], // Format: YYYY-MM-DD
     });
     setIsDialogOpen(true);
   }
@@ -404,6 +405,7 @@ export default function Dashboard() {
       if (form.description !== undefined)
         payload.description = form.description;
       if (form.categoryId) payload.category_id = form.categoryId;
+      if (form.createdAt) payload.created_at = new Date(form.createdAt).toISOString();
 
       const res = await fetch(`/api/transactions/${editingTx.id}`, {
         method: "PUT",
@@ -732,6 +734,13 @@ export default function Dashboard() {
             openEdit={openEdit}
             handleDeleteConfirmed={handleDeleteConfirmed}
             isDeleting={isDeleting}
+            handleBulkDelete={async (ids) => {
+              for (const id of ids) {
+                await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+              }
+              setRefreshKey(k => k + 1);
+              toast.success(`${ids.length} transaksi berhasil dihapus.`);
+            }}
           />
         </div>
       </div>
@@ -837,6 +846,18 @@ export default function Dashboard() {
                 value={form.description}
                 onChange={(e) =>
                   handleFormChange("description", e.target.value)
+                }
+              />
+            </div>
+
+            {/* Transaction Date */}
+            <div>
+              <Label className="mb-1">Tanggal Transaksi</Label>
+              <Input
+                type="date"
+                value={form.createdAt}
+                onChange={(e) =>
+                  handleFormChange("createdAt", e.target.value)
                 }
               />
             </div>
