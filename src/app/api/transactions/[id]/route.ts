@@ -8,6 +8,7 @@ type UpdatePayload = {
   type?: "INCOME" | "EXPENSE";
   description?: string | null;
   category_id?: string | null;
+  created_at?: string; // ISO date string
 };
 
 async function resolveParams(
@@ -29,10 +30,11 @@ export async function PUT(
 
   const body = (await request.json().catch(() => ({}))) as UpdatePayload;
 
-  const updateData: UpdatePayload = {};
+  const updateData: Record<string, any> = {};
   if (body.amount !== undefined) updateData.amount = body.amount;
   if (body.type !== undefined) updateData.type = body.type;
   if (body.description !== undefined) updateData.description = body.description;
+  if (body.created_at !== undefined) updateData.created_at = new Date(body.created_at);
 
   if (body.category_id !== undefined) {
     if (body.category_id === null) {

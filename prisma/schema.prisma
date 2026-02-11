@@ -150,6 +150,7 @@ model Transaction {
   amount      Decimal  @db.Decimal(12, 2)
   description String?
   created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt @default(now())
 
   // DIUBAH: payment_method sekarang String untuk mendukung metode bayar dinamis
   payment_method String? // Opsional, mendukung input bebas seperti "transfer bca", "gopay", dll

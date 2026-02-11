@@ -1,4 +1,4 @@
-import { Edit, Trash } from "lucide-react";
+import { Edit, Trash, RefreshCw, Search, X } from "lucide-react";
 import React, { useState, useMemo } from "react";
 import { Button } from "../ui/button";
 import {
@@ -21,6 +21,36 @@ import {
   TableHead,
   TableHeader,
 } from "../ui/table";
+import { Input } from "../ui/input";
+import { Checkbox } from "../ui/checkbox";
+
+interface CategoryObj {
+  id?: string;
+  name?: string;
+}
+
+interface Transaction {
+  id: string;
+  type: "INCOME" | "EXPENSE";
+  amount: number | string;
+  category?: string | CategoryObj | null;
+  description?: string | null;
+  created_at: string;
+}
+
+interface Props {
+  currentPeriod: {
+    transactions: Transaction[];
+  };
+  getCategoryName: (category: string | CategoryObj | null | undefined) => string;
+  formatCurrency: (value: number) => string;
+  openEdit: (tx: Transaction) => void;
+  handleDeleteConfirmed: (tx: Transaction) => void;
+  handleBulkDelete?: (ids: string[]) => Promise<void>;
+  onRefresh?: () => void;
+  isDeleting: boolean;
+  isRefreshing?: boolean;
+}
 
 export default function RecentTransactionsCard({
   currentPeriod,
@@ -28,38 +58,182 @@ export default function RecentTransactionsCard({
   formatCurrency,
   openEdit,
   handleDeleteConfirmed,
+  handleBulkDelete,
+  onRefresh,
   isDeleting,
-}) {
+  isRefreshing = false,
+}: Props) {
   const itemsPerPage = 10;
   const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
-  const totalItems = currentPeriod?.transactions?.length || 0;
+  const allTransactions = useMemo(() => {
+    return currentPeriod?.transactions || [];
+  }, [currentPeriod?.transactions]);
+
+  // Filter transactions based on search query
+  const filteredTransactions = useMemo(() => {
+    if (!searchQuery.trim()) return allTransactions;
+    
+    const query = searchQuery.toLowerCase();
+    return allTransactions.filter((tx) => {
+      const categoryName = getCategoryName(tx.category).toLowerCase();
+      const description = (tx.description || "").toLowerCase();
+      const amount = String(tx.amount);
+      const date = new Date(tx.created_at).toLocaleDateString("id-ID");
+      
+      return (
+        categoryName.includes(query) ||
+        description.includes(query) ||
+        amount.includes(query) ||
+        date.includes(query)
+      );
+    });
+  }, [allTransactions, searchQuery, getCategoryName]);
+
+  const totalItems = filteredTransactions.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
-  // defensif: pastikan page valid saat data berubah
+  // Reset page when search changes
+  React.useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
+
+  // Reset selections when data changes
+  React.useEffect(() => {
+    setSelectedIds(new Set());
+  }, [allTransactions]);
+
+  // Ensure page is valid
   if (page > totalPages) setPage(totalPages);
 
   const paginated = useMemo(() => {
     const start = (page - 1) * itemsPerPage;
     const end = start + itemsPerPage;
-    return (currentPeriod?.transactions || []).slice(start, end);
-  }, [currentPeriod, page]);
+    return filteredTransactions.slice(start, end);
+  }, [filteredTransactions, page]);
 
-  // helper: range of page numbers to show around current (desktop)
+  // Selection handlers
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === paginated.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(paginated.map((tx) => tx.id)));
+    }
+  };
+
+  const handleBulkDeleteClick = async () => {
+    if (selectedIds.size === 0 || !handleBulkDelete) return;
+    setIsBulkDeleting(true);
+    try {
+      await handleBulkDelete(Array.from(selectedIds));
+      setSelectedIds(new Set());
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
+  // Page numbers for pagination
   const pageNumbersToShow = (() => {
-    const around = 2; // show 2 pages before/after current
+    const around = 2;
     const pages = [];
     const start = Math.max(1, page - around);
     const end = Math.min(totalPages, page + around);
     for (let i = start; i <= end; i++) pages.push(i);
-    // if close to edges and not full, try to expand to fill (optional)
     return pages;
   })();
 
   return (
     <Card className="lg:col-span-3">
       <CardHeader>
-        <CardTitle>Transaksi Terbaru</CardTitle>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <CardTitle>Transaksi Terbaru</CardTitle>
+          
+          <div className="flex items-center gap-2">
+            {/* Refresh Button */}
+            {onRefresh && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className="shrink-0"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline ml-1">Refresh</span>
+              </Button>
+            )}
+            
+            {/* Bulk Delete Button */}
+            {selectedIds.size > 0 && handleBulkDelete && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    disabled={isBulkDeleting}
+                    className="shrink-0"
+                  >
+                    <Trash className="h-4 w-4" />
+                    <span className="ml-1">Hapus ({selectedIds.size})</span>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Hapus {selectedIds.size} Transaksi?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Anda akan menghapus {selectedIds.size} transaksi yang dipilih.
+                      Tindakan ini tidak dapat dibatalkan.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Batal</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleBulkDeleteClick}
+                      disabled={isBulkDeleting}
+                      className="bg-destructive text-white hover:bg-destructive/90"
+                    >
+                      {isBulkDeleting ? "Menghapus..." : "Hapus Semua"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
+        </div>
+
+        {/* Search Input */}
+        <div className="relative mt-3">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cari transaksi..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </CardHeader>
 
       <CardContent>
@@ -68,6 +242,12 @@ export default function RecentTransactionsCard({
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={selectedIds.size === paginated.length && paginated.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Tanggal</TableHead>
                   <TableHead>Kategori</TableHead>
                   <TableHead>Deskripsi</TableHead>
@@ -78,7 +258,13 @@ export default function RecentTransactionsCard({
 
               <TableBody>
                 {paginated.map((tx) => (
-                  <TableRow key={tx.id}>
+                  <TableRow key={tx.id} className={selectedIds.has(tx.id) ? "bg-muted/50" : ""}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(tx.id)}
+                        onCheckedChange={() => toggleSelect(tx.id)}
+                      />
+                    </TableCell>
                     <TableCell>
                       {new Date(tx.created_at).toLocaleDateString("id-ID")}
                     </TableCell>
@@ -152,6 +338,11 @@ export default function RecentTransactionsCard({
             {/* Pagination controls */}
             <div className="mt-4 flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
+                {searchQuery && (
+                  <span className="mr-2 text-primary">
+                    Hasil pencarian:
+                  </span>
+                )}
                 Menampilkan{" "}
                 {Math.min((page - 1) * itemsPerPage + 1, totalItems)}-
                 {Math.min(page * itemsPerPage, totalItems)} dari {totalItems}{" "}
@@ -177,9 +368,7 @@ export default function RecentTransactionsCard({
                   Prev
                 </Button>
 
-                {/* Page numbers — make horizontally scrollable if many */}
                 <div className="flex gap-1 items-center overflow-x-auto max-w-[36rem] px-1">
-                  {/* If there's gap between first page and start, show first + ellipsis */}
                   {pageNumbersToShow[0] > 1 && (
                     <>
                       <Button
@@ -206,7 +395,6 @@ export default function RecentTransactionsCard({
                     </Button>
                   ))}
 
-                  {/* If gap between end and last page */}
                   {pageNumbersToShow[pageNumbersToShow.length - 1] <
                     totalPages && (
                     <>
@@ -275,7 +463,10 @@ export default function RecentTransactionsCard({
           </>
         ) : (
           <div className="text-sm text-muted-foreground">
-            Belum ada transaksi bulan ini.
+            {searchQuery 
+              ? `Tidak ada transaksi yang cocok dengan "${searchQuery}"`
+              : "Belum ada transaksi bulan ini."
+            }
           </div>
         )}
       </CardContent>

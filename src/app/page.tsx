@@ -1,5 +1,13 @@
 /*eslint-disable*/
 import Link from "next/link";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,6 +20,7 @@ import {
   Target,
   ArrowRight,
   Zap,
+  CircleAlert,
   Smartphone,
   Sparkles,
   PieChart,
@@ -88,6 +97,224 @@ function AppFooter() {
         </p>
       </div>
     </footer>
+  );
+}
+
+
+
+
+
+
+
+function FaqSection() {
+  return (
+    <section id="faq" className="py-24 bg-background relative overflow-hidden">
+      <div className="absolute top-0 right-0 -z-10 opacity-20 transform translate-x-1/2 -translate-y-1/2">
+        <div className="w-[600px] h-[600px] bg-neon-purple rounded-full blur-[120px]" />
+      </div>
+
+      <div className="container mx-auto px-4">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Panduan Penggunaan</h2>
+          <p className="text-muted-foreground max-w-xl mx-auto">
+            Pilih metode pencatatan yang paling nyaman untuk Anda: Manual yang presisi atau AI yang praktis.
+          </p>
+        </div>
+
+        <div className="max-w-4xl mx-auto">
+          <Tabs defaultValue="manual" className="w-full">
+            <div className="flex justify-center mb-8">
+              <TabsList className="grid w-full max-w-md grid-cols-2">
+                <TabsTrigger value="manual">Manual Format</TabsTrigger>
+                <TabsTrigger value="ai">AI Natural Language</TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="manual" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <ArrowRight className="h-5 w-5 text-neon-cyan" />
+                      Pencatatan Transaksi
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Pemasukan</p>
+                      <div className="bg-muted p-3 rounded-md font-mono text-sm border border-border">
+                        masuk [jumlah] [keterangan] [kategori]
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Contoh: <code>masuk 5jt Gaji Bulanan @gaji</code>
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Pengeluaran</p>
+                      <div className="bg-muted p-3 rounded-md font-mono text-sm border border-border">
+                        keluar [jumlah] [keterangan] [kategori]
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Contoh: <code>keluar 25k Kopi Susu @jajan</code>
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Wallet className="h-5 w-5 text-neon-purple" />
+                      Hutang & Budget
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Catat Hutang</p>
+                      <div className="bg-muted p-3 rounded-md font-mono text-sm border border-border">
+                        hutang [jumlah] [keterangan] [nama]
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Contoh: <code>hutang 50k Pinjam Uang @Budi</code>
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Set Budget</p>
+                      <div className="bg-muted p-3 rounded-md font-mono text-sm border border-border">
+                        budget [jumlah] [kategori]
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Contoh: <code>budget 1jt @makan</code>
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 flex items-start gap-3">
+                <div className="mt-1">
+                  <Zap className="h-5 w-5 text-yellow-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-yellow-500 mb-1">Tips Penting</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Pastikan menggunakan spasi sebagai pemisah. Gunakan simbol <code>@</code> untuk menandai kategori atau nama orang (untuk hutang).
+                  </p>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="ai" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <Card className="glass-card border-neon-purple/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-neon-purple" />
+                    AI Smart Parser
+                  </CardTitle>
+                  <CardDescription>
+                    Ketik seperti Anda berbicara dengan teman. AI kami akan memilahnya untuk Anda.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex flex-col md:flex-row gap-6 items-center">
+                    <div className="flex-1 space-y-4 w-full">
+                      <div className="bg-muted p-4 rounded-xl rounded-tl-none border border-border">
+                        <p className="text-sm">
+                          &quot;Tadi beli bensin 20rb, terus mampir indomaret habis 50rb buat beli snack, sama bayar parkir 2rb&quot;
+                        </p>
+                      </div>
+                      <div className="flex justify-center">
+                        <ArrowRight className="h-6 w-6 text-muted-foreground rotate-90 md:rotate-0" />
+                      </div>
+                      <div className="bg-neon-purple/10 border border-neon-purple/20 p-4 rounded-xl space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <span>Bensin</span>
+                          <span className="font-bold">Rp 20.000</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span>Indomaret (Snack)</span>
+                          <span className="font-bold">Rp 50.000</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span>Parkir</span>
+                          <span className="font-bold">Rp 2.000</span>
+                        </div>
+                        <div className="border-t border-neon-purple/20 pt-2 mt-2 flex justify-between items-center font-bold">
+                          <span>Total Pengeluaran</span>
+                          <span className="text-neon-purple">Rp 72.000</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 flex items-start gap-3">
+                <div className="mt-1">
+                  <CircleAlert className="h-5 w-5 text-yellow-500" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-yellow-500 mb-1">Peringatan!</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Untuk fitur AI Smart Parser, penggunaan nya masih sangat terbatas. Utamakan menggunakan Manual Format terlebih dahulu.
+                  </p>
+                </div>
+              </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FaqAccordionSection() {
+  const faqs = [
+    {
+      question: "Apakah GoTEK ini berbayar?",
+      answer: "Saat ini GoTEK dapat digunakan secara GRATIS selama masa beta. Kedepannya akan ada fitur premium untuk penggunaan lebih lanjut."
+    },
+    {
+      question: "Apakah data keuangan saya aman?",
+      answer: "Tentu saja. Kami menggunakan enkripsi standar industri untuk menyimpan data Anda. Kami tidak akan membagikan data Anda ke pihak ketiga manapun."
+    },
+    {
+      question: "Bagaimana jika saya lupa password?",
+      answer: "Tenang, Anda bisa mereset password melalui fitur 'Lupa Password' di halaman login."
+    },
+    {
+      question: "Apakah bisa diexport ke Excel?",
+      answer: "Untuk saat ini fitur export belum tersedia, namun sedang dalam pengembangan dan akan segera hadir!"
+    },
+    {
+      question: "Apakah ada batasan transaksi?",
+      answer: "Tidak ada batasan jumlah transaksi yang bisa Anda catat. Catat sebanyak-banyaknya!"
+    }
+  ];
+
+  return (
+    <section id="faq-accordion" className="py-24 bg-muted/30">
+      <div className="container mx-auto px-4 max-w-3xl">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold mb-4">Pertanyaan Umum</h2>
+          <p className="text-muted-foreground">
+            Jawaban untuk pertanyaan yang sering diajukan.
+          </p>
+        </div>
+
+        <Accordion type="single" collapsible className="w-full">
+          {faqs.map((faq, index) => (
+            <AccordionItem key={index} value={`item-${index}`}>
+              <AccordionTrigger className="text-left font-medium text-lg">
+                {faq.question}
+              </AccordionTrigger>
+              <AccordionContent className="text-muted-foreground">
+                {faq.answer}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </div>
+    </section>
   );
 }
 
@@ -283,6 +510,10 @@ export default function HomePage() {
              </div>
           </div>
         </section>
+
+
+        <FaqSection />
+        <FaqAccordionSection />
       </main>
 
       <AppFooter />
