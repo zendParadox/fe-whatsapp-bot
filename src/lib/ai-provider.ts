@@ -31,11 +31,19 @@ export async function parseTransactionWithAI(
     case "auto":
       // Try Gemini first, fallback to Qwen if it fails
       console.log("🔄 Auto mode: Trying Gemini first...");
-      const geminiResult = await parseWithGemini(text);
-      
-      if (geminiResult && geminiResult.length > 0) {
-        console.log("✅ Gemini succeeded");
-        return geminiResult;
+      let geminiResult;
+      try {
+        geminiResult = await parseWithGemini(text);
+        if (geminiResult && geminiResult.length > 0) {
+          console.log("✅ Gemini succeeded");
+          return geminiResult;
+        }
+      } catch (error: any) {
+        if (error.message === "GEMINI_RATE_LIMIT") {
+          console.warn("⚠️ Gemini rate limit exceeded in auto mode, falling back to Qwen...");
+        } else {
+          console.error("❌ Gemini error:", error);
+        }
       }
       
       console.log("⚠️ Gemini failed, falling back to Qwen...");

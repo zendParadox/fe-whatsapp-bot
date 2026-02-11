@@ -142,7 +142,7 @@ export async function parseTransactionFromText(
         } else {
           // All keys exhausted
           console.error("❌ All API keys rate limited!");
-          return null;
+          throw new Error("GEMINI_RATE_LIMIT");
         }
       }
 

@@ -138,6 +138,17 @@ export default function ProfileMenu({
             </button>
 
             <button
+              onClick={() => {
+                setIsOpen(false);
+                router.push("/feedback");
+              }}
+              className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors"
+            >
+              <span className="w-4 h-4 flex items-center justify-center">💬</span>
+              Beri Masukan
+            </button>
+
+            <button
               onClick={handleLogout}
               disabled={isLoggingOut}
               className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center gap-3 transition-colors disabled:opacity-50"

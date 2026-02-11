@@ -430,7 +430,67 @@ export async function POST(request: NextRequest) {
         }
 
         return NextResponse.json({ message: reply });
+      } else if (type === "minggu" || type === "week" || type === "mingguan") {
+        const now = new Date();
+        const day = now.getDay(); // 0 (Sun) - 6 (Sat)
+        // Adjust to Monday start
+        const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
+        
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(diffToMonday);
+        startOfWeek.setHours(0, 0, 0, 0);
+        
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(startOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        const formatDate = (d: Date) => d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        const periodStr = `${formatDate(startOfWeek)} - ${formatDate(endOfWeek)}`;
+
+        const transactions = await prisma.transaction.findMany({
+          where: {
+            user_id: user.id,
+            created_at: { gte: startOfWeek, lte: endOfWeek }
+          },
+          include: { category: true }
+        });
+
+        const income = transactions.filter(t => t.type === "INCOME").reduce((acc, t) => acc + t.amount.toNumber(), 0);
+        const expense = transactions.filter(t => t.type === "EXPENSE").reduce((acc, t) => acc + t.amount.toNumber(), 0);
+        const balance = income - expense;
+        const balanceEmoji = balance >= 0 ? "💚" : "💔";
+        const txCount = transactions.length;
+
+        let reply = `📊 *Laporan Minggu Ini*\n📅 ${periodStr}\n━━━━━━━━━━━━━━━━━\n`;
+        reply += `📈 *Total Pemasukan:*\nRp ${income.toLocaleString("id-ID")}\n\n`;
+        reply += `📉 *Total Pengeluaran:*\nRp ${expense.toLocaleString("id-ID")}\n━━━━━━━━━━━━━━━━━\n`;
+        reply += `${balanceEmoji} *Balance:* Rp ${balance.toLocaleString("id-ID")}\n`;
+        reply += `📝 *Total Transaksi:* ${txCount}\n\n`;
+
+        // Top 3 pengeluaran per kategori
+        const expensesByCategory = transactions
+          .filter(t => t.type === "EXPENSE")
+          .reduce((acc, t) => {
+            const catName = t.category?.name || "Lainnya";
+            acc[catName] = (acc[catName] || 0) + t.amount.toNumber();
+            return acc;
+          }, {} as Record<string, number>);
+        
+        const topExpenses = Object.entries(expensesByCategory)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3);
+        
+        if (topExpenses.length > 0) {
+          reply += `🔥 *Top Pengeluaran:*\n`;
+          topExpenses.forEach(([cat, amt], i) => {
+            const medals = ['🥇', '🥈', '🥉'];
+            reply += `${medals[i]} ${cat}: Rp ${amt.toLocaleString("id-ID")}\n`;
+          });
+        }
+
+        return NextResponse.json({ message: reply });
       }
+
     }
 
 
@@ -660,7 +720,18 @@ export async function POST(request: NextRequest) {
 
 
 
-    const aiTransactions = await parseTransactionWithAI(message);
+    let aiTransactions;
+    try {
+      aiTransactions = await parseTransactionWithAI(message);
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === "GEMINI_RATE_LIMIT") {
+        return NextResponse.json({
+          message:
+            "⚠️ *Limit AI Habis*\n\nMaaf, kuota penggunaan AI (Gemini) telah mencapai batas harian.\n\nSilakan gunakan format manual:\n`keluar [jumlah] [keterangan] [kategori]`\n\nContoh:\n`keluar 50k makan siang @makan`",
+        });
+      }
+      console.error("❌ Error parsing AI transaction:", error);
+    }
 
     if (aiTransactions && aiTransactions.length > 0) {
       let reply = "✨ *Sistem AI (Gemini)*\n";
@@ -774,6 +845,7 @@ Format: \`masuk [jumlah] [keterangan] @[kategori]\`
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 � *5. LAPORAN*
 • \`laporan hari\` - Ringkasan hari ini
+• \`laporan minggu\` - Ringkasan minggu ini
 • \`laporan bulan\` - Ringkasan bulan ini
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -817,7 +889,7 @@ masuk 100k uang jajan @bonus\`
 
 🎯 *BUDGET & LAPORAN*
 \`budget 1jt @makan\` | \`cek budget\`
-\`laporan hari\` | \`laporan bulan\`
+\`laporan hari/minggu/bulan\`
 
 ↩️ \`undo\` - Batalkan transaksi
 

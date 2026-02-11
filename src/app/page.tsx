@@ -82,6 +82,9 @@ function AppFooter() {
           Kelola keuangan dengan cara masa depan.
         </p>
         <p className="text-sm text-muted-foreground mb-4">
+          <Link href="/feedback" className="text-neon-purple hover:underline font-medium mr-4">
+            Beri Masukan
+          </Link>
           Jika ada kendala, hubungi{" "}
           <a 
             href="https://t.me/rafliramadhaniii" 
