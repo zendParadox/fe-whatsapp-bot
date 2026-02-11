@@ -660,7 +660,18 @@ export async function POST(request: NextRequest) {
 
 
 
-    const aiTransactions = await parseTransactionWithAI(message);
+    let aiTransactions;
+    try {
+      aiTransactions = await parseTransactionWithAI(message);
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message === "GEMINI_RATE_LIMIT") {
+        return NextResponse.json({
+          message:
+            "⚠️ *Limit AI Habis*\n\nMaaf, kuota penggunaan AI (Gemini) telah mencapai batas harian.\n\nSilakan gunakan format manual:\n`keluar [jumlah] [keterangan] [kategori]`\n\nContoh:\n`keluar 50k makan siang @makan`",
+        });
+      }
+      console.error("❌ Error parsing AI transaction:", error);
+    }
 
     if (aiTransactions && aiTransactions.length > 0) {
       let reply = "✨ *Sistem AI (Gemini)*\n";
