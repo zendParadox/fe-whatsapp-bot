@@ -4,7 +4,7 @@
  * Supports: gemini, qwen, auto (fallback)
  */
 
-import { parseTransactionFromText as parseWithGemini, type ParsedTransaction } from "./gemini";
+import { parseTransactionFromText as parseWithGemini, parseTransactionFromImage as parseImageWithGemini, type ParsedTransaction } from "./gemini";
 import { parseTransactionWithQwen as parseWithQwen } from "./qwen";
 
 // AI Provider options: 'gemini' | 'qwen' | 'auto'
@@ -65,3 +65,16 @@ export async function parseTransactionWithAI(
 
 // Re-export types for convenience
 export type { ParsedTransaction };
+
+/**
+ * Parse receipt image using configured AI provider (Gemini multimodal)
+ */
+export async function parseReceiptImage(
+  base64Image: string,
+  mimeType: string,
+  caption?: string
+): Promise<ParsedTransaction[] | null> {
+  console.log(`📸 Parsing receipt image with AI Provider: ${AI_PROVIDER}`);
+  // Currently only Gemini supports multimodal image parsing
+  return parseImageWithGemini(base64Image, mimeType, caption);
+}

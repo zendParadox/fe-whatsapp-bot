@@ -156,3 +156,122 @@ export async function parseTransactionFromText(
   console.error("❌ Max retry attempts reached");
   return null;
 }
+
+/**
+ * Parse transactions from a receipt image using Gemini multimodal
+ *
+ * @param base64Image - Base64 encoded image data (without data URI prefix)
+ * @param mimeType - MIME type of the image (e.g., "image/jpeg", "image/png")
+ * @param caption - Optional caption sent with the image
+ * @returns Array of parsed transactions or null
+ */
+export async function parseTransactionFromImage(
+  base64Image: string,
+  mimeType: string,
+  caption?: string
+): Promise<ParsedTransaction[] | null> {
+  if (apiKeys.length === 0) {
+    console.error("❌ GEMINI_API_KEYS is missing in environment variables!");
+    return null;
+  }
+
+  resetFailedKeys();
+
+  const captionHint = caption ? `\nUser caption: "${caption}"` : "";
+
+  const prompt = `Kamu adalah asisten pencatat keuangan. Analisis foto struk/nota berikut dan ekstrak SEMUA item transaksi yang ada.${captionHint}
+
+Output Schema (JSON array):
+[
+  {
+    "amount": number,
+    "type": "INCOME" | "EXPENSE",
+    "category": string,
+    "description": string,
+    "confidence": number
+  }
+]
+
+Rules:
+- Setiap item di struk harus menjadi satu transaksi terpisah.
+- Default type adalah "EXPENSE" (struk belanja = pengeluaran).
+- Amount harus berupa angka tanpa "Rp", ".", atau ",".
+- Jika ada total, JANGAN masukkan total sebagai transaksi terpisah. Hanya item individual.
+- Jika struk tidak terbaca atau bukan struk, kembalikan array kosong [].
+- Category harus dalam bahasa Indonesia (contoh: makanan, minuman, belanja, transportasi, dll).
+- Description harus singkat dan jelas menggambarkan item.
+- confidence: 0.0 - 1.0, seberapa yakin kamu dengan parsing ini.
+- Jika hanya ada total tanpa detail item, buat satu transaksi dengan total tersebut.`;
+
+  let attempts = 0;
+  const maxAttempts = apiKeys.length;
+
+  while (attempts < maxAttempts) {
+    attempts++;
+
+    const genAI = getGeminiClient();
+    if (!genAI) return null;
+
+    try {
+      console.log(`📸 SENDING IMAGE TO GEMINI (key #${currentKeyIndex + 1})...`);
+
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        generationConfig: { responseMimeType: "application/json" },
+      });
+
+      const imagePart = {
+        inlineData: {
+          data: base64Image,
+          mimeType: mimeType,
+        },
+      };
+
+      const result = await model.generateContent([prompt, imagePart]);
+      const response = await result.response;
+      const textResponse = response.text();
+      console.log("GEMINI IMAGE RAW RESPONSE:", textResponse);
+
+      const jsonStr = textResponse.replace(/```json|```/g, "").trim();
+      let data = JSON.parse(jsonStr);
+      if (!Array.isArray(data)) {
+        data = [data];
+      }
+
+      // Filter out zero-amount or invalid entries
+      data = data.filter(
+        (tx: ParsedTransaction) => tx.amount > 0 && tx.description
+      );
+
+      return data as ParsedTransaction[];
+    } catch (error: any) {
+      const statusCode = error?.status || error?.response?.status;
+      const isRateLimited =
+        statusCode === 429 ||
+        error?.message?.includes("429") ||
+        error?.message?.includes("Too Many Requests") ||
+        error?.message?.includes("quota");
+
+      if (isRateLimited) {
+        console.warn(
+          `⚠️ Rate limit hit on key #${currentKeyIndex + 1}. Attempting rotation...`
+        );
+
+        if (rotateApiKey()) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          continue;
+        } else {
+          console.error("❌ All API keys rate limited!");
+          throw new Error("GEMINI_RATE_LIMIT");
+        }
+      }
+
+      console.error("❌ Gemini Image Parse Error:", error);
+      if (error?.message) console.error("Error Message:", error.message);
+      return null;
+    }
+  }
+
+  console.error("❌ Max retry attempts reached for image parsing");
+  return null;
+}
