@@ -66,6 +66,7 @@ import DebtCard from "@/components/dashboard/DebtCard";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { formatMoney } from "@/lib/phone";
 
 // --- INTERFACE & KONSTANTA ---
 interface CategoryObj {
@@ -313,6 +314,7 @@ export default function Dashboard() {
 
         const apiData: DashboardData = await res.json();
         setData(apiData);
+        if ((apiData as any).currency) setUserCurrency((apiData as any).currency);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -343,8 +345,10 @@ export default function Dashboard() {
     }
   }
 
+  const [userCurrency, setUserCurrency] = useState<string>("IDR");
+
   const formatCurrency = (value: number) =>
-    `Rp ${value.toLocaleString("id-ID")}`;
+    formatMoney(value, userCurrency);
 
   function openEdit(tx: Transaction) {
     setEditingTx(tx);

@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { formatMoneyBot } from "@/lib/phone";
 
-export async function checkBudgetStatus(userId: string, categoryId: string, amount: number) {
+export async function checkBudgetStatus(userId: string, categoryId: string, amount: number, currency: string = "IDR") {
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
@@ -41,10 +42,10 @@ export async function checkBudgetStatus(userId: string, categoryId: string, amou
 
   if (totalExpense > budgetAmount) {
     const over = totalExpense - budgetAmount;
-    return `\n\n⚠️ *PERINGATAN:* Budget kategori ini telah terlampaui sebesar Rp ${over.toLocaleString("id-ID")}!`;
+    return `\n\n⚠️ *PERINGATAN:* Budget kategori ini telah terlampaui sebesar ${formatMoneyBot(over, currency)}!`;
   } else if (totalExpense > budgetAmount * 0.8) {
     const remaining = budgetAmount - totalExpense;
-    return `\n\n📝 *Info:* Budget hampir habis. Sisa: Rp ${remaining.toLocaleString("id-ID")}`;
+    return `\n\n📝 *Info:* Budget hampir habis. Sisa: ${formatMoneyBot(remaining, currency)}`;
   }
 
   return null;

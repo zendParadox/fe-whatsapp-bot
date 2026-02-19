@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import crypto from "crypto";
+import { normalizePhone, isAllowedPhone } from "@/lib/phone";
 
 const prisma = new PrismaClient();
 
@@ -27,12 +28,13 @@ export async function POST(request: NextRequest) {
     let { phoneNumber } = validation.data;
 
     // Normalisasi nomor telepon
-    phoneNumber = phoneNumber.replace(/\D/g, "");
-    if (phoneNumber.startsWith("0")) {
-      phoneNumber = "62" + phoneNumber.substring(1);
-    }
-    if (!phoneNumber.startsWith("62")) {
-      phoneNumber = "62" + phoneNumber;
+    phoneNumber = normalizePhone(phoneNumber);
+
+    if (!isAllowedPhone(phoneNumber)) {
+      return NextResponse.json(
+        { error: "Hanya nomor Indonesia (62) dan Australia (61) yang didukung." },
+        { status: 400 }
+      );
     }
 
     // Cari user berdasarkan nomor WhatsApp

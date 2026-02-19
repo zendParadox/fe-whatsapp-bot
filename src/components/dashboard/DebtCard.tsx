@@ -45,6 +45,7 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import { formatMoney } from "@/lib/phone";
 
 interface Debt {
   id: string;
@@ -92,7 +93,7 @@ export default function DebtCard({ onDataChange }: DebtCardProps) {
   });
 
   const formatCurrency = (value: number | string) =>
-    `Rp ${Number(value).toLocaleString("id-ID")}`;
+    formatMoney(Number(value));
 
   // Fetch debts
   async function fetchDebts() {

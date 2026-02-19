@@ -39,8 +39,8 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
 
-    if (!phoneNumber.startsWith("62")) {
-      toast.error("Nomor WhatsApp harus diawali dengan kode negara 62.");
+    if (!phoneNumber.startsWith("62") && !phoneNumber.startsWith("61")) {
+      toast.error("Nomor WhatsApp harus diawali dengan kode negara 62 (Indonesia) atau 61 (Australia).");
       setLoading(false);
       return;
     }

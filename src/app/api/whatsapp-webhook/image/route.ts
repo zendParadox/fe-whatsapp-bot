@@ -4,6 +4,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 import { z } from "zod";
 import { parseReceiptImage } from "@/lib/ai-provider";
 import { checkBudgetStatus } from "@/lib/whatsapp/service";
+import { normalizePhone, formatMoneyBot } from "@/lib/phone";
 
 const prisma = new PrismaClient();
 
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     const { sender, image, mimetype, caption } = validation.data;
 
-    // === Normalize sender (reuse logic from main webhook) ===
+    // === Normalize sender ===
     let rawSender = sender;
     if (rawSender.includes("@")) {
       rawSender = rawSender.split("@")[0];
@@ -38,16 +39,12 @@ export async function POST(request: NextRequest) {
     }
     rawSender = rawSender.replace(/\D/g, "");
 
-    const isLid =
-      rawSender.length > 15 ||
-      (!rawSender.startsWith("62") &&
-        !rawSender.startsWith("0") &&
-        rawSender.length > 10);
+    // LID detection - length-based only
+    const isLid = rawSender.length > 15;
 
     let normalizedSender = rawSender;
 
     if (isLid) {
-      // Look up LID mapping
       const mapping = await prisma.lidMapping.findUnique({
         where: { lid: rawSender },
       });
@@ -60,15 +57,7 @@ export async function POST(request: NextRequest) {
         });
       }
     } else {
-      if (normalizedSender.startsWith("0")) {
-        normalizedSender = "62" + normalizedSender.substring(1);
-      }
-      if (
-        !normalizedSender.startsWith("62") &&
-        normalizedSender.length >= 9
-      ) {
-        normalizedSender = "62" + normalizedSender;
-      }
+      normalizedSender = normalizePhone(normalizedSender);
     }
 
     // === Find user ===
@@ -82,6 +71,9 @@ export async function POST(request: NextRequest) {
           "❌ Nomor Anda belum terdaftar. Silakan daftar terlebih dahulu di https://gotek.vercel.app/register",
       });
     }
+
+    // Currency-aware formatter
+    const fmt = (amount: number) => formatMoneyBot(amount, user.currency);
 
     console.log(
       `📸 Receipt image received from ${normalizedSender} (${image.length} chars base64)`
@@ -138,7 +130,8 @@ export async function POST(request: NextRequest) {
           const alert = await checkBudgetStatus(
             user.id,
             category.id,
-            tx.amount
+            tx.amount,
+            user.currency
           );
           if (alert) budgetAlerts.push(`${category.name}: ${alert}`);
           totalExpense += tx.amount;
@@ -162,7 +155,7 @@ export async function POST(request: NextRequest) {
         });
 
         const icon = tx.type === "INCOME" ? "📈" : "📉";
-        const formattedAmt = `Rp ${tx.amount.toLocaleString("id-ID")}`;
+        const formattedAmt = fmt(tx.amount);
         results.push({
           success: true,
           icon,
@@ -198,9 +191,9 @@ export async function POST(request: NextRequest) {
     reply += `📊 *Ringkasan:*\n`;
     reply += `✅ Berhasil: ${successCount}/${parsedTransactions.length} item\n`;
     if (totalIncome > 0)
-      reply += `📈 Total Masuk: Rp ${totalIncome.toLocaleString("id-ID")}\n`;
+      reply += `📈 Total Masuk: ${fmt(totalIncome)}\n`;
     if (totalExpense > 0)
-      reply += `📉 Total Keluar: Rp ${totalExpense.toLocaleString("id-ID")}\n`;
+      reply += `📉 Total Keluar: ${fmt(totalExpense)}\n`;
 
     if (budgetAlerts.length > 0) {
       reply += `\n⚠️ *Peringatan Budget:*\n${budgetAlerts.join("\n")}`;

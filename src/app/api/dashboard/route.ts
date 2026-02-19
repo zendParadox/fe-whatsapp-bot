@@ -46,6 +46,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
     const userId = payload.userId as string;
+
+    // Fetch user for currency
+    const currentUser = await prisma.user.findUnique({ where: { id: userId } });
+    const userCurrency = currentUser?.currency || "IDR";
+
     const categories = await prisma.category.findMany({
       where: { user_id: userId },
       orderBy: { name: "asc" },
@@ -199,6 +204,7 @@ export async function GET(request: NextRequest) {
 
     // --- 4. STRUKTURKAN DATA RESPON FINAL ---
     const responseData = {
+      currency: userCurrency,
       currentPeriod: {
         summary,
         transactions: currentTransactions,

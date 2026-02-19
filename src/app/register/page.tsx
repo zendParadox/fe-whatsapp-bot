@@ -41,8 +41,8 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!phone.startsWith("62")) {
-      toast.error("Nomor WhatsApp harus diawali dengan kode negara 62.");
+    if (!phone.startsWith("62") && !phone.startsWith("61")) {
+      toast.error("Nomor WhatsApp harus diawali dengan kode negara 62 (Indonesia) atau 61 (Australia).");
       return;
     }
 

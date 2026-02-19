@@ -6,46 +6,11 @@ import { hashSync } from "bcryptjs";
 import { cookies } from "next/headers";
 import { signToken } from "@/lib/auth"; // kalau kamu sudah punya lib/auth (disarankan)
 
+import { normalizePhone, isAllowedPhone, getCurrencyFromPhone } from "@/lib/phone";
+
 const prisma = new PrismaClient();
 const BCRYPT_SALT_ROUNDS = 10;
 
-/**
- * Normalize phone number to raw format.
- * Converts various input formats to: 62xxx (raw number)
- * @example "081234567890" -> "6281234567890"
- * @example "+6281234567890" -> "6281234567890"
- * @example "6281234567890" -> "6281234567890"
- * @example "6281234567890@s.whatsapp.net" -> "6281234567890"
- */
-function normalizePhoneToRaw(phone: string): string {
-  // Remove @xxx suffix if exists
-  let cleaned = phone.includes("@") ? phone.split("@")[0] : phone;
-  
-  // Remove device identifier if exists (e.g., 628xxx:1 -> 628xxx)
-  if (cleaned.includes(":")) {
-    cleaned = cleaned.split(":")[0];
-  }
-
-  // Remove all non-digit characters except + at the beginning
-  cleaned = cleaned.replace(/[^\d+]/g, "");
-
-  // Remove leading + if exists
-  if (cleaned.startsWith("+")) {
-    cleaned = cleaned.substring(1);
-  }
-
-  // Convert leading 0 to 62 (Indonesia country code)
-  if (cleaned.startsWith("0")) {
-    cleaned = "62" + cleaned.substring(1);
-  }
-
-  // If somehow it doesn't start with 62, add it (for edge cases like just "81234567890")
-  if (!cleaned.startsWith("62") && cleaned.length >= 9 && cleaned.length <= 12) {
-    cleaned = "62" + cleaned;
-  }
-
-  return cleaned;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,8 +29,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // normalisasi whatsapp_jid jadi bentuk raw (62xxx)
-    const whatsapp_jid = normalizePhoneToRaw(rawPhone);
+    // normalisasi whatsapp_jid
+    const whatsapp_jid = normalizePhone(rawPhone);
+
+    // validasi: hanya nomor Indonesia (62) dan Australia (61)
+    if (!isAllowedPhone(whatsapp_jid)) {
+      return NextResponse.json(
+        { error: "Hanya nomor Indonesia (62) dan Australia (61) yang didukung." },
+        { status: 400 }
+      );
+    }
+
+    // Auto-detect currency dari country code
+    const currency = getCurrencyFromPhone(whatsapp_jid);
 
     // cek duplicate email / whatsapp_jid
     const exists = await prisma.user.findFirst({
@@ -91,6 +67,7 @@ export async function POST(request: NextRequest) {
         name,
         password: password,
         whatsapp_jid,
+        currency,
       },
     });
 

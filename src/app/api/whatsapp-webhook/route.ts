@@ -8,6 +8,7 @@ import {
 import { Decimal } from "@prisma/client/runtime/library";
 import { z } from "zod";
 import { parseTransactionWithAI } from "@/lib/ai-provider";
+import { normalizePhone, formatMoneyBot } from "@/lib/phone";
 
 import { parseSmartAmount, parseTransactionMessage, parseDebtMessage } from "@/lib/whatsapp/parser";
 import { checkBudgetStatus } from "@/lib/whatsapp/service";
@@ -41,8 +42,8 @@ export async function POST(request: NextRequest) {
     }
     rawSender = rawSender.replace(/\D/g, "");
 
-    // Deteksi apakah ini LID (Linked ID) - LID biasanya > 15 digit dan tidak dimulai dengan 62/08
-    const isLid = rawSender.length > 15 || (!rawSender.startsWith("62") && !rawSender.startsWith("0") && rawSender.length > 10);
+    // Deteksi apakah ini LID (Linked ID) - LID biasanya > 15 digit
+    const isLid = rawSender.length > 15;
 
     let normalizedSender = rawSender;
     let lidValue: string | null = null;
@@ -63,17 +64,11 @@ export async function POST(request: NextRequest) {
         // Tidak ada mapping - cek apakah user sedang mendaftarkan nomornya
         const trimmedMessage = message.trim();
 
-        // Jika pesan berupa nomor telepon (format: 08xxx atau 62xxx atau +62xxx)
-        const phoneRegex = /^(\+?62|0)[0-9]{8,12}$/;
+        // Jika pesan berupa nomor telepon (format: 08xxx atau 62xxx atau 61xxx)
+        const phoneRegex = /^(\+?62|\+?61|0)[0-9]{8,12}$/;
         if (phoneRegex.test(trimmedMessage.replace(/[\s-]/g, ""))) {
           // User mengirim nomor telepon - simpan mapping
-          let phoneToSave = trimmedMessage.replace(/[\s\-\+]/g, "");
-          if (phoneToSave.startsWith("0")) {
-            phoneToSave = "62" + phoneToSave.substring(1);
-          }
-          if (!phoneToSave.startsWith("62")) {
-            phoneToSave = "62" + phoneToSave;
-          }
+          const phoneToSave = normalizePhone(trimmedMessage);
 
           // Cari user dengan nomor tersebut
           const existingUser = await prisma.user.findUnique({
@@ -109,12 +104,7 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // Bukan LID - normalisasi nomor telepon biasa
-      if (normalizedSender.startsWith("0")) {
-        normalizedSender = "62" + normalizedSender.substring(1);
-      }
-      if (!normalizedSender.startsWith("62") && normalizedSender.length >= 9) {
-        normalizedSender = "62" + normalizedSender;
-      }
+      normalizedSender = normalizePhone(normalizedSender);
     }
 
     console.log(`Webhook received sender: ${sender} -> Normalized: ${normalizedSender}${isLid ? ' (via LID mapping)' : ''}`);
@@ -130,6 +120,9 @@ export async function POST(request: NextRequest) {
           "❌ Nomor Anda belum terdaftar. Silakan daftar terlebih dahulu di https://gotek.vercel.app/register",
       });
     }
+
+    // Currency-aware formatter based on user's country
+    const fmt = (amount: number) => formatMoneyBot(amount, user.currency);
 
     // Update LID mapping dengan user_id jika belum ada
     if (lidValue) {
@@ -198,7 +191,7 @@ export async function POST(request: NextRequest) {
 
           // Check budget for expense
           if (parsedData.type === "EXPENSE") {
-            const alert = await checkBudgetStatus(user.id, category.id, parsedData.amount);
+            const alert = await checkBudgetStatus(user.id, category.id, parsedData.amount, user.currency);
             if (alert) budgetAlerts.push(`${category.name}: ${alert}`);
             totalExpense += parsedData.amount;
           } else {
@@ -217,7 +210,7 @@ export async function POST(request: NextRequest) {
           });
 
           const icon = parsedData.type === "INCOME" ? "📈" : "📉";
-          const formattedAmt = `Rp ${parsedData.amount.toLocaleString("id-ID")}`;
+          const formattedAmt = fmt(parsedData.amount);
           results.push({
             success: true,
             icon,
@@ -245,7 +238,7 @@ export async function POST(request: NextRequest) {
         
         let reply = `${r.icon} *${typeText} Tercatat!*\n`;
         reply += `━━━━━━━━━━━━━━━━━\n`;
-        reply += `💰 *Nominal:* Rp ${parsedData.amount.toLocaleString("id-ID")}\n`;
+        reply += `💰 *Nominal:* ${fmt(parsedData.amount)}\n`;
         reply += `📂 *Kategori:* ${parsedData.category}\n`;
         reply += `📝 *Keterangan:* ${parsedData.description}\n`;
         reply += ` *Tanggal:* ${dateStr}\n`;
@@ -270,8 +263,8 @@ export async function POST(request: NextRequest) {
         reply += `\n━━━━━━━━━━━━━━━━━\n`;
         reply += `📊 *Ringkasan:*\n`;
         reply += `✅ Berhasil: ${successCount}/${transactionLines.length} transaksi\n`;
-        if (totalIncome > 0) reply += `📈 Total Masuk: Rp ${totalIncome.toLocaleString("id-ID")}\n`;
-        if (totalExpense > 0) reply += `📉 Total Keluar: Rp ${totalExpense.toLocaleString("id-ID")}\n`;
+        if (totalIncome > 0) reply += `📈 Total Masuk: ${fmt(totalIncome)}\n`;
+        if (totalExpense > 0) reply += `📉 Total Keluar: ${fmt(totalExpense)}\n`;
         
         if (budgetAlerts.length > 0) {
           reply += `\n⚠️ *Peringatan Budget:*\n${budgetAlerts.join('\n')}`;
@@ -334,7 +327,7 @@ export async function POST(request: NextRequest) {
       const monthName = monthNames[currentMonth - 1];
 
       return NextResponse.json({
-        message: `🎯 *Budget Berhasil Diatur!*\n━━━━━━━━━━━━━━━━━\n📂 *Kategori:* ${category.name}\n💰 *Anggaran:* Rp ${amount.toLocaleString("id-ID")}\n📅 *Periode:* ${monthName} ${currentYear}\n━━━━━━━━━━━━━━━━━\n\n💡 _Ketik \"cek budget\" untuk lihat status_`,
+        message: `🎯 *Budget Berhasil Diatur!*\n━━━━━━━━━━━━━━━━━\n📂 *Kategori:* ${category.name}\n💰 *Anggaran:* ${fmt(amount)}\n📅 *Periode:* ${monthName} ${currentYear}\n━━━━━━━━━━━━━━━━━\n\n💡 _Ketik \"cek budget\" untuk lihat status_`,
       });
     }
 
@@ -364,10 +357,10 @@ export async function POST(request: NextRequest) {
         const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
 
         let reply = `📊 *Laporan Hari Ini*\n📅 ${dateStr}\n━━━━━━━━━━━━━━━━━\n`;
-        reply += `📈 *Pemasukan:* Rp ${income.toLocaleString("id-ID")}\n`;
-        reply += `📉 *Pengeluaran:* Rp ${expense.toLocaleString("id-ID")}\n`;
+        reply += `📈 *Pemasukan:* ${fmt(income)}\n`;
+        reply += `📉 *Pengeluaran:* ${fmt(expense)}\n`;
         reply += `━━━━━━━━━━━━━━━━━\n`;
-        reply += `${balanceEmoji} *Balance:* Rp ${balance.toLocaleString("id-ID")}\n`;
+        reply += `${balanceEmoji} *Balance:* ${fmt(balance)}\n`;
         reply += `📝 *Total Transaksi:* ${txCount} transaksi\n`;
         
         if (txCount > 0) {
@@ -375,7 +368,7 @@ export async function POST(request: NextRequest) {
           const lastTx = transactions.slice(-3).reverse();
           lastTx.forEach(t => {
             const icon = t.type === "INCOME" ? "➕" : "➖";
-            reply += `${icon} Rp ${t.amount.toNumber().toLocaleString("id-ID")} - ${t.description}\n`;
+            reply += `${icon} ${fmt(t.amount.toNumber())} - ${t.description}\n`;
           });
         }
 
@@ -547,8 +540,8 @@ export async function POST(request: NextRequest) {
 
         reply += `\n${statusIcon} *${b.category.name}*\n`;
         reply += `   ${statusBar} ${percent}%\n`;
-        reply += `   💸 Terpakai: Rp ${used.toLocaleString("id-ID")}\n`;
-        reply += `   💰 Sisa: Rp ${remaining.toLocaleString("id-ID")}\n`;
+        reply += `   💸 Terpakai: ${fmt(used)}\n`;
+        reply += `   💰 Sisa: ${fmt(remaining)}\n`;
       }
 
       reply += `\n💡 _Ketik \"laporan bulan\" untuk detail lengkap_`;

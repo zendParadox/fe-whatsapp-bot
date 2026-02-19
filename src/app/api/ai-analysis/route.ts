@@ -6,6 +6,7 @@ import { subMonths, startOfMonth, endOfMonth, format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
+import { formatMoney } from "@/lib/phone";
 
 const prisma = new PrismaClient();
 
@@ -27,23 +28,25 @@ interface TransactionSummary {
   transactionCount: number;
 }
 
-async function generateAnalysis(summary: TransactionSummary, monthName: string, year: number): Promise<string> {
+async function generateAnalysis(summary: TransactionSummary, monthName: string, year: number, currency: string = "IDR"): Promise<string> {
   const genAI = getGeminiClient();
   if (!genAI) {
     throw new Error("Gemini API key tidak dikonfigurasi");
   }
 
+  const fmt = (v: number) => formatMoney(v, currency);
+
   const prompt = `
 Kamu adalah konsultan keuangan pribadi yang senang me-roasting dan kocak. Analisis data keuangan berikut dari bulan ${monthName} ${year}:
 
 DATA KEUANGAN:
-- Total Pemasukan: Rp ${summary.totalIncome.toLocaleString("id-ID")}
-- Total Pengeluaran: Rp ${summary.totalExpense.toLocaleString("id-ID")}
-- Saldo: Rp ${summary.balance.toLocaleString("id-ID")}
+- Total Pemasukan: ${fmt(summary.totalIncome)}
+- Total Pengeluaran: ${fmt(summary.totalExpense)}
+- Saldo: ${fmt(summary.balance)}
 - Jumlah Transaksi: ${summary.transactionCount}
 
 PENGELUARAN PER KATEGORI:
-${summary.categoryBreakdown.map(c => `- ${c.category}: Rp ${c.amount.toLocaleString("id-ID")}`).join("\n")}
+${summary.categoryBreakdown.map(c => `- ${c.category}: ${fmt(c.amount)}`).join("\n")}
 
 Berikan analisis dalam format berikut (langsung dalam Bahasa Indonesia yang natural dalam me-roasting):
 
@@ -178,8 +181,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Fetch user's currency
+    const currentUser = await prisma.user.findUnique({ where: { id: userId } });
+    const userCurrency = currentUser?.currency || "IDR";
+
     // Generate analysis using Gemini
-    const analysisContent = await generateAnalysis(summary, monthName, year);
+    const analysisContent = await generateAnalysis(summary, monthName, year, userCurrency);
 
     // Save to database
     await prisma.monthlyAnalysis.create({
