@@ -43,7 +43,13 @@ export async function POST(request: NextRequest) {
     rawSender = rawSender.replace(/\D/g, "");
 
     // Deteksi apakah ini LID (Linked ID) - LID biasanya > 15 digit
-    const isLid = rawSender.length > 15;
+    // atau nomor yang tidak diawali country code 62/61/0 dan panjangnya > 10
+    const isLid =
+      rawSender.length > 15 ||
+      (!rawSender.startsWith("62") &&
+        !rawSender.startsWith("61") &&
+        !rawSender.startsWith("0") &&
+        rawSender.length > 10);
 
     let normalizedSender = rawSender;
     let lidValue: string | null = null;

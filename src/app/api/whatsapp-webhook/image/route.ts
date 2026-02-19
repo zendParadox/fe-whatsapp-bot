@@ -39,8 +39,13 @@ export async function POST(request: NextRequest) {
     }
     rawSender = rawSender.replace(/\D/g, "");
 
-    // LID detection - length-based only
-    const isLid = rawSender.length > 15;
+    // LID detection — length > 15 OR unknown prefix with length > 10
+    const isLid =
+      rawSender.length > 15 ||
+      (!rawSender.startsWith("62") &&
+        !rawSender.startsWith("61") &&
+        !rawSender.startsWith("0") &&
+        rawSender.length > 10);
 
     let normalizedSender = rawSender;
 
