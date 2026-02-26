@@ -54,6 +54,9 @@ function AppHeader() {
           <Link href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             Cara Kerja
           </Link>
+          <Link href="/guide" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            Panduan
+          </Link>
         </div>
         <div className="flex items-center gap-3">
             <ModeToggle />
@@ -82,6 +85,9 @@ function AppFooter() {
           Kelola keuangan dengan cara masa depan.
         </p>
         <p className="text-sm text-muted-foreground mb-4">
+          <Link href="/guide" className="text-neon-cyan hover:underline font-medium mr-4">
+            Panduan Lengkap
+          </Link>
           <Link href="/feedback" className="text-neon-purple hover:underline font-medium mr-4">
             Beri Masukan
           </Link>
