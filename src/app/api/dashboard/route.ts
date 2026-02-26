@@ -210,6 +210,7 @@ export async function GET(request: NextRequest) {
     // --- 4. STRUKTURKAN DATA RESPON FINAL ---
     const responseData = {
       currency: userCurrency,
+      plan_type: currentUser?.plan_type || "FREE",
       currentPeriod: {
         summary,
         transactions: currentTransactions,

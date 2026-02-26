@@ -85,6 +85,13 @@ export async function POST(request: NextRequest) {
     );
 
     // === Parse receipt with AI ===
+    if (user.plan_type === "FREE") {
+      return NextResponse.json({
+        message:
+          "👑 *Fitur Premium*\n\nMaaf, fitur *Scan Struk AI* hanya tersedia untuk pengguna Premium.\n\nSilakan catat manual pengeluaran Anda atau upgrade di Dashboard untuk fitur tanpa batas! ✨",
+      });
+    }
+
     let parsedTransactions;
     try {
       parsedTransactions = await parseReceiptImage(image, mimetype, caption);

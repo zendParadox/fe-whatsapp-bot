@@ -61,6 +61,7 @@ import SmartAiInput from "@/components/dashboard/SmartAiInput";
 import WhatsAppBotBanner from "@/components/dashboard/WhatsAppBotBanner";
 import AiAnalysisButton from "@/components/dashboard/AiAnalysisButton";
 import AiAnalysisModal from "@/components/dashboard/AiAnalysisModal";
+import ExportReportButtons from "@/components/dashboard/ExportReportButtons";
 import BudgetCard from "@/components/dashboard/BudgetCard";
 import DebtCard from "@/components/dashboard/DebtCard";
 import { toast } from "sonner";
@@ -103,6 +104,7 @@ interface DashboardData {
   trendData: { name: string; Pemasukan: number; Pengeluaran: number }[];
   budgetData: { category: string; budget: number; actual: number }[];
   totalSaldo: number;
+  plan_type?: "FREE" | "PREMIUM";
 }
 
 interface UserProfile {
@@ -601,11 +603,19 @@ export default function Dashboard() {
       <SmartAiInput 
         categories={categories} 
         onTransactionAdded={() => setRefreshKey(k => k + 1)} 
+        planType={data.plan_type || "FREE"}
       />
 
-      {/* AI Analysis Button */}
-      <div className="flex justify-center sm:justify-start">
-        <AiAnalysisButton onClick={fetchAiAnalysis} isLoading={isAiLoading} />
+      {/* AI Analysis Button + Export Buttons */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <AiAnalysisButton onClick={fetchAiAnalysis} isLoading={isAiLoading} planType={data.plan_type || "FREE"} />
+        <ExportReportButtons
+          transactions={currentPeriod.transactions}
+          summary={currentPeriod.summary}
+          planType={data.plan_type || "FREE"}
+          formatCurrency={formatCurrency}
+          dateRange={activeDateRange}
+        />
       </div>
 
       {/* AI Analysis Modal */}

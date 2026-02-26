@@ -746,6 +746,27 @@ export async function POST(request: NextRequest) {
 
 
 
+    if (user.plan_type === "FREE") {
+      return NextResponse.json({
+        message:
+          "👑 *Fitur Premium*\n\nMaaf, fitur AI Smart Parser hanya tersedia untuk pengguna Premium.\n\nSilakan gunakan format manual:\n\n`keluar [jumlah] [keterangan] [kategori]`\n\nContoh:\n`keluar 50k makan siang @makan`\n\nAtau upgrade sekarang di Dashboard untuk akses tanpa batas! ✨",
+      });
+    }
+
+    if (command === "upgrade" || command === "premium") {
+      const isPremium = user.plan_type === "PREMIUM";
+      if (isPremium) {
+        return NextResponse.json({
+          message: `👑 *Status Premium Aktif*\n\nTerima kasih, Anda sudah menjadi pelanggan eksklusif GoTEK Premium.\nNikmati terus kemudahan pencatatan pakai AI scan struk dan laporan prediktif harian!`
+        });
+      }
+
+      return NextResponse.json({
+        message: `⭐️ *Upgrade ke GoTEK Premium!* ⭐️\n\nBuka kekuatan penuh AI Asisten Keuangan:\n✅ Bebas ketik bahasa natural ke chatbot\n📸 Kirim foto / struk pengeluaran langsung tercatat\n📊 Dapatkan insight pintar & saran keuangan bulanan dari AI\n\n🔥 *PROMO 100 Pendaftar Pertama!*\n~Rp 29.000~ → *Rp 15.000/Bulan*\n\nKlik link di bawah ini untuk upgrade:\n🔗 https://gotek.vercel.app/pricing\n\n\n💡 _Dukung karya anak bangsa. Kami juga butuh kopi!_ ☕`
+      });
+    }
+
+
     let aiTransactions;
     try {
       aiTransactions = await parseTransactionWithAI(message);
@@ -916,6 +937,9 @@ masuk 100k uang jajan @bonus\`
 🎯 *BUDGET, LAPORAN & SALDO*
 \`budget 1jt @makan\` | \`cek budget\`
 \`laporan hari/minggu/bulan\` | \`cek saldo\`
+
+⭐️ *PREMIUM & AI*
+\`upgrade\` - Akses Struk AI & Report Cerdas
 
 ↩️ \`undo\` - Batalkan transaksi
 
