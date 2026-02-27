@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     // --- 2. QUERY DATABASE SECARA PARALEL ---
     // NOTE: cast ke `any` di sini supaya build tidak terganggu oleh mismatch tipe Prisma.
     // Ini aman untuk runtime — hanya menghindari pemeriksaan compile-time yang memblokir deploy.
-    const [currentTransactionsRaw, previousSummary, budgetsRaw, trendDataRaw] =
+    const [currentTransactionsRaw, previousSummary, budgetsRaw, trendDataRaw, totalAllTimeRaw] =
       await Promise.all([
         prisma.transaction.findMany({
           where: {
@@ -127,6 +127,11 @@ export async function GET(request: NextRequest) {
           },
           _sum: { amount: true },
           orderBy: { created_at: "asc" },
+        }),
+        prisma.transaction.groupBy({
+          by: ["type"],
+          where: { user_id: userId },
+          _sum: { amount: true },
         }),
       ]);
 
@@ -205,6 +210,7 @@ export async function GET(request: NextRequest) {
     // --- 4. STRUKTURKAN DATA RESPON FINAL ---
     const responseData = {
       currency: userCurrency,
+      plan_type: currentUser?.plan_type || "FREE",
       currentPeriod: {
         summary,
         transactions: currentTransactions,
@@ -218,7 +224,19 @@ export async function GET(request: NextRequest) {
       },
       trendData,
       budgetData,
+      totalSaldo: 0,
     };
+
+    let totalAllTimeIncome = 0;
+    let totalAllTimeExpense = 0;
+    if (Array.isArray(totalAllTimeRaw)) {
+      totalAllTimeRaw.forEach((t: any) => {
+        const amt = Number(t._sum?.amount ?? 0);
+        if (t.type === "INCOME") totalAllTimeIncome += amt;
+        else if (t.type === "EXPENSE") totalAllTimeExpense += amt;
+      });
+    }
+    responseData.totalSaldo = totalAllTimeIncome - totalAllTimeExpense;
 
     return NextResponse.json(responseData);
   } catch (error) {

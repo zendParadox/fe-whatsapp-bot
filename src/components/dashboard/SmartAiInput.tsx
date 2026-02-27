@@ -20,6 +20,7 @@ import { ParsedTransaction } from "@/lib/gemini";
 interface SmartAiInputProps {
   onTransactionAdded: () => void;
   categories: { id?: string; name?: string }[];
+  planType?: "FREE" | "PREMIUM";
 }
 
 interface FormItem {
@@ -30,7 +31,7 @@ interface FormItem {
   originalCategory: string;
 }
 
-export default function SmartAiInput({ onTransactionAdded, categories }: SmartAiInputProps) {
+export default function SmartAiInput({ onTransactionAdded, categories, planType = "FREE" }: SmartAiInputProps) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -38,6 +39,8 @@ export default function SmartAiInput({ onTransactionAdded, categories }: SmartAi
   const [formItems, setFormItems] = useState<FormItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(true); // default collapsed, will update from localStorage
+
+  const isFree = planType === "FREE";
 
   // Load isCollapsed from localStorage on mount
   useEffect(() => {
@@ -209,8 +212,13 @@ export default function SmartAiInput({ onTransactionAdded, categories }: SmartAi
           </Button>
         </div>
         {!isCollapsed && (
-          <CardDescription>
+          <CardDescription className="flex items-center gap-2">
             Ketik transaksi Anda secara natural, misalnya: &quot;Beli bensin 15k dan makan siang 18k&quot;
+            {!isFree && (
+              <span className="inline-flex items-center bg-gradient-to-r from-yellow-500/20 to-amber-500/20 text-yellow-600 dark:text-yellow-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded border border-yellow-500/50">
+                👑 Premium
+              </span>
+            )}
           </CardDescription>
         )}
       </CardHeader>
@@ -219,15 +227,30 @@ export default function SmartAiInput({ onTransactionAdded, categories }: SmartAi
         <CardContent>
           <div className="space-y-4">
             <div className="relative">
+              {isFree ? (
+                <div className="absolute inset-0 z-10 bg-background/60 backdrop-blur-[2px] rounded-md flex flex-col items-center justify-center border border-dashed border-muted-foreground/30 p-4">
+                  <div className="flex flex-col items-center text-center space-y-2">
+                    <div className="w-10 h-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                      <Sparkles className="w-5 h-5 text-yellow-500" />
+                    </div>
+                    <p className="text-sm font-medium">Fitur Premium</p>
+                    <p className="text-xs text-muted-foreground mb-2">Upgrade untuk mencatat otomatis dari teks struk / suara Anda.</p>
+                    <Button size="sm" variant="outline" className="border-yellow-500 text-yellow-600 hover:bg-yellow-500/10" asChild>
+                      <a href="/pricing">⭐️ Upgrade Premium</a>
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
               <Textarea
                 placeholder="Contoh: Beli bensin 50.000 dan makan siang 25.000, Gaji bulanan 5.000.000..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 className="pr-24 min-h-[80px] text-base resize-none"
+                disabled={isFree}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
-                    handleAnalyze();
+                    if (!isFree) handleAnalyze();
                   }
                 }}
               />
@@ -235,7 +258,7 @@ export default function SmartAiInput({ onTransactionAdded, categories }: SmartAi
                 <Button
                   size="sm"
                   onClick={handleAnalyze}
-                  disabled={isLoading || !input.trim()}
+                  disabled={isLoading || !input.trim() || isFree}
                   className="bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 border border-neon-cyan/20"
                 >
                   {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Analisa"}

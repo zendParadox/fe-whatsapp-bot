@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, LogIn, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -97,7 +98,7 @@ export default function LoginPage() {
         <Card className="w-full shadow-lg border-0 bg-card/80 backdrop-blur-sm">
           <CardHeader className="text-center pb-2">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <LogIn className="h-6 w-6 text-primary" />
+              <Image src="/images/gotek-g.png" alt="Logo" width={50} height={50} />
             </div>
             <CardTitle className="text-2xl font-bold">Login ke Akun Anda</CardTitle>
             <CardDescription className="text-muted-foreground">

@@ -26,6 +26,7 @@ import {
   PieChart,
   Wallet,
   Brain,
+  Check,
 } from "lucide-react";
 
 // ... (keep surrounding code same if possible, but I need to do ReplaceFileContent well)
@@ -53,6 +54,9 @@ function AppHeader() {
           </Link>
           <Link href="#how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             Cara Kerja
+          </Link>
+          <Link href="#pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            Harga
           </Link>
           <Link href="/guide" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             Panduan
@@ -520,6 +524,107 @@ export default function HomePage() {
           </div>
         </section>
 
+
+        {/* Pricing Section */}
+        <section id="pricing" className="py-24 relative">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-4">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Pilih Paket Anda</h2>
+              <p className="text-muted-foreground max-w-xl mx-auto">
+                Mulai gratis atau upgrade ke Premium untuk membuka semua fitur AI.
+              </p>
+            </div>
+            <div className="flex justify-center mb-12">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/50 text-amber-600 dark:text-amber-400 rounded-full px-5 py-2 text-sm font-semibold animate-pulse">
+                🔥 Promo Terbatas: Diskon 48% untuk 100 Pendaftar Pertama!
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+              {/* FREE PLAN */}
+              <Card className="glass-card border-border/50">
+                <CardHeader>
+                  <CardTitle className="text-2xl">Biasa (Free)</CardTitle>
+                  <CardDescription>Pencatatan manual untuk kebutuhan dasar.</CardDescription>
+                  <div className="mt-4 flex items-baseline text-4xl font-extrabold">
+                    Rp 0
+                    <span className="ml-1 text-xl font-medium text-muted-foreground">/bln</span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    {[
+                      "Pencatatan Manual Tak Terbatas",
+                      "Format Teks Manual di WhatsApp",
+                      "Laporan Standar (Hari/Minggu/Bulan)",
+                      "Limit 5 Kategori Budget",
+                    ].map((f, i) => (
+                      <li key={i} className="flex items-start">
+                        <Check className="h-5 w-5 text-neon-cyan flex-shrink-0" />
+                        <span className="ml-3 text-sm">{f}</span>
+                      </li>
+                    ))}
+                    {[
+                      "Smart AI Parser",
+                      "Scan Struk Otomatis",
+                      "Analisis AI Bulanan",
+                    ].map((f, i) => (
+                      <li key={`d-${i}`} className="flex items-start opacity-40">
+                        <div className="h-5 w-5 rounded-full border-2 border-muted-foreground flex-shrink-0" />
+                        <span className="ml-3 text-sm text-muted-foreground line-through">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+
+              {/* PREMIUM PLAN */}
+              <Card className="glass-card relative border-neon-cyan/50 shadow-2xl shadow-neon-cyan/10">
+                <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-neon-purple to-neon-pink px-4 py-1 text-sm font-semibold tracking-wider text-white shadow-sm uppercase">
+                    <Sparkles className="w-4 h-4" /> Recommended
+                  </span>
+                </div>
+                <CardHeader>
+                  <CardTitle className="text-2xl text-neon-cyan">Premium</CardTitle>
+                  <CardDescription>Analisis dan efisiensi maksimum dengan AI.</CardDescription>
+                  <div className="mt-4 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl font-medium text-muted-foreground line-through">Rp 29.000</span>
+                      <span className="inline-flex items-center bg-red-500/20 text-red-500 text-xs font-bold px-2 py-0.5 rounded-full border border-red-500/40 uppercase">-48%</span>
+                    </div>
+                    <div className="flex items-baseline text-4xl font-extrabold bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent">
+                      Rp 15.000
+                      <span className="ml-1 text-xl font-medium text-muted-foreground">/bln</span>
+                    </div>
+                    <p className="text-xs text-amber-500 font-medium">⏳ Harga khusus 100 pendaftar pertama</p>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    {[
+                      "Semua fitur di akun Biasa",
+                      "Unlimited Smart AI Parser",
+                      "Kirim Gambar Struk Langsung Dicatat",
+                      "Analisis & Insight Keuangan Bulanan AI",
+                      "Kategori Budget Tak Terbatas",
+                    ].map((f, i) => (
+                      <li key={i} className="flex items-start">
+                        <Check className="h-5 w-5 text-neon-purple flex-shrink-0" />
+                        <span className="ml-3 text-sm font-medium">{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button asChild className="w-full mt-6 bg-gradient-to-r from-neon-cyan to-neon-purple hover:opacity-90 transition-opacity text-white font-semibold h-12">
+                    <Link href="/pricing">
+                      Upgrade Sekarang <ArrowRight className="ml-2 h-5 w-5" />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
 
         <FaqSection />
         <FaqAccordionSection />

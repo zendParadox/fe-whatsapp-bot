@@ -6,9 +6,26 @@ import { Button } from "@/components/ui/button";
 interface AiAnalysisButtonProps {
   onClick: () => void;
   isLoading?: boolean;
+  planType?: "FREE" | "PREMIUM";
 }
 
-export default function AiAnalysisButton({ onClick, isLoading }: AiAnalysisButtonProps) {
+export default function AiAnalysisButton({ onClick, isLoading, planType = "FREE" }: AiAnalysisButtonProps) {
+  const isFree = planType === "FREE";
+
+  if (isFree) {
+    return (
+      <Button
+        disabled
+        className="relative overflow-hidden bg-muted text-muted-foreground shadow-sm cursor-not-allowed"
+      >
+        <Sparkles className="h-4 w-4 mr-2 opacity-50" />
+        <span className="relative">
+          Analisis AI (Hanya Premium)
+        </span>
+      </Button>
+    );
+  }
+
   return (
     <Button
       onClick={onClick}

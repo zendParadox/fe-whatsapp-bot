@@ -181,8 +181,15 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Fetch user's currency
+    // Fetch user's currency and plan
     const currentUser = await prisma.user.findUnique({ where: { id: userId } });
+    
+    if (currentUser?.plan_type === "FREE") {
+      return NextResponse.json({ 
+        error: "👑 Fitur Premium: Analisis AI Khusus Pengguna Premium. Silakan upgrade di halaman Profil/Pricing." 
+      }, { status: 403 });
+    }
+
     const userCurrency = currentUser?.currency || "IDR";
 
     // Generate analysis using Gemini
