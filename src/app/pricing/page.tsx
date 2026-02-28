@@ -240,6 +240,8 @@ export default function PricingPage() {
                     "Smart AI Parser di Dashboard & WA",
                     "Scan Struk Otomatis (Gambar)",
                     "Laporan Analisis Mendalam AI",
+                    "Kantong Keuangan (Bank & E-Wallet)",
+                    "Export Laporan PDF & Excel",
                   ].map((feature, i) => (
                     <li key={`disabled-${i}`} className="flex items-start opacity-40">
                       <div className="flex-shrink-0">
@@ -288,6 +290,8 @@ export default function PricingPage() {
                     "Unlimited Smart AI Parser di Dashboard & WA",
                     "Kirim Gambar Struk Langsung Dicatat",
                     "Analisis Mendalam & Insight Keuangan Bulanan dari AI",
+                    "Kantong Keuangan — Lacak Saldo Bank & E-Wallet",
+                    "Export Laporan PDF & Excel",
                     "Kategori Budget Tak Terbatas",
                   ].map((feature, i) => (
                     <li key={i} className="flex items-start">

@@ -27,6 +27,8 @@ import {
   Wallet,
   Brain,
   Check,
+  Landmark,
+  FileSpreadsheet,
 } from "lucide-react";
 
 // ... (keep surrounding code same if possible, but I need to do ReplaceFileContent well)
@@ -42,7 +44,7 @@ import { ModeToggle } from "@/components/mode-toggle";
 function AppHeader() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/50 backdrop-blur-md">
-      <div className="container mx-auto flex h-16 items-center justify-between px-6 md:px-8">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 md:px-8">
         <Link href="/" className="flex items-center gap-2 text-xl font-bold tracking-tighter">
           <span className="bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent dark:text-glow">
             GoTEK
@@ -62,13 +64,13 @@ function AppHeader() {
             Panduan
           </Link>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
             <ModeToggle />
           <Button asChild variant="ghost" className="hidden sm:inline-flex hover:bg-accent hover:text-accent-foreground">
             <Link href="/login">Masuk</Link>
           </Button>
-          <Button asChild className="bg-gradient-to-r from-neon-purple to-neon-pink hover:opacity-90 transition-opacity border-0 shadow-lg dark:shadow-[0_0_20px_rgba(188,19,254,0.3)]">
-            <Link href="/register">Daftar Sekarang</Link>
+          <Button asChild size="sm" className="sm:size-default bg-gradient-to-r from-neon-purple to-neon-pink hover:opacity-90 transition-opacity border-0 shadow-lg dark:shadow-[0_0_20px_rgba(188,19,254,0.3)]">
+            <Link href="/register">Daftar</Link>
           </Button>
         </div>
       </div>
@@ -88,14 +90,23 @@ function AppFooter() {
         <p className="text-muted-foreground mb-4">
           Kelola keuangan dengan cara masa depan.
         </p>
-        <p className="text-sm text-muted-foreground mb-4">
-          <Link href="/guide" className="text-neon-cyan hover:underline font-medium mr-4">
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 text-sm text-muted-foreground mb-4">
+          <Link href="/guide" className="text-neon-cyan hover:underline font-medium">
             Panduan Lengkap
           </Link>
-          <Link href="/feedback" className="text-neon-purple hover:underline font-medium mr-4">
+          <span className="hidden sm:inline text-border">|</span>
+          <Link href="/feedback" className="text-neon-purple hover:underline font-medium">
             Beri Masukan
           </Link>
-          Jika ada kendala, hubungi{" "}
+          <span className="hidden sm:inline text-border">|</span>
+          <Link href="/privacy" className="hover:underline">
+            Privasi
+          </Link>
+          <span className="hidden sm:inline text-border">|</span>
+          <Link href="/terms" className="hover:underline">
+            Syarat
+          </Link>
+          <span className="hidden sm:inline text-border">|</span>
           <a 
             href="https://t.me/rafliramadhaniii" 
             target="_blank" 
@@ -104,7 +115,7 @@ function AppFooter() {
           >
             Telegram Support
           </a>
-        </p>
+        </div>
         <p className="text-sm text-zinc-500">
           &copy; {new Date().getFullYear()} GoTEK. All rights reserved.
         </p>
@@ -284,7 +295,19 @@ function FaqAccordionSection() {
   const faqs = [
     {
       question: "Apakah GoTEK ini berbayar?",
-      answer: "Saat ini GoTEK dapat digunakan secara GRATIS selama masa beta. Kedepannya akan ada fitur premium untuk penggunaan lebih lanjut."
+      answer: "GoTEK menyediakan paket Gratis dan Premium. Paket Gratis sudah mencakup pencatatan manual tanpa batas. Paket Premium (Rp 15.000/bln) membuka fitur AI Smart Parser, Scan Struk, Kantong Keuangan, Export PDF/Excel, dan Analisis AI bulanan."
+    },
+    {
+      question: "Apa saja fitur Premium?",
+      answer: "Premium mencakup: AI Smart Parser (ketik bebas, langsung tercatat), Scan Struk (kirim foto, otomatis tercatat), Kantong Keuangan (lacak saldo bank & e-wallet seperti BCA, Gopay, ShopeePay), Export Laporan PDF & Excel, Analisis Keuangan Bulanan oleh AI, dan Kategori Budget tak terbatas."
+    },
+    {
+      question: "Apa itu Kantong Keuangan?",
+      answer: "Kantong Keuangan adalah fitur Premium yang memungkinkan Anda melacak saldo di berbagai rekening bank dan e-wallet (BCA, Mandiri, Gopay, ShopeePay, dll). Saat mencatat transaksi, cukup ketik 'beli makan 20k dari gopay' dan saldo kantong Gopay Anda otomatis terpotong."
+    },
+    {
+      question: "Apakah bisa diexport ke Excel atau PDF?",
+      answer: "Bisa! Pengguna Premium dapat mengunduh laporan keuangan dalam format PDF dan Excel langsung dari Dashboard. Laporan mencakup ringkasan pemasukan/pengeluaran dan detail seluruh transaksi."
     },
     {
       question: "Apakah data keuangan saya aman?",
@@ -295,12 +318,8 @@ function FaqAccordionSection() {
       answer: "Tenang, Anda bisa mereset password melalui fitur 'Lupa Password' di halaman login."
     },
     {
-      question: "Apakah bisa diexport ke Excel?",
-      answer: "Untuk saat ini fitur export belum tersedia, namun sedang dalam pengembangan dan akan segera hadir!"
-    },
-    {
       question: "Apakah ada batasan transaksi?",
-      answer: "Tidak ada batasan jumlah transaksi yang bisa Anda catat. Catat sebanyak-banyaknya!"
+      answer: "Tidak ada batasan jumlah transaksi yang bisa Anda catat, baik untuk paket Gratis maupun Premium. Catat sebanyak-banyaknya!"
     }
   ];
 
@@ -344,32 +363,32 @@ export default function HomePage() {
         </div>
 
         {/* Hero Section */}
-        <section className="relative py-24 md:py-32 lg:py-40 px-4 text-center">
+        <section className="relative py-16 sm:py-24 md:py-32 lg:py-40 px-4 text-center">
           <div className="container mx-auto max-w-5xl relative z-10">
-            <div className="inline-flex items-center rounded-full border border-neon-cyan/30 bg-neon-cyan/5 px-3 py-1 text-sm text-neon-cyan mb-8 backdrop-blur-sm">
+            <div className="inline-flex items-center rounded-full border border-neon-cyan/30 bg-neon-cyan/5 px-3 py-1 text-sm text-neon-cyan mb-6 sm:mb-8 backdrop-blur-sm">
               <span className="flex h-2 w-2 rounded-full bg-neon-cyan mr-2 animate-pulse"></span>
               Revolutionizing Finance
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-4 sm:mb-6 leading-tight">
               Catat Keuangan <br />
               <span className="bg-gradient-to-r from-neon-cyan via-blue-500 to-neon-purple bg-clip-text text-transparent dark:text-glow-purple">
                 Dengan Kekuatan AI
               </span>
             </h1>
             
-            <p className="max-w-2xl mx-auto text-lg md:text-xl text-muted-foreground mb-10 leading-relaxed">
+            <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-muted-foreground mb-8 sm:mb-10 leading-relaxed px-2">
               Kelola pemasukan, pengeluaran, dan budget bulanan Anda langsung
               dari WhatsApp. Cepat, praktis, dan futuristik.
             </p>
             
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button asChild size="lg" className="h-12 px-8 text-lg bg-foreground text-background hover:bg-foreground/90 transition-colors rounded-full font-bold">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
+              <Button asChild size="lg" className="w-full sm:w-auto h-12 px-8 text-lg bg-foreground text-background hover:bg-foreground/90 transition-colors rounded-full font-bold">
                 <Link href="/register">
                   Mulai Sekarang <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="h-12 px-8 text-lg border-border hover:bg-accent hover:text-accent-foreground rounded-full backdrop-blur-sm">
+              <Button asChild size="lg" variant="outline" className="w-full sm:w-auto h-12 px-8 text-lg border-border hover:bg-accent hover:text-accent-foreground rounded-full backdrop-blur-sm">
                 <Link href="#how-it-works">Pelajari Cara Kerja</Link>
               </Button>
             </div>
@@ -377,31 +396,33 @@ export default function HomePage() {
         </section>
 
         {/* Features Section */}
-        <section id="features" className="py-24 relative">
+        <section id="features" className="py-16 sm:py-24 relative">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Fitur Masa Depan</h2>
-              <p className="text-muted-foreground max-w-xl mx-auto">
+            <div className="text-center mb-10 sm:mb-16">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">Fitur Masa Depan</h2>
+              <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-base">
                 Semua yang Anda butuhkan untuk mengatur keuangan, dikemas dalam
                 antarmuka chat yang familiar.
               </p>
             </div>
             
-            <div className="grid gap-8 md:grid-cols-3">
+            {/* Free Features — Row 1 */}
+            <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-4">✅ Gratis untuk Semua</p>
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 mb-8 sm:mb-10">
               <Card className="glass-card transition-transform duration-300 hover:scale-105 hover:bg-card/70 group">
                 <CardHeader>
                   <div className="h-12 w-12 rounded-xl bg-neon-cyan/10 flex items-center justify-center mb-4 group-hover:bg-neon-cyan/20 transition-colors">
-                    <Sparkles className="h-6 w-6 text-neon-cyan" />
+                    <PieChart className="h-6 w-6 text-neon-cyan" />
                   </div>
-                  <CardTitle className="text-xl">Multi-Transaction AI</CardTitle>
+                  <CardTitle className="text-xl">Input Manual via WhatsApp</CardTitle>
                   <CardDescription className="text-muted-foreground">
-                    Didukung oleh <strong>Gemini AI</strong>. Ketik beberapa transaksi sekaligus, kami yang urus sisanya.
+                    Catat pemasukan &amp; pengeluaran langsung dari WhatsApp dengan format simpel.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="p-3 bg-muted rounded-lg text-sm font-mono border border-border text-foreground">
-                    &quot;beli bensin 15k dan makan siang 18k&quot; <br/>
-                    → <span className="text-green-500">2 transaksi tercatat</span>
+                    <span className="text-muted-foreground">user:</span> keluar 25k kopi susu @jajan <br/>
+                    → <span className="text-green-500">✅ Tercatat!</span>
                   </div>
                 </CardContent>
               </Card>
@@ -426,16 +447,101 @@ export default function HomePage() {
               <Card className="glass-card transition-transform duration-300 hover:scale-105 hover:bg-card/70 group">
                 <CardHeader>
                   <div className="h-12 w-12 rounded-xl bg-neon-pink/10 flex items-center justify-center mb-4 group-hover:bg-neon-pink/20 transition-colors">
-                    <Brain className="h-6 w-6 text-neon-pink" />
+                    <Target className="h-6 w-6 text-neon-pink" />
                   </div>
-                  <CardTitle className="text-xl">AI Financial Analysis</CardTitle>
+                  <CardTitle className="text-xl">Dashboard &amp; Laporan</CardTitle>
                   <CardDescription className="text-muted-foreground">
-                    Dapatkan insight keuangan bulanan dari Gemini AI secara otomatis.
+                    Lihat ringkasan harian, mingguan, bulanan lengkap dengan grafik di dashboard.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="p-3 bg-muted rounded-lg text-sm font-mono border border-border text-foreground">
-                    <span className="text-neon-cyan">"Pengeluaran food naik 15%..."</span>
+                    📊 <span className="text-neon-cyan">Laporan Maret: Rp 2.1jt</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Premium Features — Row 2 */}
+            <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground mb-3 sm:mb-4">👑 Fitur Premium</p>
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+              <Card className="glass-card transition-transform duration-300 hover:scale-105 hover:bg-card/70 group relative overflow-hidden">
+                <div className="absolute top-3 right-3">
+                  <span className="text-[10px] font-bold bg-gradient-to-r from-neon-purple to-neon-pink text-white px-2 py-0.5 rounded-full uppercase">Premium</span>
+                </div>
+                <CardHeader>
+                  <div className="h-12 w-12 rounded-xl bg-neon-cyan/10 flex items-center justify-center mb-4 group-hover:bg-neon-cyan/20 transition-colors">
+                    <Sparkles className="h-6 w-6 text-neon-cyan" />
+                  </div>
+                  <CardTitle className="text-lg">AI Smart Parser</CardTitle>
+                  <CardDescription className="text-muted-foreground text-xs">
+                    Ketik bebas bahasa natural, AI catat otomatis. Multi-transaksi sekaligus.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-2.5 bg-muted rounded-lg text-xs font-mono border border-border text-foreground">
+                    &quot;beli bensin 15k dan makan 18k&quot; <br/>
+                    → <span className="text-green-500">2 transaksi tercatat</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="glass-card transition-transform duration-300 hover:scale-105 hover:bg-card/70 group relative overflow-hidden">
+                <div className="absolute top-3 right-3">
+                  <span className="text-[10px] font-bold bg-gradient-to-r from-neon-purple to-neon-pink text-white px-2 py-0.5 rounded-full uppercase">Premium</span>
+                </div>
+                <CardHeader>
+                  <div className="h-12 w-12 rounded-xl bg-amber-500/10 flex items-center justify-center mb-4 group-hover:bg-amber-500/20 transition-colors">
+                    <Brain className="h-6 w-6 text-amber-500" />
+                  </div>
+                  <CardTitle className="text-lg">Scan Struk &amp; AI Analysis</CardTitle>
+                  <CardDescription className="text-muted-foreground text-xs">
+                    Kirim foto struk, langsung tercatat. Dapatkan insight keuangan bulanan dari AI.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-2.5 bg-muted rounded-lg text-xs font-mono border border-border text-foreground">
+                    📸 Foto struk → <span className="text-green-500">3 item tercatat</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="glass-card transition-transform duration-300 hover:scale-105 hover:bg-card/70 group relative overflow-hidden">
+                <div className="absolute top-3 right-3">
+                  <span className="text-[10px] font-bold bg-gradient-to-r from-neon-purple to-neon-pink text-white px-2 py-0.5 rounded-full uppercase">Premium</span>
+                </div>
+                <CardHeader>
+                  <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4 group-hover:bg-green-500/20 transition-colors">
+                    <Landmark className="h-6 w-6 text-green-500" />
+                  </div>
+                  <CardTitle className="text-lg">Kantong Keuangan</CardTitle>
+                  <CardDescription className="text-muted-foreground text-xs">
+                    Lacak saldo bank &amp; e-wallet. BCA, Gopay, ShopeePay — semua dalam satu tempat.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-2.5 bg-muted rounded-lg text-xs font-mono border border-border text-foreground">
+                    &quot;20k dari gopay&quot; → <span className="text-green-500">💚 -Rp 20k</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="glass-card transition-transform duration-300 hover:scale-105 hover:bg-card/70 group relative overflow-hidden">
+                <div className="absolute top-3 right-3">
+                  <span className="text-[10px] font-bold bg-gradient-to-r from-neon-purple to-neon-pink text-white px-2 py-0.5 rounded-full uppercase">Premium</span>
+                </div>
+                <CardHeader>
+                  <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition-colors">
+                    <FileSpreadsheet className="h-6 w-6 text-blue-500" />
+                  </div>
+                  <CardTitle className="text-lg">Export PDF &amp; Excel</CardTitle>
+                  <CardDescription className="text-muted-foreground text-xs">
+                    Unduh laporan keuangan lengkap kapan saja untuk arsip atau bisnis Anda.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="p-2.5 bg-muted rounded-lg text-xs font-mono border border-border text-foreground">
+                    📄 <span className="text-blue-500">GoTEK_Laporan.pdf</span> ✅
                   </div>
                 </CardContent>
               </Card>
@@ -444,18 +550,18 @@ export default function HomePage() {
         </section>
 
         {/* How It Works Section */}
-        <section id="how-it-works" className="py-24 bg-gradient-to-b from-transparent to-black/5 dark:to-black/20">
+        <section id="how-it-works" className="py-16 sm:py-24 bg-gradient-to-b from-transparent to-black/5 dark:to-black/20">
           <div className="container mx-auto px-4">
-             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Cara Kerja</h2>
-              <p className="text-muted-foreground">
+             <div className="text-center mb-10 sm:mb-16">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">Cara Kerja</h2>
+              <p className="text-muted-foreground text-sm sm:text-base">
                 Cukup 3 langkah mudah untuk memulai.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-12 text-center relative">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12 text-center relative">
               {/* Connector Lines (Desktop) */}
-              <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-border to-transparent -translate-y-1/2 -z-10" />
+              <div className="hidden sm:block absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-border to-transparent -translate-y-1/2 -z-10" />
 
               <div className="relative">
                 <div className="w-20 h-20 mx-auto bg-background border border-border rounded-full flex items-center justify-center text-2xl font-bold text-neon-cyan shadow-lg z-10 mb-6">
@@ -526,21 +632,21 @@ export default function HomePage() {
 
 
         {/* Pricing Section */}
-        <section id="pricing" className="py-24 relative">
+        <section id="pricing" className="py-16 sm:py-24 relative">
           <div className="container mx-auto px-4">
             <div className="text-center mb-4">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Pilih Paket Anda</h2>
-              <p className="text-muted-foreground max-w-xl mx-auto">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">Pilih Paket Anda</h2>
+              <p className="text-muted-foreground max-w-xl mx-auto text-sm sm:text-base">
                 Mulai gratis atau upgrade ke Premium untuk membuka semua fitur AI.
               </p>
             </div>
-            <div className="flex justify-center mb-12">
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/50 text-amber-600 dark:text-amber-400 rounded-full px-5 py-2 text-sm font-semibold animate-pulse">
+            <div className="flex justify-center mb-8 sm:mb-12">
+              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/50 text-amber-600 dark:text-amber-400 rounded-full px-4 sm:px-5 py-2 text-xs sm:text-sm font-semibold animate-pulse text-center">
                 🔥 Promo Terbatas: Diskon 48% untuk 100 Pendaftar Pertama!
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
               {/* FREE PLAN */}
               <Card className="glass-card border-border/50">
                 <CardHeader>
@@ -568,6 +674,8 @@ export default function HomePage() {
                       "Smart AI Parser",
                       "Scan Struk Otomatis",
                       "Analisis AI Bulanan",
+                      "Kantong Keuangan",
+                      "Export PDF & Excel",
                     ].map((f, i) => (
                       <li key={`d-${i}`} className="flex items-start opacity-40">
                         <div className="h-5 w-5 rounded-full border-2 border-muted-foreground flex-shrink-0" />
@@ -607,6 +715,8 @@ export default function HomePage() {
                       "Unlimited Smart AI Parser",
                       "Kirim Gambar Struk Langsung Dicatat",
                       "Analisis & Insight Keuangan Bulanan AI",
+                      "Kantong Keuangan (Bank & E-Wallet)",
+                      "Export Laporan PDF & Excel",
                       "Kategori Budget Tak Terbatas",
                     ].map((f, i) => (
                       <li key={i} className="flex items-start">

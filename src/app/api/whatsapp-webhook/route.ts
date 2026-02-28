@@ -150,6 +150,7 @@ export async function POST(request: NextRequest) {
 
     const args = message.trim().split(" ");
     const command = args[0].toLowerCase();
+    const lower = message.toLowerCase().trim();
 
 
     // Multi-Transaction Handler: supports single or multiple transactions separated by newline
@@ -746,23 +747,127 @@ export async function POST(request: NextRequest) {
 
 
 
-    if (user.plan_type === "FREE") {
+    // =================== KANTONG (WALLET) COMMANDS ===================
+    if (command === "kantong" || command === "wallet" || command === "dompet") {
+      if ((user as Record<string, unknown>).plan_type !== "PREMIUM") {
+        return NextResponse.json({
+          message: "👑 *Fitur Premium*\n\nFitur Kantong Keuangan hanya untuk pengguna Premium.\nUpgrade di 🔗 https://gotek.vercel.app/pricing"
+        });
+      }
+      const wallets = await prisma.wallet.findMany({
+        where: { user_id: user.id },
+        orderBy: { created_at: "asc" },
+      });
+      if (wallets.length === 0) {
+        return NextResponse.json({
+          message: "💰 *Kantong Keuangan*\n\nBelum ada kantong. Buat dengan:\n_tambah kantong [nama] [saldo_awal]_\n\nContoh:\n`tambah kantong BCA 5000000`\n`tambah kantong Gopay 150000`"
+        });
+      }
+      let totalAll = 0;
+      let list = "💰 *Kantong Keuangan Anda*\n━━━━━━━━━━━━━━━━━\n";
+      for (const w of wallets) {
+        const bal = Number(w.balance);
+        totalAll += bal;
+        list += `\n${w.icon || "💰"} *${w.name}*: Rp ${bal.toLocaleString("id-ID")}`;
+      }
+      list += `\n━━━━━━━━━━━━━━━━━\n💎 *Total:* Rp ${totalAll.toLocaleString("id-ID")}`;
+      return NextResponse.json({ message: list });
+    }
+
+    // Tambah kantong: "tambah kantong BCA 5000000"
+    if (lower.startsWith("tambah kantong") || lower.startsWith("buat kantong") || lower.startsWith("tambah wallet")) {
+      if ((user as Record<string, unknown>).plan_type !== "PREMIUM") {
+        return NextResponse.json({
+          message: "👑 *Fitur Premium*\n\nFitur Kantong Keuangan hanya untuk pengguna Premium.\nUpgrade di 🔗 https://gotek.vercel.app/pricing"
+        });
+      }
+      const parts = message.replace(/^(tambah|buat)\s+(kantong|wallet)\s+/i, "").trim().split(/\s+/);
+      const walletName = parts[0];
+      const initialBalance = parts[1] ? Number(parts[1].replace(/[^\d]/g, "")) : 0;
+
+      if (!walletName) {
+        return NextResponse.json({
+          message: "⚠️ Format: `tambah kantong [nama] [saldo_awal]`\n\nContoh: `tambah kantong BCA 5000000`"
+        });
+      }
+
+      try {
+        const newWallet = await prisma.wallet.create({
+          data: {
+            user_id: user.id,
+            name: walletName,
+            balance: initialBalance,
+          },
+        });
+        return NextResponse.json({
+          message: `✅ Kantong *${newWallet.name}* berhasil dibuat!\n💰 Saldo awal: Rp ${initialBalance.toLocaleString("id-ID")}`
+        });
+      } catch {
+        return NextResponse.json({
+          message: `⚠️ Kantong "${walletName}" sudah ada atau terjadi error.`
+        });
+      }
+    }
+
+    // Transfer antar kantong: "transfer 500k dari bca ke gopay"
+    const transferMatch = lower.match(/^transfer\s+([\d.,]+[kmjbt]?)\s+dari\s+(\w+)\s+ke\s+(\w+)$/i);
+    if (transferMatch) {
+      if ((user as Record<string, unknown>).plan_type !== "PREMIUM") {
+        return NextResponse.json({
+          message: "👑 *Fitur Premium*\n\nFitur Transfer antar Kantong hanya untuk pengguna Premium."
+        });
+      }
+      let amount = parseFloat(transferMatch[1].replace(/,/g, ".").replace(/[^\d.]/g, ""));
+      const suffix = transferMatch[1].slice(-1).toLowerCase();
+      if (suffix === "k") amount *= 1000;
+      else if (suffix === "j" || suffix === "m") amount *= 1000000;
+      else if (suffix === "b" || suffix === "t") amount *= 1000000000;
+
+      const fromName = transferMatch[2];
+      const toName = transferMatch[3];
+
+      const fromWallet = await prisma.wallet.findFirst({
+        where: { user_id: user.id, name: { equals: fromName, mode: "insensitive" } },
+      });
+      const toWallet = await prisma.wallet.findFirst({
+        where: { user_id: user.id, name: { equals: toName, mode: "insensitive" } },
+      });
+
+      if (!fromWallet) return NextResponse.json({ message: `⚠️ Kantong "${fromName}" tidak ditemukan.` });
+      if (!toWallet) return NextResponse.json({ message: `⚠️ Kantong "${toName}" tidak ditemukan.` });
+
+      // Deduct from source, add to destination
+      await prisma.wallet.update({
+        where: { id: fromWallet.id },
+        data: { balance: { decrement: amount } },
+      });
+      await prisma.wallet.update({
+        where: { id: toWallet.id },
+        data: { balance: { increment: amount } },
+      });
+
+      return NextResponse.json({
+        message: `🔄 *Transfer Berhasil!*\n━━━━━━━━━━━━━━━━━\n📤 Dari: *${fromWallet.name}*\n📥 Ke: *${toWallet.name}*\n💰 Jumlah: Rp ${amount.toLocaleString("id-ID")}\n━━━━━━━━━━━━━━━━━\n\nSaldo ${fromWallet.name}: Rp ${(Number(fromWallet.balance) - amount).toLocaleString("id-ID")}\nSaldo ${toWallet.name}: Rp ${(Number(toWallet.balance) + amount).toLocaleString("id-ID")}`
+      });
+    }
+
+    if ((user as Record<string, unknown>).plan_type === "FREE") {
       return NextResponse.json({
         message:
-          "👑 *Fitur Premium*\n\nMaaf, fitur AI Smart Parser hanya tersedia untuk pengguna Premium.\n\nSilakan gunakan format manual:\n\n`keluar [jumlah] [keterangan] [kategori]`\n\nContoh:\n`keluar 50k makan siang @makan`\n\nAtau upgrade sekarang di Dashboard untuk akses tanpa batas! ✨",
+          "👑 *Fitur Premium*\n\nMaaf, fitur ini hanya untuk pengguna Premium.\n\nDengan upgrade, Anda mendapatkan:\n✅ AI Smart Parser — ketik bebas, langsung tercatat\n📸 Scan Struk — kirim foto, otomatis tercatat\n💰 Kantong Keuangan — lacak saldo bank & e-wallet\n📤 Export PDF & Excel\n📊 AI Analysis — insight keuangan bulanan\n\nSilakan gunakan format manual:\n`keluar [jumlah] [keterangan] [kategori]`\n\nAtau upgrade sekarang:\n🔗 https://gotek.vercel.app/pricing",
       });
     }
 
     if (command === "upgrade" || command === "premium") {
-      const isPremium = user.plan_type === "PREMIUM";
+      const isPremium = (user as Record<string, unknown>).plan_type === "PREMIUM";
       if (isPremium) {
         return NextResponse.json({
-          message: `👑 *Status Premium Aktif*\n\nTerima kasih, Anda sudah menjadi pelanggan eksklusif GoTEK Premium.\nNikmati terus kemudahan pencatatan pakai AI scan struk dan laporan prediktif harian!`
+          message: `👑 *Status Premium Aktif*\n━━━━━━━━━━━━━━━━━\nTerima kasih, ${user.name || "Sobat GoTEK"}! Anda pelanggan Premium.\n\n🔓 *Fitur Aktif Anda:*\n✅ AI Smart Parser (ketik bebas)\n📸 Scan Struk otomatis\n💰 Kantong Keuangan (bank & e-wallet)\n📤 Export Laporan PDF & Excel\n📊 Analisis Keuangan AI Bulanan\n🎯 Kategori Budget tak terbatas\n━━━━━━━━━━━━━━━━━\n\n💡 Ketik *kantong* untuk cek saldo kantong Anda.`
         });
       }
 
       return NextResponse.json({
-        message: `⭐️ *Upgrade ke GoTEK Premium!* ⭐️\n\nBuka kekuatan penuh AI Asisten Keuangan:\n✅ Bebas ketik bahasa natural ke chatbot\n📸 Kirim foto / struk pengeluaran langsung tercatat\n📊 Dapatkan insight pintar & saran keuangan bulanan dari AI\n\n🔥 *PROMO 100 Pendaftar Pertama!*\n~Rp 29.000~ → *Rp 15.000/Bulan*\n\nKlik link di bawah ini untuk upgrade:\n🔗 https://gotek.vercel.app/pricing\n\n\n💡 _Dukung karya anak bangsa. Kami juga butuh kopi!_ ☕`
+        message: `⭐️ *Upgrade ke GoTEK Premium!* ⭐️\n\nBuka semua fitur AI Asisten Keuangan:\n✅ AI Smart Parser — ketik bebas, langsung tercatat\n📸 Scan Struk — kirim foto, auto tercatat\n💰 Kantong Keuangan — lacak saldo bank & e-wallet\n📤 Export Laporan PDF & Excel\n📊 AI Financial Analysis bulanan\n🎯 Kategori Budget tak terbatas\n\n🔥 *PROMO 100 Pendaftar Pertama!*\n~Rp 29.000~ → *Rp 15.000/Bulan*\n\nUpgrade sekarang:\n🔗 https://gotek.vercel.app/pricing\n\n💡 _Dukung karya anak bangsa. Kami juga butuh kopi!_ ☕`
       });
     }
 
@@ -812,6 +917,35 @@ export async function POST(request: NextRequest) {
           const typeEnum =
             tx.type === "INCOME" ? TransactionType.INCOME : TransactionType.EXPENSE;
 
+          // Deteksi kantong dari pesan (keyword "dari [nama]" atau "ke [nama]")
+          let walletId: string | null = null;
+          let walletLabel = "";
+          const walletFromMatch = lower.match(/(?:dari|pakai|pake|via|lewat)\s+(\w+)/i);
+          const walletToMatch = lower.match(/(?:ke|masuk)\s+(\w+)/i);
+          const walletKeyword = tx.type === "INCOME" ? walletToMatch?.[1] : walletFromMatch?.[1];
+
+          if (walletKeyword) {
+            const foundWallet = await prisma.wallet.findFirst({
+              where: { user_id: user.id, name: { equals: walletKeyword, mode: "insensitive" } },
+            });
+            if (foundWallet) {
+              walletId = foundWallet.id;
+              walletLabel = foundWallet.name;
+              // Update saldo wallet
+              if (tx.type === "EXPENSE") {
+                await prisma.wallet.update({
+                  where: { id: foundWallet.id },
+                  data: { balance: { decrement: tx.amount } },
+                });
+              } else {
+                await prisma.wallet.update({
+                  where: { id: foundWallet.id },
+                  data: { balance: { increment: tx.amount } },
+                });
+              }
+            }
+          }
+
           await prisma.transaction.create({
             data: {
               type: typeEnum,
@@ -819,12 +953,14 @@ export async function POST(request: NextRequest) {
               description: tx.description,
               user_id: user.id,
               category_id: category.id,
+              wallet_id: walletId,
             },
           });
 
           const icon = tx.type === "INCOME" ? "📈" : "📉";
           reply += `\n${icon} *${tx.category}*: Rp ${tx.amount.toLocaleString("id-ID")}`;
           if (tx.description) reply += ` (${tx.description})`;
+          if (walletLabel) reply += ` 💰 ${walletLabel}`;
           if (budgetAlert) reply += ` ${budgetAlert}`;
           count++;
           console.log(`✅ Transaction saved: ${tx.description}`);
@@ -900,6 +1036,13 @@ Format: \`masuk [jumlah] [keterangan] @[kategori]\`
 • \`undo\` atau \`hapus\` - Batalkan transaksi terakhir
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👑 *7. KANTONG KEUANGAN* _(Premium)_
+• \`kantong\` - Lihat saldo semua kantong
+• \`tambah kantong BCA 5000000\` - Buat kantong baru
+• \`transfer 500k dari bca ke gopay\` - Transfer antar kantong
+• Catat + potong saldo: \`beli makan 20k dari gopay\`
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 *FORMAT JUMLAH:*
 • 50k = Rp 50.000
 • 1.5jt = Rp 1.500.000
@@ -938,8 +1081,11 @@ masuk 100k uang jajan @bonus\`
 \`budget 1jt @makan\` | \`cek budget\`
 \`laporan hari/minggu/bulan\` | \`cek saldo\`
 
-⭐️ *PREMIUM & AI*
-\`upgrade\` - Akses Struk AI & Report Cerdas
+👑 *PREMIUM*
+\`kantong\` - Cek saldo bank & e-wallet
+\`tambah kantong BCA 5jt\` - Buat kantong
+\`transfer 500k dari bca ke gopay\`
+\`upgrade\` - Info Premium
 
 ↩️ \`undo\` - Batalkan transaksi
 
@@ -947,6 +1093,7 @@ masuk 100k uang jajan @bonus\`
 💡 *TIPS:*
 • Kategori bisa multi-kata
 • Format: 50k, 1.5jt, 500rb
+• Beli dari kantong: \`beli makan 20k dari gopay\`
 • Ketik *penjelasan detail* untuk panduan lengkap
 
 🌐 https://gotek.vercel.app`;

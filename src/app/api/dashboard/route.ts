@@ -238,7 +238,16 @@ export async function GET(request: NextRequest) {
     }
     responseData.totalSaldo = totalAllTimeIncome - totalAllTimeExpense;
 
-    return NextResponse.json(responseData);
+    // --- 5. FETCH WALLETS (untuk Premium) ---
+    let wallets: unknown[] = [];
+    if (currentUser?.plan_type === "PREMIUM") {
+      wallets = await prisma.wallet.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: "asc" },
+      });
+    }
+
+    return NextResponse.json({ ...responseData, wallets });
   } catch (error) {
     console.error("API Error:", error);
     let errorMessage = "Gagal mengambil data dashboard";

@@ -29,6 +29,8 @@ export async function GET() {
         whatsapp_jid: true,
         avatar_url: true,
         created_at: true,
+        plan_type: true,
+        premium_valid_until: true,
       },
     });
 

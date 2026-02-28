@@ -70,6 +70,9 @@ model User {
   premium_valid_until  DateTime?
 
   subscriptions        Subscription[]
+
+  // Kantong Keuangan (Wallet)
+  wallets              Wallet[]
 }
 
 // 🔗 Model untuk mapping WhatsApp Linked ID ke nomor telepon
@@ -177,8 +180,13 @@ model Transaction {
   category_id String?
   category    Category? @relation(fields: [category_id], references: [id], onDelete: SetNull)
 
+  // Kantong (Wallet) — opsional
+  wallet_id String?
+  wallet    Wallet? @relation(fields: [wallet_id], references: [id], onDelete: SetNull)
+
   @@index([user_id])
   @@index([category_id])
+  @@index([wallet_id])
 }
 
 // 🤖 Model untuk menyimpan analisis keuangan bulanan dari AI
@@ -233,5 +241,23 @@ model Subscription {
 
   user             User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
+  @@index([user_id])
+}
+
+// 💰 Model untuk kantong keuangan (Bank/E-Wallet)
+model Wallet {
+  id           String   @id @default(uuid())
+  name         String   // "BCA", "Gopay", "Cash", dll
+  icon         String?  // Emoji: "🏦", "💚", "💵"
+  balance      Decimal  @db.Decimal(15, 2) @default(0)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  user_id      String
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  transactions Transaction[]
+
+  @@unique([user_id, name])
   @@index([user_id])
 }
