@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient } from "@prisma/client";
+
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // GET - Get current user profile
 export async function GET() {
@@ -38,7 +38,11 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ user });
+    return NextResponse.json({ user }, {
+      headers: {
+        "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
+      },
+    });
   } catch (error) {
     console.error("Get profile error:", error);
     return NextResponse.json(

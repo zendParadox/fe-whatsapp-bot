@@ -207,10 +207,6 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState<any | undefined>({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date()),
-  });
   const [selectedDateRange, setSelectedDateRange] = useState<any | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
@@ -434,11 +430,8 @@ export default function Dashboard() {
       setIsDialogOpen(false);
       setEditingTx(null);
 
-      // refresh data
-      const from = format(activeDateRange.from, "yyyy-MM-dd");
-      const to = format(activeDateRange.to, "yyyy-MM-dd");
-      const refreshed = await fetch(`/api/dashboard?from=${from}&to=${to}`);
-      if (refreshed.ok) setData(await refreshed.json());
+      // refresh data via refreshKey (triggers useEffect)
+      setRefreshKey(k => k + 1);
 
       // show success toast
       toast.success("Perubahan transaksi berhasil disimpan.");
@@ -460,11 +453,8 @@ export default function Dashboard() {
       });
       if (!res.ok) throw new Error("Gagal menghapus");
       setDeletingTx(null);
-      // refresh data
-      const from = format(activeDateRange.from, "yyyy-MM-dd");
-      const to = format(activeDateRange.to, "yyyy-MM-dd");
-      const refreshed = await fetch(`/api/dashboard?from=${from}&to=${to}`);
-      if (refreshed.ok) setData(await refreshed.json());
+      // refresh data via refreshKey (triggers useEffect)
+      setRefreshKey(k => k + 1);
       toast.success("Transaksi dihapus.");
     } catch (err) {
       console.error(err);

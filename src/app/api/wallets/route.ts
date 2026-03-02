@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 /**
  * GET /api/wallets — List semua kantong milik user

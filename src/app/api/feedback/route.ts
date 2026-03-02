@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { PrismaClient, FeedbackType } from "@prisma/client";
+import { FeedbackType } from "@prisma/client";
 import { z } from "zod";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const feedbackSchema = z.object({
   name: z.string().optional(),

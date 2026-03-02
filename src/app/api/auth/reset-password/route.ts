@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient } from "@prisma/client";
+
 import { z } from "zod";
 import { hashPassword } from "@/lib/auth";
 import { normalizePhone, isAllowedPhone } from "@/lib/phone";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const resetPasswordSchema = z.object({
   phoneNumber: z.string().min(10, "Nomor WhatsApp tidak valid"),

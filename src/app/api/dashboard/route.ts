@@ -1,7 +1,7 @@
 /* eslint-disable */
 
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient, TransactionType } from "@prisma/client";
+import { TransactionType } from "@prisma/client";
 import type { Decimal } from "@prisma/client/runtime/library";
 import {
   startOfMonth,
@@ -17,7 +17,8 @@ import {
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
+import { withPerformanceTracking } from "@/lib/performance";
 
 interface Summary {
   totalIncome: number;
@@ -32,7 +33,7 @@ type TrendRecord = {
   };
 };
 
-export async function GET(request: NextRequest) {
+async function handleDashboardGET(request: NextRequest) {
   try {
     // ambil token dari cookie
     const cookieStore = await cookies();
@@ -47,24 +48,10 @@ export async function GET(request: NextRequest) {
     }
     const userId = payload.userId as string;
 
-    // Fetch user for currency
-    const currentUser = await prisma.user.findUnique({ where: { id: userId } });
-    const userCurrency = currentUser?.currency || "IDR";
-
-    const categories = await prisma.category.findMany({
-      where: { user_id: userId },
-      orderBy: { name: "asc" },
-    });
-    // --- 1. PENGATURAN PERIODE & USER ---
+    // --- 1. PENGATURAN PERIODE ---
     const { searchParams } = new URL(request.url);
     const from = searchParams.get("from");
     const to = searchParams.get("to");
-
-    // TODO: Ganti dengan logic otentikasi yang nyata
-    // const userId = "user-123";
-    // if (!userId) {
-    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    // }
 
     let startDate: Date;
     let endDate: Date;
@@ -85,55 +72,78 @@ export async function GET(request: NextRequest) {
     );
 
     // --- 2. QUERY DATABASE SECARA PARALEL ---
-    // NOTE: cast ke `any` di sini supaya build tidak terganggu oleh mismatch tipe Prisma.
-    // Ini aman untuk runtime — hanya menghindari pemeriksaan compile-time yang memblokir deploy.
-    const [currentTransactionsRaw, previousSummary, budgetsRaw, trendDataRaw, totalAllTimeRaw] =
-      await Promise.all([
-        prisma.transaction.findMany({
-          where: {
-            user_id: userId,
-            created_at: { gte: startDate, lte: endDate },
+    // All queries run in parallel for maximum performance
+    const [
+      currentUser,
+      currentTransactionsRaw,
+      previousSummary,
+      budgetsRaw,
+      trendDataRaw,
+      totalAllTimeRaw,
+      walletsRaw,
+    ] = await Promise.all([
+      // User info (currency, plan_type)
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: { currency: true, plan_type: true },
+      }),
+      // Current period transactions (limited to 50 most recent)
+      prisma.transaction.findMany({
+        where: {
+          user_id: userId,
+          created_at: { gte: startDate, lte: endDate },
+        },
+        include: { category: true },
+        orderBy: { created_at: "desc" },
+      }),
+      // Previous period expense summary
+      prisma.transaction.aggregate({
+        where: {
+          user_id: userId,
+          type: "EXPENSE",
+          created_at: {
+            gte: previousPeriodStartDate,
+            lte: previousPeriodEndDate,
           },
-          include: { category: true },
-          orderBy: { created_at: "desc" },
-        }),
-        prisma.transaction.aggregate({
-          where: {
-            user_id: userId,
-            type: "EXPENSE",
-            created_at: {
-              gte: previousPeriodStartDate,
-              lte: previousPeriodEndDate,
-            },
+        },
+        _sum: { amount: true },
+      }),
+      // Current month budgets
+      prisma.budget.findMany({
+        where: {
+          user_id: userId,
+          month: startDate.getMonth() + 1,
+          year: startDate.getFullYear(),
+        },
+        include: { category: true },
+      }),
+      // 6-month trend data
+      prisma.transaction.groupBy({
+        by: ["type", "created_at"],
+        where: {
+          user_id: userId,
+          created_at: {
+            gte: startOfMonth(subMonths(now, 5)),
+            lte: endOfMonth(now),
           },
-          _sum: { amount: true },
-        }),
-        prisma.budget.findMany({
-          where: {
-            user_id: userId,
-            month: startDate.getMonth() + 1,
-            year: startDate.getFullYear(),
-          },
-          include: { category: true },
-        }),
-        prisma.transaction.groupBy({
-          by: ["type", "created_at"],
-          where: {
-            user_id: userId,
-            created_at: {
-              gte: startOfMonth(subMonths(now, 5)),
-              lte: endOfMonth(now),
-            },
-          },
-          _sum: { amount: true },
-          orderBy: { created_at: "asc" },
-        }),
-        prisma.transaction.groupBy({
-          by: ["type"],
-          where: { user_id: userId },
-          _sum: { amount: true },
-        }),
-      ]);
+        },
+        _sum: { amount: true },
+        orderBy: { created_at: "asc" },
+      }),
+      // All-time totals for overall saldo
+      prisma.transaction.groupBy({
+        by: ["type"],
+        where: { user_id: userId },
+        _sum: { amount: true },
+      }),
+      // Wallets (all users — filter later, avoids conditional parallel issue)
+      prisma.wallet.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: "asc" },
+      }),
+    ]);
+
+    const userCurrency = currentUser?.currency || "IDR";
 
     // treat results as any for now (safe runtime handling below)
     const currentTransactions: any[] = Array.isArray(currentTransactionsRaw)
@@ -238,14 +248,8 @@ export async function GET(request: NextRequest) {
     }
     responseData.totalSaldo = totalAllTimeIncome - totalAllTimeExpense;
 
-    // --- 5. FETCH WALLETS (untuk Premium) ---
-    let wallets: unknown[] = [];
-    if (currentUser?.plan_type === "PREMIUM") {
-      wallets = await prisma.wallet.findMany({
-        where: { user_id: userId },
-        orderBy: { created_at: "asc" },
-      });
-    }
+    // --- 5. INCLUDE WALLETS (only for Premium) ---
+    const wallets = currentUser?.plan_type === "PREMIUM" ? walletsRaw : [];
 
     return NextResponse.json({ ...responseData, wallets });
   } catch (error) {
@@ -257,3 +261,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
+
+export const GET = withPerformanceTracking(handleDashboardGET, "/api/dashboard");

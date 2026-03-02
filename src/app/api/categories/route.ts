@@ -1,11 +1,12 @@
 /*eslint-disable*/
 // app/api/categories/route.ts
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient } from "@prisma/client";
+
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
+import { categoriesCache } from "@/lib/cache";
 
 export async function GET(_request: NextRequest) {
   try {
@@ -20,11 +21,20 @@ export async function GET(_request: NextRequest) {
 
     const userId = payload.userId as string;
 
+    // Check cache first (30s TTL)
+    const cached = categoriesCache.get(userId);
+    if (cached) {
+      return NextResponse.json(cached);
+    }
+
     // ambil semua kategori milik user, urut berdasarkan nama
     const categories = await prisma.category.findMany({
       where: { user_id: userId },
       orderBy: { name: "asc" },
     });
+
+    // Store in cache
+    categoriesCache.set(userId, categories);
 
     return NextResponse.json(categories);
   } catch (err) {
@@ -74,6 +84,9 @@ export async function POST(request: NextRequest) {
         user_id: userId,
       },
     });
+
+    // Invalidate cache so next GET returns fresh data
+    categoriesCache.invalidate(userId);
 
     return NextResponse.json(created, { status: 201 });
   } catch (err) {

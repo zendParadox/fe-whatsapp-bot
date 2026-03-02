@@ -130,6 +130,7 @@ model Debt {
   user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@index([user_id])
+  @@index([user_id, status])  // Filter by status (UNPAID/PAID)
 }
 
 // 🏷️ Model untuk kategori transaksi
@@ -187,6 +188,8 @@ model Transaction {
   @@index([user_id])
   @@index([category_id])
   @@index([wallet_id])
+  @@index([user_id, created_at])       // Dashboard date-range queries
+  @@index([user_id, type, created_at]) // Trend data groupBy queries
 }
 
 // 🤖 Model untuk menyimpan analisis keuangan bulanan dari AI

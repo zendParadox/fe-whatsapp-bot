@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient, PlanType } from "@prisma/client";
+import { PlanType } from "@prisma/client";
 import { coreApi } from "@/lib/midtrans";
 import crypto from "crypto";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {

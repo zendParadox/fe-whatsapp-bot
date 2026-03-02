@@ -1,6 +1,6 @@
 /* eslint-disable */
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient } from "@prisma/client";
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { subMonths, startOfMonth, endOfMonth, format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
@@ -8,7 +8,7 @@ import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { formatMoney } from "@/lib/phone";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Support multiple API keys for rotation
 const apiKeysString = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "";

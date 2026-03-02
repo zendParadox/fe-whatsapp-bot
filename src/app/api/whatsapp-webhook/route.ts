@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
 import {
-  PrismaClient,
   TransactionType,
   DebtType,
   DebtStatus
@@ -13,7 +12,7 @@ import { normalizePhone, formatMoneyBot } from "@/lib/phone";
 import { parseSmartAmount, parseTransactionMessage, parseDebtMessage } from "@/lib/whatsapp/parser";
 import { checkBudgetStatus } from "@/lib/whatsapp/service";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const webhookPayloadSchema = z.object({
   sender: z.string(),

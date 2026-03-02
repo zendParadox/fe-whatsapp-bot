@@ -1,12 +1,12 @@
 /* eslint-disable */
 // src/app/api/auth/login/route.ts
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { serialize } from "cookie";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? "7d";
 

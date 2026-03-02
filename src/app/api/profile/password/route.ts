@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient } from "@prisma/client";
+
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import bcrypt from "bcryptjs";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 const BCRYPT_SALT_ROUNDS = 10;
 
 // PUT - Change password
