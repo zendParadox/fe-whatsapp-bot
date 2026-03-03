@@ -139,11 +139,24 @@ export async function POST(request: NextRequest) {
 
     // Handler untuk sapaan "Halo GoTEK Bot!"
     const trimmedMessage = message.trim().toLowerCase();
-    if (trimmedMessage === "halo gotek bot!" || trimmedMessage === "halo gotek bot" || trimmedMessage === "hi" || trimmedMessage === "halo" || trimmedMessage === "hai") {
+    if (trimmedMessage === "halo gotek bot!" || trimmedMessage === "halo gotek bot" || trimmedMessage === "hi" || trimmedMessage === "halo" || trimmedMessage === "hai" || trimmedMessage === "p" || trimmedMessage === "ping" || trimmedMessage === "test") {
       const hour = new Date().getHours();
       const greeting = hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 18 ? "Selamat sore" : "Selamat malam";
+
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date();
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const todayTxs = await prisma.transaction.findMany({
+        where: { user_id: user.id, created_at: { gte: startOfDay, lte: endOfDay } }
+      });
+      
+      const todayIncome = todayTxs.filter(t => t.type === "INCOME").reduce((acc, t) => acc + t.amount.toNumber(), 0);
+      const todayExpense = todayTxs.filter(t => t.type === "EXPENSE").reduce((acc, t) => acc + t.amount.toNumber(), 0);
+
       return NextResponse.json({
-        message: `👋 *${greeting}, ${user.name || "Sobat GoTEK"}!*\n\n🤖 Saya *GoTEK Bot* - asisten pencatat keuangan Anda!\n\n📊 *Quick Stats Hari Ini:*\n_Loading data..._\n\n💡 *Tips:* Ketik *"help"* untuk panduan lengkap atau langsung catat transaksi:\n\`keluar 50k kopi @minuman\`\n\n🚀 Mulai catat keuanganmu sekarang!`
+        message: `👋 *${greeting}, ${user.name || "Sobat GoTEK"}!*\n\n🤖 Saya *GoTEK Bot* - asisten pencatat keuangan Anda!\n\n📊 *Quick Stats Hari Ini:*\n📈 Pemasukan: ${fmt(todayIncome)}\n📉 Pengeluaran: ${fmt(todayExpense)}\n\n💡 *Tips:* Ketik *"panduan"* untuk melihat fitur lengkap atau langsung coba catat secara bebas, contoh:\n\`keluar 50k beli kopi ya\`\n\n🚀 Let's go!`
       });
     }
 
@@ -885,9 +898,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (aiTransactions && aiTransactions.length > 0) {
-      let reply = "✨ *Sistem AI (Gemini)*\n";
+      const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+      let reply = `✨ *Asisten AI GoTEK*\n📅 ${dateStr}\n━━━━━━━━━━━━━━━━━\n`;
       let count = 0;
       const errors: string[] = [];
+      const budgetAlertsList: string[] = [];
 
       for (const tx of aiTransactions) {
         try {
@@ -909,8 +924,8 @@ export async function POST(request: NextRequest) {
 
           let budgetAlert = "";
           if (tx.type === "EXPENSE") {
-            const alert = await checkBudgetStatus(user.id, category.id, tx.amount);
-            if (alert) budgetAlert = alert;
+            const alert = await checkBudgetStatus(user.id, category.id, tx.amount, user.currency);
+            if (alert) budgetAlertsList.push(`${category.name}: ${alert}`);
           }
 
           const typeEnum =
@@ -957,10 +972,11 @@ export async function POST(request: NextRequest) {
           });
 
           const icon = tx.type === "INCOME" ? "📈" : "📉";
-          reply += `\n${icon} *${tx.category}*: Rp ${tx.amount.toLocaleString("id-ID")}`;
-          if (tx.description) reply += ` (${tx.description})`;
-          if (walletLabel) reply += ` 💰 ${walletLabel}`;
-          if (budgetAlert) reply += ` ${budgetAlert}`;
+          reply += `\n${icon} *${tx.category}*\n`;
+          reply += `   💰 Nominal: ${fmt(tx.amount)}\n`;
+          if (tx.description) reply += `   📝 Ket: ${tx.description}\n`;
+          if (walletLabel) reply += `   💳 Kantong: ${walletLabel}\n`;
+          
           count++;
           console.log(`✅ Transaction saved: ${tx.description}`);
         } catch (txError) {
@@ -971,15 +987,19 @@ export async function POST(request: NextRequest) {
       }
 
       if (count > 0) {
-        reply += `\n\n✅ Berhasil mencatat ${count} transaksi.`;
+        reply += `\n━━━━━━━━━━━━━━━━━\n`;
+        reply += `✅ Berhasil mencatat ${count} transaksi dari AI.`;
+        if (budgetAlertsList.length > 0) {
+          reply += `\n\n⚠️ *Peringatan Budget:*\n` + budgetAlertsList.map(a => `• ${a}`).join("\n");
+        }
         if (errors.length > 0) {
-          reply += `\n⚠️ ${errors.length} transaksi gagal.`;
+          reply += `\n⚠️ ${errors.length} transaksi gagal diproses.`;
         }
         return NextResponse.json({ message: reply });
       } else if (errors.length > 0) {
-        console.error("❌ All transactions failed:", errors);
+        console.error("❌ All AI transactions failed:", errors);
         return NextResponse.json({
-          message: `❌ Gagal mencatat transaksi:\n${errors.join('\n')}`
+          message: `❌ AI Gagal mencatat transaksi:\n${errors.join('\n')}`
         });
       }
     }

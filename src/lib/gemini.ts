@@ -72,8 +72,8 @@ export async function parseTransactionFromText(
   resetFailedKeys();
 
   const prompt = `
-    Analyze the following financial text and extract ALL transactions mentioned into a JSON list.
-    Text: "${text}"
+    Kamu adalah asisten pencatat keuangan pribadi dan bisnis yang cerdas. Analisis teks berikut dan ekstrak SEMUA transaksi ke dalam bentuk array JSON.
+    Teks: "${text}"
 
     Output Schema:
     [
@@ -86,12 +86,13 @@ export async function parseTransactionFromText(
       }
     ]
 
-    Rules:
-    - Default to "EXPENSE" if not specified.
-    - If it's about receiving money (gaji, dapat, terima), it's "INCOME".
-    - Remove "Rp", ".", "," from amount.
-    - Translate category to Indonesian.
-    - If multiple items are mentioned (e.g. "beli A dan beli B"), return multiple objects in the array.
+    Aturan Ketat:
+    1. Default ke "EXPENSE" (pengeluaran) jika teks tidak menyebutkan spesifik (misal: "beli makan", "bayar listrik", "bensin").
+    2. Jika tentang menerima uang (gaji, dapat arisan, dikasih, menang), maka "INCOME".
+    3. Hapus "Rp", ".", dan "," dari nominal. Jadikan integer.
+    4. "category" harus dalam Bahasa Indonesia singkat dan relevan (contoh: "Makanan & Minuman", "Transportasi", "Gaji", "Belanja", "Tagihan").
+    5. "description" harus dirapikan, sopan, dengan huruf kapital di awal kata (Title Case). Jangan gunakan singkatan alay.
+    6. Jika ada banyak transaksi sekaligus ("beli A 50k lalu bensin 20k"), pecah jadi array beberapa objek!
   `;
 
   // Try with key rotation on 429 errors
@@ -179,7 +180,7 @@ export async function parseTransactionFromImage(
 
   const captionHint = caption ? `\nUser caption: "${caption}"` : "";
 
-  const prompt = `Kamu adalah asisten pencatat keuangan. Analisis foto struk/nota berikut dan ekstrak SEMUA item transaksi yang ada.${captionHint}
+  const prompt = `Kamu adalah asisten pencatat keuangan yang sangat cerdas. Analisis foto struk/nota berikut dan ekstrak SEMUA item transaksi persis sesuai struk.${captionHint}
 
 Output Schema (JSON array):
 [
@@ -192,16 +193,16 @@ Output Schema (JSON array):
   }
 ]
 
-Rules:
-- Setiap item di struk harus menjadi satu transaksi terpisah.
-- Default type adalah "EXPENSE" (struk belanja = pengeluaran).
-- Amount harus berupa angka tanpa "Rp", ".", atau ",".
-- Jika ada total, JANGAN masukkan total sebagai transaksi terpisah. Hanya item individual.
-- Jika struk tidak terbaca atau bukan struk, kembalikan array kosong [].
-- Category harus dalam bahasa Indonesia (contoh: makanan, minuman, belanja, transportasi, dll).
-- Description harus singkat dan jelas menggambarkan item.
-- confidence: 0.0 - 1.0, seberapa yakin kamu dengan parsing ini.
-- Jika hanya ada total tanpa detail item, buat satu transaksi dengan total tersebut.`;
+Aturan Ketat:
+1. Setiap item barang/layanan harus menjadi list transaksi yang terpisah.
+2. Tipe pastinya "EXPENSE" untuk struk belanja.
+3. Nominal "amount" berupa angka bersih tanpa teks, koma, atau titik desimal yang salah.
+4. JANGAN masukkan elemen TOTAL, SUB-TOTAL, PAJAK, KEMBALIAN, atau CASH sebagai transaksi terpisah! Hanya item aslinya.
+5. Jika struknya buram atau bukan struk belanja, kembalikan array kosong [].
+6. "category" gunakan Bahasa Indonesia umum yang elegan (contoh: "Minuman", "Kebutuhan Bulanan", "Makanan", "Elektronik").
+7. "description" rapihkan ke format Title Case, jangan tulis singkatan kaku mesin kasir.
+8. Jika struknya struk transfer (seperti mutasi bank masuk), buat menjadi "INCOME" jika warna hijau/masuk.
+9. "confidence" 0.0 sampai 1.0 seberapa pasti kamu membacanya.`;
 
   let attempts = 0;
   const maxAttempts = apiKeys.length;

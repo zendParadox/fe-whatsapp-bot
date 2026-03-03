@@ -1,105 +1,149 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Sparkles, Loader2, ArrowLeft, ExternalLink, RefreshCw, PartyPopper } from "lucide-react";
+import { Check, Sparkles, Loader2, ArrowLeft, UploadCloud, Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
+import Image from "next/image";
 
-type PageState = "idle" | "creating" | "waiting" | "verifying" | "success" | "failed";
+type PageState = "idle" | "uploading" | "success";
 
 export default function PricingPage() {
   const [pageState, setPageState] = useState<PageState>("idle");
-  const [orderId, setOrderId] = useState<string | null>(null);
-  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
-  const [verifyMessage, setVerifyMessage] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedMonths, setSelectedMonths] = useState<number>(1);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
-  // Load pending order from sessionStorage on mount
-  useEffect(() => {
-    const pendingOrder = sessionStorage.getItem("pending_order_id");
-    const pendingUrl = sessionStorage.getItem("pending_redirect_url");
-    if (pendingOrder) {
-      setOrderId(pendingOrder);
-      setRedirectUrl(pendingUrl);
-      setPageState("waiting");
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Ukuran file maksimal 5MB");
+        return;
+      }
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
     }
-  }, []);
+  };
 
-  const handleSubscribe = async () => {
-    setPageState("creating");
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Nomor rekening disalin!");
+  };
+
+  const handleSubscribe = () => {
+    setPageState("uploading");
+  };
+
+  const getDurationPrice = (months: number) => {
+    switch (months) {
+      case 1: return 15000;
+      case 3: return 39000; // 13.000/bln
+      case 6: return 66000; // 11.000/bln
+      case 12: return 108000; // 9.000/bln
+      default: return 15000 * months;
+    }
+  };
+
+  const getPricePerMonth = (months: number) => {
+    return Math.floor(getDurationPrice(months) / months);
+  };
+
+  const handleSubmitReceipt = async () => {
+    if (!selectedFile) return;
+
+    setIsSubmitting(true);
+    const amountToPay = getDurationPrice(selectedMonths);
     try {
-      const res = await fetch("/api/subscription/create", {
-        method: "POST",
-      });
+      // 1. Read file as Data URL
+      const reader = new FileReader();
+      reader.readAsDataURL(selectedFile);
+      
+      reader.onloadend = () => {
+        const image = new window.Image();
+        image.src = reader.result as string;
+        
+        image.onload = async () => {
+          // 2. Setup Canvas for compression
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 800; // Resize width
+          const MAX_HEIGHT = 1200; // Resize height
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Gagal membuat order langganan");
-      }
+          let width = image.width;
+          let height = image.height;
 
-      if (data.redirect_url && data.order_id) {
-        setOrderId(data.order_id);
-        setRedirectUrl(data.redirect_url);
-        sessionStorage.setItem("pending_order_id", data.order_id);
-        sessionStorage.setItem("pending_redirect_url", data.redirect_url);
-        setPageState("waiting");
+          // Preserve aspect ratio
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
 
-        // Buka halaman pembayaran Midtrans di tab baru 
-        window.open(data.redirect_url, "_blank");
-      }
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            toast.error("Gagal mengompres gambar.");
+            setIsSubmitting(false);
+            return;
+          }
+
+          // Draw and Compress
+          ctx.drawImage(image, 0, 0, width, height);
+          
+          // 3. Convert to WebP Base64 (Quality 0.7 = 70%)
+          const webpBase64 = canvas.toDataURL("image/webp", 0.7);
+
+          try {
+            // 4. Send to API
+            const res = await fetch("/api/subscription/manual", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                amount: amountToPay,
+                months: selectedMonths,
+                receiptBase64: webpBase64,
+              }),
+            });
+
+            const data = await res.json();
+            
+            if (res.status === 401) {
+              toast.error("Silakan login terlebih dahulu untuk berlangganan.");
+              router.push("/login?callbackUrl=/pricing");
+              return;
+            }
+            
+            if (!res.ok) throw new Error(data.error || "Gagal mengunggah bukti");
+
+            setPageState("success");
+          } catch (err: any) {
+            console.error(err);
+            toast.error(err.message || "Gagal mengirim bukti pembayaran.");
+            setIsSubmitting(false);
+          }
+        };
+      };
     } catch (err: unknown) {
       console.error(err);
-      if (err instanceof Error) {
-        toast.error(err.message || "Gagal membuka halaman pembayaran.");
-      } else {
-        toast.error("Gagal membuka halaman pembayaran.");
-      }
-      setPageState("idle");
+      toast.error("Terjadi kesalahan sistem saat kompresi.");
+      setIsSubmitting(false);
     }
   };
 
-  const handleVerify = useCallback(async () => {
-    if (!orderId) return;
-    setPageState("verifying");
 
-    try {
-      const res = await fetch(`/api/subscription/verify?order_id=${orderId}`);
-      const data = await res.json();
-
-      if (data.status === "settlement") {
-        setVerifyMessage(data.message || "Pembayaran berhasil!");
-        setPageState("success");
-        sessionStorage.removeItem("pending_order_id");
-        sessionStorage.removeItem("pending_redirect_url");
-        toast.success("🎉 Akun Anda sekarang Premium!");
-      } else if (data.status === "pending") {
-        setVerifyMessage(data.message || "Pembayaran masih menunggu...");
-        setPageState("waiting");
-        toast.info("Pembayaran belum selesai. Silakan selesaikan pembayaran, lalu tekan Verifikasi lagi.");
-      } else {
-        setVerifyMessage(data.message || "Pembayaran gagal.");
-        setPageState("failed");
-        sessionStorage.removeItem("pending_order_id");
-        sessionStorage.removeItem("pending_redirect_url");
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Gagal memverifikasi pembayaran.");
-      setPageState("waiting");
-    }
-  }, [orderId]);
-
-  const handleReset = () => {
-    setOrderId(null);
-    setRedirectUrl(null);
-    setVerifyMessage("");
-    setPageState("idle");
-    sessionStorage.removeItem("pending_order_id");
-    sessionStorage.removeItem("pending_redirect_url");
-  };
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
@@ -120,83 +164,124 @@ export default function PricingPage() {
       {pageState === "success" && (
         <div className="text-center space-y-6 relative z-10 max-w-lg mx-auto animate-in fade-in slide-in-from-bottom-4">
           <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
-            <PartyPopper className="w-10 h-10 text-green-500" />
+            <Check className="w-10 h-10 text-green-500" />
           </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent">
-            Selamat! Anda Premium 🎉
+            Bukti Berhasil Diunggah!
           </h1>
-          <p className="text-muted-foreground text-lg">{verifyMessage}</p>
+          <p className="text-muted-foreground text-lg">
+            Terima kasih! Pembayaran Anda sedang diproses oleh tim kami. Akun Anda akan otomatis menjadi Premium setelah divalidasi (biasanya 1-5 menit).
+          </p>
           <Button 
             onClick={() => router.push("/dashboard")} 
             className="bg-gradient-to-r from-neon-cyan to-neon-purple text-white h-12 px-8"
           >
-            Mulai Gunakan Premium
+            Kembali ke Dashboard
           </Button>
         </div>
       )}
 
-      {/* FAILED STATE */}
-      {pageState === "failed" && (
-        <div className="text-center space-y-6 relative z-10 max-w-lg mx-auto animate-in fade-in slide-in-from-bottom-4">
-          <h1 className="text-3xl font-extrabold tracking-tight text-red-500">
-            Pembayaran Gagal
-          </h1>
-          <p className="text-muted-foreground text-lg">{verifyMessage}</p>
-          <Button onClick={handleReset} variant="outline">
-            Coba Lagi
-          </Button>
-        </div>
-      )}
+      {/* UPLOADING STATE (MANUAL PAYMENT) */}
+      {pageState === "uploading" && (
+        <div className="relative z-10 w-full max-w-lg mx-auto animate-in fade-in slide-in-from-bottom-4">
+          <Card className="bg-background/80 backdrop-blur border-border">
+            <CardHeader className="text-center pb-4 border-b">
+              <CardTitle className="text-2xl">Instruksi Pembayaran</CardTitle>
+              <CardDescription>
+                Transfer sesuai nominal ke rekening berikut untuk aktivasi Premium.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
+              
+              <div className="bg-muted p-4 rounded-lg flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Tagihan ({selectedMonths} Bulan)</p>
+                  <p className="text-2xl font-bold bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent">Rp {getDurationPrice(selectedMonths).toLocaleString("id-ID")}</p>
+                </div>
+              </div>
 
-      {/* WAITING / VERIFYING STATE */}
-      {(pageState === "waiting" || pageState === "verifying") && (
-        <div className="text-center space-y-6 relative z-10 max-w-lg mx-auto animate-in fade-in slide-in-from-bottom-4">
-          <div className="w-16 h-16 rounded-full bg-neon-cyan/20 flex items-center justify-center mx-auto">
-            <Sparkles className="w-8 h-8 text-neon-cyan animate-pulse" />
-          </div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Menunggu Pembayaran</h1>
-          <p className="text-muted-foreground">
-            Silakan selesaikan pembayaran di tab Midtrans yang sudah terbuka.
-            Setelah selesai bayar, klik tombol &quot;Verifikasi&quot; di bawah ini.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-            <Button
-              onClick={handleVerify}
-              disabled={pageState === "verifying"}
-              className="bg-gradient-to-r from-neon-cyan to-neon-purple text-white h-12 px-8"
-            >
-              {pageState === "verifying" ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Memverifikasi...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="w-5 h-5 mr-2" />
-                  Verifikasi Pembayaran
-                </>
-              )}
-            </Button>
-            {redirectUrl && (
-              <Button variant="outline" asChild>
-                <a href={redirectUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Buka Halaman Bayar
-                </a>
+              <div className="space-y-4">
+                <p className="text-sm font-semibold">💳 Transfer Rekening Bank</p>
+                <div className="border rounded-lg p-3 flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Bank BCA</p>
+                    <p className="font-mono text-lg tracking-wider">BCA 706-064-6826</p>
+                    <p className="text-xs font-medium">a.n. Rafli Ramadhani</p>
+                  </div>
+                  <Button variant="outline" size="icon" onClick={() => copyToClipboard("7060646826")}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="border rounded-lg p-3 flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Bank Jago</p>
+                    <p className="font-mono text-lg tracking-wider">Jago 5098-3712-3795</p>
+                    <p className="text-xs font-medium">a.n. Rafli Ramadhani</p>
+                  </div>
+                  <Button variant="outline" size="icon" onClick={() => copyToClipboard("509837123795")}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                <p className="text-sm font-semibold mt-6">📱 E-Wallet (Gopay / ShopeePay / Dana)</p>
+                <div className="border rounded-lg p-3 flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-muted-foreground">E-Wallet Gopay / ShopeePay / Dana</p>
+                    <p className="font-mono text-lg tracking-wider">0896-3003-2240</p>
+                    <p className="text-xs font-medium">a.n. Rafli Ramadhani</p>
+                  </div>
+                  <Button variant="outline" size="icon" onClick={() => copyToClipboard("089630032240")}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-6 border-t mt-6">
+                <p className="text-sm font-semibold">Upload Bukti Transfer</p>
+                
+                {!previewUrl ? (
+                  <label className="border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors">
+                    <UploadCloud className="w-10 h-10 text-muted-foreground mb-3" />
+                    <p className="text-sm font-medium">Klik untuk pilih gambar</p>
+                    <p className="text-xs text-muted-foreground mt-1">.JPG, .PNG maksimal 5MB</p>
+                    <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                  </label>
+                ) : (
+                  <div className="relative border rounded-xl overflow-hidden aspect-[4/3] bg-muted flex items-center justify-center">
+                    <Image src={previewUrl} alt="Bukti Transfer" fill className="object-contain" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <Button variant="secondary" size="sm" onClick={() => { setSelectedFile(null); setPreviewUrl(null); }}>
+                        Ganti Gambar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </CardContent>
+            <CardFooter className="flex gap-3 border-t bg-muted/20 pt-6">
+              <Button variant="outline" className="flex-1" onClick={() => setPageState("idle")} disabled={isSubmitting}>
+                Batal
               </Button>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Order ID: <code className="bg-muted px-1 py-0.5 rounded">{orderId}</code>
-          </p>
-          <button onClick={handleReset} className="text-xs text-muted-foreground underline hover:text-foreground transition-colors">
-            Batal dan mulai ulang
-          </button>
+              <Button 
+                className="flex-1 bg-gradient-to-r from-neon-cyan to-neon-purple text-white" 
+                disabled={!selectedFile || isSubmitting}
+                onClick={handleSubmitReceipt}
+              >
+                {isSubmitting ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Mengunggah...</>
+                ) : (
+                  "Kirim Bukti"
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
       )}
 
-      {/* IDLE / CREATING STATE - Show pricing cards */}
-      {(pageState === "idle" || pageState === "creating") && (
+      {/* IDLE STATE - Show pricing cards */}
+      {pageState === "idle" && (
         <>
           <div className="text-center space-y-4 mb-12 relative z-10 w-full max-w-2xl mx-auto">
             <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight">
@@ -262,7 +347,7 @@ export default function PricingPage() {
             </Card>
 
             {/* PREMIUM PLAN */}
-            <Card className="relative bg-gradient-to-b from-background to-background/50 backdrop-blur border-neon-cyan/50 shadow-2xl shadow-neon-cyan/10">
+            <Card className="relative bg-gradient-to-b from-background to-background/50 backdrop-blur border-neon-cyan/50 shadow-2xl shadow-neon-cyan/10 flex flex-col">
               <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/4">
                 <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-neon-purple to-neon-pink px-4 py-1 text-sm font-semibold tracking-wider text-white shadow-sm uppercase">
                   <Sparkles className="w-4 h-4" /> Recommended
@@ -270,20 +355,66 @@ export default function PricingPage() {
               </div>
               <CardHeader>
                 <CardTitle className="text-2xl text-neon-cyan">Premium</CardTitle>
-                <CardDescription>Analisis dan efisiensi maksimum dengan kekuatan AI.</CardDescription>
-                <div className="mt-4 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl font-medium text-muted-foreground line-through">Rp 29.000</span>
-                    <span className="inline-flex items-center bg-red-500/20 text-red-500 text-xs font-bold px-2 py-0.5 rounded-full border border-red-500/40 uppercase">-48%</span>
-                  </div>
-                  <div className="flex items-baseline text-4xl font-extrabold bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent">
-                    Rp 15.000
-                    <span className="ml-1 text-xl font-medium text-muted-foreground">/bln</span>
-                  </div>
-                  <p className="text-xs text-amber-500 font-medium">⏳ Harga khusus 100 pendaftar pertama — setelahnya kembali Rp 29.000/bln</p>
+                <CardDescription>Pilih durasi berlangganan. Lebih lama, lebih hemat!</CardDescription>
+                
+                {/* Duration Selector */}
+                <div className="grid grid-cols-4 gap-2 mt-4">
+                  {[1, 3, 6, 12].map((months) => (
+                    <button
+                      key={months}
+                      onClick={() => setSelectedMonths(months)}
+                      className={`relative flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all ${
+                        selectedMonths === months 
+                          ? "border-neon-cyan bg-neon-cyan/10" 
+                          : "border-border hover:border-neon-cyan/50 hover:bg-muted"
+                      }`}
+                    >
+                      {months === 6 && (
+                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500 text-amber-950 text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm">
+                          POPULER
+                        </span>
+                      )}
+                      {months === 12 && (
+                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-neon-pink text-white text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shadow-sm">
+                          TERHEMAT
+                        </span>
+                      )}
+                      <span className={`text-xl font-bold ${selectedMonths === months ? "text-neon-cyan" : ""}`}>{months}</span>
+                      <span className="text-xs text-muted-foreground font-medium">Bulan</span>
+                    </button>
+                  ))}
                 </div>
+
+                <div className="mt-6 p-4 rounded-xl border border-neon-cyan/20 bg-neon-cyan/5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Harga Normal</p>
+                      <p className="text-lg font-medium text-muted-foreground line-through decoration-red-500/50">
+                        Rp {(29000 * selectedMonths).toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                    {selectedMonths > 1 && (
+                      <div className="text-right">
+                        <span className="inline-flex items-center bg-green-500/20 text-green-500 text-xs font-bold px-2 py-1 rounded-full border border-green-500/40 uppercase animate-pulse">
+                          Hemat Rp {( (15000 * selectedMonths) - getDurationPrice(selectedMonths) ).toLocaleString('id-ID')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="mt-2 flex items-baseline justify-between">
+                    <div className="flex items-baseline text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent">
+                      Rp {getDurationPrice(selectedMonths).toLocaleString("id-ID")}
+                    </div>
+                    <div className="text-right flex flex-col">
+                      <span className="text-sm font-bold text-foreground">Hanya Rp {getPricePerMonth(selectedMonths).toLocaleString("id-ID")}</span>
+                      <span className="text-xs text-muted-foreground">/ bulan</span>
+                    </div>
+                  </div>
+                </div>
+
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 flex-1">
                 <ul className="space-y-3">
                   {[
                     "Semua fitur di akun Biasa",
@@ -303,20 +434,12 @@ export default function PricingPage() {
                   ))}
                 </ul>
               </CardContent>
-              <CardFooter>
+              <CardFooter className="mt-auto pt-6">
                 <Button
-                  className="w-full bg-gradient-to-r from-neon-cyan to-neon-purple hover:opacity-90 transition-opacity text-white text-md font-semibold h-12"
+                  className="w-full bg-gradient-to-r from-neon-cyan to-neon-purple hover:opacity-90 transition-opacity text-white text-md font-semibold h-14 shadow-lg shadow-neon-cyan/20"
                   onClick={handleSubscribe}
-                  disabled={pageState === "creating"}
                 >
-                  {pageState === "creating" ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Memproses...
-                    </>
-                  ) : (
-                    "Upgrade Sekarang"
-                  )}
+                  Bayar Rp {getDurationPrice(selectedMonths).toLocaleString("id-ID")}
                 </Button>
               </CardFooter>
             </Card>

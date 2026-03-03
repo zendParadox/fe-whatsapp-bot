@@ -270,7 +270,7 @@ function FaqSection() {
                       </div>
                     </div>
                   </div>
-                  <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 flex items-start gap-3">
+                  {/* <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 flex items-start gap-3">
                 <div className="mt-1">
                   <CircleAlert className="h-5 w-5 text-yellow-500" />
                 </div>
@@ -280,7 +280,7 @@ function FaqSection() {
                     Untuk fitur AI Smart Parser, penggunaan nya masih sangat terbatas. Utamakan menggunakan Manual Format terlebih dahulu.
                   </p>
                 </div>
-              </div>
+              </div> */}
                 </CardContent>
               </Card>
             </TabsContent>

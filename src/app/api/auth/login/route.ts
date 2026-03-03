@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
 import { normalizePhone } from "@/lib/phone";
+import { isAdminUser } from "@/lib/auth";
 
 import { prisma } from "@/lib/prisma";
 const JWT_SECRET = process.env.JWT_SECRET ?? "";
@@ -59,7 +60,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const token = jwt.sign({ userId: user.id }, JWT_SECRET, {
+    const isAdmin = isAdminUser(user.whatsapp_jid);
+
+    const token = jwt.sign({ userId: user.id, isAdmin }, JWT_SECRET, {
       expiresIn: JWT_EXPIRES_IN,
     });
 

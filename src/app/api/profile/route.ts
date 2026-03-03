@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
+import { isAdminUser } from "@/lib/auth";
 
 import { prisma } from "@/lib/prisma";
 
@@ -38,7 +39,9 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ user }, {
+    return NextResponse.json({
+      user: { ...user, isAdmin: isAdminUser(user.whatsapp_jid) },
+    }, {
       headers: {
         "Cache-Control": "private, max-age=60, stale-while-revalidate=120",
       },
