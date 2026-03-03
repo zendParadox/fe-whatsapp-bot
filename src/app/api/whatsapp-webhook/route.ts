@@ -1078,7 +1078,8 @@ masuk 100k uang jajan @bonus\`
 
 🤖 Atau kirim pesan biasa, AI akan otomatis mendeteksi transaksi!
 
-🌐 Dashboard: gotek.vercel.app`;
+🌐 *Panduan Website:* https://gotek.vercel.app/guide
+🌐 *Dashboard:* https://gotek.vercel.app`;
 
       return NextResponse.json({ message: detailedHelp });
     }
@@ -1112,9 +1113,7 @@ masuk 100k uang jajan @bonus\`
 • Kategori bisa multi-kata
 • Format: 50k, 1.5jt, 500rb
 • Beli dari kantong: \`beli makan 20k dari gopay\`
-• Ketik *penjelasan detail* untuk panduan lengkap
-
-🌐 https://gotek.vercel.app`;
+• Ketik *penjelasan detail* atau buka https://gotek.vercel.app/guide untuk panduan lengkap`;
 
     return NextResponse.json({ message: helpMessage });
 

@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   ArrowDownUp,
@@ -204,6 +205,7 @@ export default function GuidePage() {
                   <ArrowDownUp className="h-5 w-5 text-neon-cyan" />
                 </div>
                 1. Catat Transaksi
+                <Badge variant="outline" className="ml-auto bg-green-500/10 text-green-500 border-green-500/20">Free</Badge>
               </CardTitle>
               <CardDescription>
                 Perintah utama untuk mencatat pemasukan dan pengeluaran harian Anda
@@ -305,6 +307,7 @@ export default function GuidePage() {
                   <Receipt className="h-5 w-5 text-neon-purple" />
                 </div>
                 2. Multi-Transaksi (Sekaligus)
+                <Badge variant="outline" className="ml-auto bg-green-500/10 text-green-500 border-green-500/20">Free</Badge>
               </CardTitle>
               <CardDescription>
                 Catat beberapa transaksi dalam satu pesan sekaligus — hemat waktu!
@@ -346,6 +349,7 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                   <BarChart3 className="h-5 w-5 text-neon-cyan" />
                 </div>
                 3. Laporan Keuangan
+                <Badge variant="outline" className="ml-auto bg-green-500/10 text-green-500 border-green-500/20">Free</Badge>
               </CardTitle>
               <CardDescription>
                 Lihat ringkasan keuangan harian, mingguan, atau bulanan
@@ -416,6 +420,7 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                   <Target className="h-5 w-5 text-neon-purple" />
                 </div>
                 4. Budget / Anggaran
+                <Badge variant="outline" className="ml-auto bg-green-500/10 text-green-500 border-green-500/20">Free</Badge>
               </CardTitle>
               <CardDescription>
                 Atur batas pengeluaran per kategori setiap bulan — Go
@@ -489,6 +494,7 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                   <Handshake className="h-5 w-5 text-neon-pink" />
                 </div>
                 5. Hutang & Piutang
+                <Badge variant="outline" className="ml-auto bg-green-500/10 text-green-500 border-green-500/20">Free</Badge>
               </CardTitle>
               <CardDescription>
                 Catat uang yang Anda pinjam atau pinjamkan agar tidak lupa
@@ -573,6 +579,7 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                   <Undo2 className="h-5 w-5 text-neon-cyan" />
                 </div>
                 6. Undo / Hapus Transaksi
+                <Badge variant="outline" className="ml-auto bg-green-500/10 text-green-500 border-green-500/20">Free</Badge>
               </CardTitle>
               <CardDescription>
                 Salah catat? Langsung batalkan transaksi terakhir
@@ -618,6 +625,7 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                   <Sparkles className="h-5 w-5 text-neon-purple" />
                 </div>
                 7. AI Smart Parser (Gemini)
+                <Badge variant="outline" className="ml-auto bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Premium</Badge>
               </CardTitle>
               <CardDescription>
                 Tidak mau ketik format manual? Tulis gaya bahasa sehari-hari, AI yang parsing!
@@ -646,7 +654,6 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 text-sm">
                 <p className="font-medium text-yellow-500 mb-1">⚠️ Catatan Penting tentang AI:</p>
                 <ul className="text-muted-foreground space-y-1">
-                  <li>• Kuota AI <strong>terbatas per hari</strong> — utamakan format manual jika bisa</li>
                   <li>• AI mungkin salah mendeteksi kategori — bisa Anda koreksi di dashboard</li>
                   <li>• Semakin jelas kalimat Anda, semakin akurat hasilnya</li>
                 </ul>
@@ -663,6 +670,7 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                   <Camera className="h-5 w-5 text-neon-pink" />
                 </div>
                 8. Scan Struk / Nota (Gambar)
+                <Badge variant="outline" className="ml-auto bg-yellow-500/10 text-yellow-500 border-yellow-500/20">Premium</Badge>
               </CardTitle>
               <CardDescription>
                 Foto struk belanja & kirim ke bot — AI akan baca dan catat otomatis!
@@ -782,7 +790,7 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                   Ketik <code className="text-neon-purple font-bold">help</code> untuk panduan singkat langsung di WhatsApp.
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Ketik <code className="text-neon-pink font-bold">penjelasan detail</code>, <code className="text-neon-pink font-bold">tutorial</code>, atau{" "}
+                  Ketik <code className="text-neon-pink font-bold">penjelasan detail</code> atau{" "}
                   <code className="text-neon-pink font-bold">panduan</code> untuk panduan lengkap di WhatsApp.
                 </p>
               </div>
