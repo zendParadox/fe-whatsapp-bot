@@ -1,10 +1,9 @@
-/* eslint-disable */
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient, DebtType, DebtStatus, Prisma } from "@prisma/client";
+import { DebtType, DebtStatus, Prisma } from "@prisma/client";
 import { verifyToken } from "@/lib/auth";
 import { z } from "zod";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Schema validasi
 const createDebtSchema = z.object({

@@ -1,12 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient, TransactionType } from "@prisma/client";
+import { TransactionType } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { z } from "zod";
 import { parseReceiptImage } from "@/lib/ai-provider";
 import { checkBudgetStatus } from "@/lib/whatsapp/service";
 import { normalizePhone, formatMoneyBot } from "@/lib/phone";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const imageWebhookSchema = z.object({
   sender: z.string(),

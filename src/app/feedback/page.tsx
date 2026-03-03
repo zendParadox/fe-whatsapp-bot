@@ -43,7 +43,6 @@ const formSchema = z.object({
 });
 
 export default function FeedbackPage() {
-  const router = useRouter();
   // removed useToast
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);

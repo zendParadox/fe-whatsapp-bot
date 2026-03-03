@@ -1,16 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient, PlanType } from "@prisma/client";
+import { PlanType } from "@prisma/client";
 import { coreApi } from "@/lib/midtrans";
 import crypto from "crypto";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     
     // Webhook notification payload properties from Midtrans
-    const { order_id, status_code, gross_amount, signature_key, transaction_status, payment_type } = body;
+    const { order_id, status_code, gross_amount, signature_key, payment_type } = body;
 
     if (!order_id || !signature_key) {
       return NextResponse.json({ message: "Invalid payload" }, { status: 400 });

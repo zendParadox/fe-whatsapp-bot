@@ -1,10 +1,10 @@
 /*eslint-disable*/
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient } from "@prisma/client";
+
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // PUT: Update budget
 export async function PUT(

@@ -1,15 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient } from "@prisma/client";
+
 import { snap } from "@/lib/midtrans";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import crypto from "crypto";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 const SUBSCRIPTION_PRICE = 15000;
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;

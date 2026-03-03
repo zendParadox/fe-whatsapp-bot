@@ -1,14 +1,14 @@
 /* eslint-disable */
 // src/app/api/auth/register/route.ts
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient } from "@prisma/client";
+
 import { hashSync } from "bcryptjs";
 import { cookies } from "next/headers";
 import { signToken } from "@/lib/auth"; // kalau kamu sudah punya lib/auth (disarankan)
 
 import { normalizePhone, isAllowedPhone, getCurrencyFromPhone } from "@/lib/phone";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 const BCRYPT_SALT_ROUNDS = 10;
 
 

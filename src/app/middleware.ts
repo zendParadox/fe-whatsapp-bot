@@ -6,46 +6,52 @@ import { verifyToken } from "@/lib/auth";
 // Routes yang memerlukan autentikasi
 const protectedRoutes = ["/dashboard", "/profile"];
 
+// Routes yang memerlukan admin access
+const adminRoutes = ["/admin"];
+
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
   const pathname = url.pathname;
-  // Cek apakah path dimulai dengan salah satu protected routes
+
   const isProtectedRoute = protectedRoutes.some((route) =>
     pathname.startsWith(route)
   );
+  const isAdminRoute = adminRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
 
-  if (isProtectedRoute) {
+  if (isProtectedRoute || isAdminRoute) {
     try {
-      // Ambil cookie token
       const token = req.cookies.get("token")?.value;
-      
+
       if (!token) {
         url.pathname = "/unauthorized";
         return NextResponse.redirect(url);
       }
 
-      // Verifikasi token
       const payload = verifyToken(token);
-      
+
       if (!payload || !payload.userId) {
         url.pathname = "/unauthorized";
         return NextResponse.redirect(url);
       }
 
-      // Token valid, lanjutkan
+      // Admin route protection
+      if (isAdminRoute && !payload.isAdmin) {
+        url.pathname = "/unauthorized";
+        return NextResponse.redirect(url);
+      }
+
       return NextResponse.next();
     } catch {
-      // Error verifikasi, redirect ke unauthorized
       url.pathname = "/unauthorized";
       return NextResponse.redirect(url);
     }
   }
 
-  // Route lain, lanjutkan
   return NextResponse.next();
 }
 
-// Matcher untuk routes yang perlu dicek middleware
 export const config = {
-  matcher: ["/dashboard/:path*", "/profile/:path*"],
+  matcher: ["/dashboard/:path*", "/profile/:path*", "/admin/:path*"],
 };

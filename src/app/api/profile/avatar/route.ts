@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient } from "@prisma/client";
+
 import { cookies } from "next/headers";
 import { verifyToken } from "@/lib/auth";
 import { supabase, AVATAR_BUCKET } from "@/lib/supabase";
 import sharp from "sharp";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Avatar settings
 const AVATAR_SIZE = 256; // 256x256 pixels

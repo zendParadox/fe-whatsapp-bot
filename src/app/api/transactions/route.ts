@@ -1,14 +1,19 @@
 /* eslint-disable */
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma"; // sesuaikan path jika perlu
-import type { Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { withPerformanceTracking } from "@/lib/performance";
 
-export async function GET(request: Request) {
+async function handleTransactionsGET(request: Request) {
   const { searchParams } = new URL(request.url);
   const month = searchParams.get("month");
 
-  // gunakan tipe Prisma.TransactionWhereInput agar lebih aman (atau 'any' jika belum mau import type)
-  let whereClause: Prisma.TransactionClient | Record<string, unknown> = {};
+  // Pagination params (defaults: page=1, limit=50)
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+  const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 50));
+  const skip = (page - 1) * limit;
+
+  // Build where clause
+  let whereClause: any = {};
 
   if (month === "current" || month === "last") {
     const now = new Date();
@@ -32,16 +37,18 @@ export async function GET(request: Request) {
   }
 
   try {
-    const transactions = await prisma.transaction.findMany({
-      where: whereClause,
-      orderBy: {
-        created_at: "desc",
-      },
-    });
+    // Run count and findMany in parallel for efficiency
+    const [transactions, total] = await Promise.all([
+      prisma.transaction.findMany({
+        where: whereClause,
+        orderBy: { created_at: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.transaction.count({ where: whereClause }),
+    ]);
 
     const serializedTransactions = transactions.map((tx) => {
-      // tx.amount biasanya prisma Decimal. Gunakan toNumber jika ada, fallback ke Number/toString
-      // This avoids losing precision unexpectedly; but for UI number display toNumber is fine.
       const amountAny: any = (tx as any).amount;
       let amountNumber: number;
 
@@ -59,7 +66,18 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({ transactions: serializedTransactions });
+    const totalPages = Math.ceil(total / limit);
+
+    return NextResponse.json({
+      transactions: serializedTransactions,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore: page < totalPages,
+      },
+    });
   } catch (error) {
     console.error("Failed to fetch transactions:", error);
     return NextResponse.json(
@@ -69,7 +87,7 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
+async function handleTransactionsPOST(request: Request) {
   try {
     const { cookies } = await import("next/headers");
     const { verifyToken } = await import("@/lib/auth");
@@ -120,3 +138,6 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export const GET = withPerformanceTracking(handleTransactionsGET, "/api/transactions");
+export const POST = withPerformanceTracking(handleTransactionsPOST, "/api/transactions");

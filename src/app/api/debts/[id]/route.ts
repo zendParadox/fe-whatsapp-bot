@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { PrismaClient } from "@prisma/client";
+
 import { verifyToken } from "@/lib/auth";
 import { z } from "zod";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // Schema validasi untuk update
 const updateDebtSchema = z.object({

@@ -11,6 +11,13 @@ if (!JWT_SECRET) {
   throw new Error("Missing JWT_SECRET in environment variables");
 }
 
+// Admin access — only this phone number can access /admin
+export const ADMIN_PHONE = "6289630032240";
+
+export function isAdminUser(whatsapp_jid: string | null | undefined): boolean {
+  return whatsapp_jid === ADMIN_PHONE;
+}
+
 export function hashPassword(plain: string) {
   return bcrypt.hashSync(plain, 10);
 }

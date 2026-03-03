@@ -62,6 +62,7 @@ import WhatsAppBotBanner from "@/components/dashboard/WhatsAppBotBanner";
 import AiAnalysisButton from "@/components/dashboard/AiAnalysisButton";
 import AiAnalysisModal from "@/components/dashboard/AiAnalysisModal";
 import ExportReportButtons from "@/components/dashboard/ExportReportButtons";
+import WalletCard from "@/components/dashboard/WalletCard";
 import BudgetCard from "@/components/dashboard/BudgetCard";
 import DebtCard from "@/components/dashboard/DebtCard";
 import { toast } from "sonner";
@@ -105,11 +106,14 @@ interface DashboardData {
   budgetData: { category: string; budget: number; actual: number }[];
   totalSaldo: number;
   plan_type?: "FREE" | "PREMIUM";
+  wallets?: { id: string; name: string; icon: string | null; balance: number | string; created_at: string }[];
 }
 
 interface UserProfile {
   name: string | null;
   avatar_url: string | null;
+  plan_type?: string;
+  premium_valid_until?: string | null;
 }
 
 const PIE_CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
@@ -203,10 +207,6 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [dateRange, setDateRange] = useState<any | undefined>({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date()),
-  });
   const [selectedDateRange, setSelectedDateRange] = useState<any | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
@@ -430,11 +430,8 @@ export default function Dashboard() {
       setIsDialogOpen(false);
       setEditingTx(null);
 
-      // refresh data
-      const from = format(activeDateRange.from, "yyyy-MM-dd");
-      const to = format(activeDateRange.to, "yyyy-MM-dd");
-      const refreshed = await fetch(`/api/dashboard?from=${from}&to=${to}`);
-      if (refreshed.ok) setData(await refreshed.json());
+      // refresh data via refreshKey (triggers useEffect)
+      setRefreshKey(k => k + 1);
 
       // show success toast
       toast.success("Perubahan transaksi berhasil disimpan.");
@@ -456,11 +453,8 @@ export default function Dashboard() {
       });
       if (!res.ok) throw new Error("Gagal menghapus");
       setDeletingTx(null);
-      // refresh data
-      const from = format(activeDateRange.from, "yyyy-MM-dd");
-      const to = format(activeDateRange.to, "yyyy-MM-dd");
-      const refreshed = await fetch(`/api/dashboard?from=${from}&to=${to}`);
-      if (refreshed.ok) setData(await refreshed.json());
+      // refresh data via refreshKey (triggers useEffect)
+      setRefreshKey(k => k + 1);
       toast.success("Transaksi dihapus.");
     } catch (err) {
       console.error(err);
@@ -558,6 +552,8 @@ export default function Dashboard() {
               variant="icon" 
               userName={userProfile?.name}
               avatarUrl={userProfile?.avatar_url}
+              planType={userProfile?.plan_type || data?.plan_type}
+              premiumValidUntil={userProfile?.premium_valid_until}
             />
           </div>
 
@@ -577,6 +573,8 @@ export default function Dashboard() {
               variant="full" 
               userName={userProfile?.name}
               avatarUrl={userProfile?.avatar_url}
+              planType={userProfile?.plan_type || data?.plan_type}
+              premiumValidUntil={userProfile?.premium_valid_until}
             />
           </div>
         </div>
@@ -749,6 +747,12 @@ export default function Dashboard() {
             year={activeDateRange?.from ? activeDateRange.from.getFullYear() : new Date().getFullYear()}
             onBudgetChange={() => setRefreshKey(k => k + 1)}
             formatter={formatCurrency}
+          />
+          <WalletCard
+            wallets={data.wallets || []}
+            planType={data.plan_type || "FREE"}
+            formatCurrency={formatCurrency}
+            onRefresh={() => setRefreshKey(k => k + 1)}
           />
           <DebtCard onDataChange={() => setRefreshKey(k => k + 1)} />
         </div>

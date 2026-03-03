@@ -2,13 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, User, Mail, Lock, Eye, EyeOff, Save, Phone } from "lucide-react";
+import { ArrowLeft, Loader2, User, Mail, Lock, Eye, EyeOff, Save, Phone, Crown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { toast } from "sonner";
 import AvatarUpload from "@/components/profile/AvatarUpload";
+import Link from "next/link";
 
 interface UserProfile {
   id: string;
@@ -17,6 +18,8 @@ interface UserProfile {
   whatsapp_jid: string | null;
   avatar_url: string | null;
   created_at: string;
+  plan_type: string;
+  premium_valid_until: string | null;
 }
 
 export default function ProfilePage() {
@@ -174,6 +177,96 @@ export default function ProfilePage() {
                 userName={user?.name}
                 onAvatarChange={handleAvatarChange}
               />
+            </CardContent>
+          </Card>
+
+          {/* Subscription Info */}
+          <Card className={user?.plan_type === "PREMIUM" ? "border-amber-500/50 bg-gradient-to-br from-amber-500/5 to-orange-500/5" : ""}>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Crown className={`w-5 h-5 ${user?.plan_type === "PREMIUM" ? "text-amber-500" : "text-slate-400"}`} />
+                Status Langganan
+              </CardTitle>
+              <CardDescription>
+                Informasi paket dan masa aktif Anda
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Jenis Paket</span>
+                {user?.plan_type === "PREMIUM" ? (
+                  <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    <Sparkles className="w-3 h-3" />
+                    PREMIUM
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold px-3 py-1 rounded-full">
+                    FREE
+                  </span>
+                )}
+              </div>
+
+              {user?.plan_type === "PREMIUM" && user?.premium_valid_until && (() => {
+                const expiry = new Date(user.premium_valid_until);
+                const now = new Date();
+                const diffMs = expiry.getTime() - now.getTime();
+                const daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+                const isExpired = daysLeft <= 0;
+                const isExpiringSoon = daysLeft <= 7 && !isExpired;
+                const progressPct = Math.min(100, Math.max(0, (daysLeft / 30) * 100));
+
+                return (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Berlaku Hingga</span>
+                      <span className="text-sm font-medium">
+                        {expiry.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Sisa Waktu</span>
+                        <span className={`text-sm font-bold ${
+                          isExpired ? "text-red-500" : isExpiringSoon ? "text-amber-500" : "text-emerald-500"
+                        }`}>
+                          {isExpired ? "Sudah Berakhir" : `${daysLeft} hari lagi`}
+                        </span>
+                      </div>
+                      <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            isExpired ? "bg-red-500" : isExpiringSoon ? "bg-amber-500" : "bg-emerald-500"
+                          }`}
+                          style={{ width: `${progressPct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {(isExpired || isExpiringSoon) && (
+                      <Button asChild className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:opacity-90 text-white font-semibold">
+                        <Link href="/pricing">
+                          {isExpired ? "Perpanjang Sekarang" : "Perpanjang Sebelum Habis"}
+                        </Link>
+                      </Button>
+                    )}
+                  </>
+                );
+              })()}
+
+              {user?.plan_type !== "PREMIUM" && (
+                <div className="pt-2">
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Upgrade ke Premium untuk AI Smart Parser, Scan Struk, Kantong Keuangan, Export PDF/Excel, dan lainnya.
+                  </p>
+                  <Button asChild className="w-full bg-gradient-to-r from-neon-purple to-neon-pink hover:opacity-90 text-white font-semibold">
+                    <Link href="/pricing">
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Upgrade ke Premium
+                    </Link>
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
