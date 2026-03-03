@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { NextResponse, type NextRequest } from "next/server";
 import { DebtType, DebtStatus, Prisma } from "@prisma/client";
 import { verifyToken } from "@/lib/auth";

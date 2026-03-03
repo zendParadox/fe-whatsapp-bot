@@ -922,7 +922,6 @@ export async function POST(request: NextRequest) {
             console.log(`✅ Created category: ${tx.category}`);
           }
 
-          let budgetAlert = "";
           if (tx.type === "EXPENSE") {
             const alert = await checkBudgetStatus(user.id, category.id, tx.amount, user.currency);
             if (alert) budgetAlertsList.push(`${category.name}: ${alert}`);

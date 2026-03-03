@@ -9,7 +9,7 @@ import { prisma } from "@/lib/prisma";
 
 const SUBSCRIPTION_PRICE = 15000;
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;

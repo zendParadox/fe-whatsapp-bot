@@ -7,7 +7,6 @@ import {
   Users,
   MessageSquare,
   Send,
-  BarChart3,
   ArrowLeft,
   CreditCard,
 } from "lucide-react";

@@ -21,7 +21,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import Image from "next/image";
 
 interface User {
   name: string | null;
@@ -60,9 +59,9 @@ export default function AdminPaymentsPage() {
       
       if (data.error) throw new Error(data.error);
       setPayments(data.payments || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "Gagal memuat data pembayaran.");
+      setError(err instanceof Error ? err.message : "Gagal memuat data pembayaran.");
     } finally {
       setLoading(false);
     }
@@ -70,6 +69,7 @@ export default function AdminPaymentsPage() {
 
   useEffect(() => {
     fetchPayments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
   const handleAction = async (action: "APPROVE" | "REJECT") => {
@@ -94,9 +94,9 @@ export default function AdminPaymentsPage() {
       setSelectedPayment(null);
       setRejectNotes("");
       fetchPayments(); // Refresh daftar
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      toast.error(err.message);
+      toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setIsProcessing(false);
     }

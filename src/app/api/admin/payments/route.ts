@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const limit = Number(searchParams.get("limit")) || 20;
     const skip = (page - 1) * limit;
 
-    const whereClause: any = {};
+    const whereClause: { status?: string } = {};
     if (status !== "ALL") {
       whereClause.status = status;
     }

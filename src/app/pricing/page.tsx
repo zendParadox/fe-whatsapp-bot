@@ -129,9 +129,9 @@ export default function PricingPage() {
             if (!res.ok) throw new Error(data.error || "Gagal mengunggah bukti");
 
             setPageState("success");
-          } catch (err: any) {
+          } catch (err: unknown) {
             console.error(err);
-            toast.error(err.message || "Gagal mengirim bukti pembayaran.");
+            toast.error(err instanceof Error ? err.message : "Gagal mengirim bukti pembayaran.");
             setIsSubmitting(false);
           }
         };

@@ -13,7 +13,6 @@ async function handleTransactionsGET(request: Request) {
   const skip = (page - 1) * limit;
 
   // Build where clause
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let whereClause: any = {};
 
   if (month === "current" || month === "last") {
@@ -50,7 +49,6 @@ async function handleTransactionsGET(request: Request) {
     ]);
 
     const serializedTransactions = transactions.map((tx) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const amountAny: any = (tx as any).amount;
       let amountNumber: number;
 
