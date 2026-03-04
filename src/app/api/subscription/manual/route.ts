@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { verifyToken } from "@/lib/auth";
+import { verifyToken, ADMIN_PHONE } from "@/lib/auth";
 import { cookies } from "next/headers";
+
+const GOLANG_BOT_URL = process.env.GOLANG_BOT_URL || "https://bot.rafliramadhani.site";
 
 export async function POST(req: Request) {
   try {
@@ -33,6 +35,26 @@ export async function POST(req: Request) {
         status: "PENDING",
       },
     });
+
+    // Kirim notifikasi ke Admin via Bot WhatsApp
+    (async () => {
+      try {
+        const adminPhone = ADMIN_PHONE.endsWith("@s.whatsapp.net") ? ADMIN_PHONE : `${ADMIN_PHONE}@s.whatsapp.net`;
+        const botBaseUrl = GOLANG_BOT_URL.endsWith("/") ? GOLANG_BOT_URL.slice(0, -1) : GOLANG_BOT_URL;
+        
+        const notifyMsg = `🔔 *INFO PEMBAYARAN BARU* 🔔\n\nTerdapat pengajuan pembayaran manual baru sebesar *Rp ${Number(amount).toLocaleString("id-ID")}* untuk *${months} Bulan* Premium.\n\nSilakan cek halaman Dashboard Admin untuk melakukan verifikasi (Approve/Reject).\n🌐 https://gotek.vercel.app/admin/payments`;
+
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+        await fetch(`${botBaseUrl}/send-message`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: adminPhone, message: notifyMsg }),
+        });
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = "1";
+      } catch (err) {
+        console.error("Gagal mengirim notif admin:", err);
+      }
+    })();
 
     return NextResponse.json({
       success: true,

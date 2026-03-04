@@ -74,26 +74,42 @@ export async function POST(request: NextRequest) {
     // Bypass TLS leaf signature verification temp
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
-    // Send to Go bot /broadcast endpoint
+    // Process broadcast in the background to avoid Vercel/Next.js timeout
     const baseUrl = GOLANG_BOT_URL.endsWith("/") ? GOLANG_BOT_URL.slice(0, -1) : GOLANG_BOT_URL;
-    const botResponse = await fetch(`${baseUrl}/broadcast`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        phones,
-        message: message.trim(),
-        delay_seconds: 75,
-      }),
-    });
+    const delaySeconds = 75;
 
-    // Re-enable it if not in dev
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "1";
+    // Simulate fire and forget in Next.js Serverless (Note: requires Vercel waitUntil or similar for strict serverless context, but for local/VPS it will run as non-blocking async)
+    (async () => {
+      let successCount = 0;
+      let failCount = 0;
 
-    if (!botResponse.ok) {
-      const errText = await botResponse.text();
-      console.error("Broadcast bot error:", errText);
-      return NextResponse.json({ error: "Failed to send broadcast to bot" }, { status: 500 });
-    }
+      for (const phone of phones) {
+        try {
+          process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+          const res = await fetch(`${baseUrl}/send-message`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phone, message: message.trim() }),
+          });
+          process.env.NODE_TLS_REJECT_UNAUTHORIZED = "1";
+
+          if (res.ok) {
+            successCount++;
+          } else {
+            failCount++;
+            console.error(`Gagal kirim broadcast ke ${phone}: ${await res.text()}`);
+          }
+        } catch (err) {
+          failCount++;
+          console.error(`Error kirim broadcast ke ${phone}:`, err);
+        }
+
+        // Delay between each message to avoid WhatsApp rate limits
+        await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000));
+      }
+
+      console.log(`[Broadcast Selesai] Terkirim: ${successCount}, Gagal: ${failCount}`);
+    })();
 
     // Save broadcast log
     await prisma.broadcastLog.create({
