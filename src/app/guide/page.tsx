@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft,
   ArrowDownUp,
@@ -199,12 +200,15 @@ export default function GuidePage() {
           <SectionAnchor id="transaksi" />
           <Card className="glass-card overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-neon-cyan/5 to-transparent border-b border-border">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="h-10 w-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center">
-                  <ArrowDownUp className="h-5 w-5 text-neon-cyan" />
-                </div>
-                1. Catat Transaksi
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-10 w-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center">
+                    <ArrowDownUp className="h-5 w-5 text-neon-cyan" />
+                  </div>
+                  1. Catat Transaksi
+                </CardTitle>
+                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">FREE</Badge>
+              </div>
               <CardDescription>
                 Perintah utama untuk mencatat pemasukan dan pengeluaran harian Anda
               </CardDescription>
@@ -300,12 +304,15 @@ export default function GuidePage() {
           <SectionAnchor id="multi" />
           <Card className="glass-card overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-neon-purple/5 to-transparent border-b border-border">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="h-10 w-10 rounded-xl bg-neon-purple/10 flex items-center justify-center">
-                  <Receipt className="h-5 w-5 text-neon-purple" />
-                </div>
-                2. Multi-Transaksi (Sekaligus)
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-10 w-10 rounded-xl bg-neon-purple/10 flex items-center justify-center">
+                    <Receipt className="h-5 w-5 text-neon-purple" />
+                  </div>
+                  2. Multi-Transaksi (Sekaligus)
+                </CardTitle>
+                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">FREE</Badge>
+              </div>
               <CardDescription>
                 Catat beberapa transaksi dalam satu pesan sekaligus — hemat waktu!
               </CardDescription>
@@ -341,12 +348,15 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
           <SectionAnchor id="laporan" />
           <Card className="glass-card overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-neon-cyan/5 to-transparent border-b border-border">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="h-10 w-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center">
-                  <BarChart3 className="h-5 w-5 text-neon-cyan" />
-                </div>
-                3. Laporan Keuangan
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-10 w-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center">
+                    <BarChart3 className="h-5 w-5 text-neon-cyan" />
+                  </div>
+                  3. Laporan Keuangan
+                </CardTitle>
+                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">FREE</Badge>
+              </div>
               <CardDescription>
                 Lihat ringkasan keuangan harian, mingguan, atau bulanan
               </CardDescription>
@@ -411,12 +421,15 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
           <SectionAnchor id="budget" />
           <Card className="glass-card overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-neon-purple/5 to-transparent border-b border-border">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="h-10 w-10 rounded-xl bg-neon-purple/10 flex items-center justify-center">
-                  <Target className="h-5 w-5 text-neon-purple" />
-                </div>
-                4. Budget / Anggaran
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-10 w-10 rounded-xl bg-neon-purple/10 flex items-center justify-center">
+                    <Target className="h-5 w-5 text-neon-purple" />
+                  </div>
+                  4. Budget / Anggaran
+                </CardTitle>
+                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">FREE</Badge>
+              </div>
               <CardDescription>
                 Atur batas pengeluaran per kategori setiap bulan — Go
                 TEK akan mengingatkan jika hampir melebihi budget
@@ -484,12 +497,15 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
           <SectionAnchor id="hutang" />
           <Card className="glass-card overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-neon-pink/5 to-transparent border-b border-border">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="h-10 w-10 rounded-xl bg-neon-pink/10 flex items-center justify-center">
-                  <Handshake className="h-5 w-5 text-neon-pink" />
-                </div>
-                5. Hutang & Piutang
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-10 w-10 rounded-xl bg-neon-pink/10 flex items-center justify-center">
+                    <Handshake className="h-5 w-5 text-neon-pink" />
+                  </div>
+                  5. Hutang & Piutang
+                </CardTitle>
+                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">FREE</Badge>
+              </div>
               <CardDescription>
                 Catat uang yang Anda pinjam atau pinjamkan agar tidak lupa
               </CardDescription>
@@ -568,12 +584,15 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
           <SectionAnchor id="undo" />
           <Card className="glass-card overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-neon-cyan/5 to-transparent border-b border-border">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="h-10 w-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center">
-                  <Undo2 className="h-5 w-5 text-neon-cyan" />
-                </div>
-                6. Undo / Hapus Transaksi
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-10 w-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center">
+                    <Undo2 className="h-5 w-5 text-neon-cyan" />
+                  </div>
+                  6. Undo / Hapus Transaksi
+                </CardTitle>
+                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">FREE</Badge>
+              </div>
               <CardDescription>
                 Salah catat? Langsung batalkan transaksi terakhir
               </CardDescription>
@@ -613,12 +632,15 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
           <SectionAnchor id="ai" />
           <Card className="glass-card overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-neon-purple/5 to-transparent border-b border-border">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="h-10 w-10 rounded-xl bg-neon-purple/10 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-neon-purple" />
-                </div>
-                7. AI Smart Parser (Gemini)
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-10 w-10 rounded-xl bg-neon-purple/10 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-neon-purple" />
+                  </div>
+                  7. AI Smart Parser (Gemini)
+                </CardTitle>
+                <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 font-bold border-0 shadow-sm">👑 PREMIUM</Badge>
+              </div>
               <CardDescription>
                 Tidak mau ketik format manual? Tulis gaya bahasa sehari-hari, AI yang parsing!
               </CardDescription>
@@ -646,7 +668,6 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4 text-sm">
                 <p className="font-medium text-yellow-500 mb-1">⚠️ Catatan Penting tentang AI:</p>
                 <ul className="text-muted-foreground space-y-1">
-                  <li>• Kuota AI <strong>terbatas per hari</strong> — utamakan format manual jika bisa</li>
                   <li>• AI mungkin salah mendeteksi kategori — bisa Anda koreksi di dashboard</li>
                   <li>• Semakin jelas kalimat Anda, semakin akurat hasilnya</li>
                 </ul>
@@ -658,12 +679,15 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
           <SectionAnchor id="struk" />
           <Card className="glass-card overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-neon-pink/5 to-transparent border-b border-border">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="h-10 w-10 rounded-xl bg-neon-pink/10 flex items-center justify-center">
-                  <Camera className="h-5 w-5 text-neon-pink" />
-                </div>
-                8. Scan Struk / Nota (Gambar)
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-10 w-10 rounded-xl bg-neon-pink/10 flex items-center justify-center">
+                    <Camera className="h-5 w-5 text-neon-pink" />
+                  </div>
+                  8. Scan Struk / Nota (Gambar)
+                </CardTitle>
+                <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 font-bold border-0 shadow-sm">👑 PREMIUM</Badge>
+              </div>
               <CardDescription>
                 Foto struk belanja & kirim ke bot — AI akan baca dan catat otomatis!
               </CardDescription>
@@ -706,12 +730,15 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
           <SectionAnchor id="jumlah" />
           <Card className="glass-card overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-neon-cyan/5 to-neon-purple/5 border-b border-border">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-neon-cyan/10 to-neon-purple/10 flex items-center justify-center">
-                  <Hash className="h-5 w-5 text-neon-cyan" />
-                </div>
-                Panduan Format Jumlah
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-neon-cyan/10 to-neon-purple/10 flex items-center justify-center">
+                    <Hash className="h-5 w-5 text-neon-cyan" />
+                  </div>
+                  Format Jumlah
+                </CardTitle>
+                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">FREE</Badge>
+              </div>
               <CardDescription>
                 GoTEK mendukung berbagai format penulisan jumlah uang
               </CardDescription>

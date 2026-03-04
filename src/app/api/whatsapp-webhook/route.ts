@@ -13,6 +13,10 @@ import { parseSmartAmount, parseTransactionMessage, parseDebtMessage } from "@/l
 import { checkBudgetStatus } from "@/lib/whatsapp/service";
 
 import { prisma } from "@/lib/prisma";
+import { startOfDay, endOfDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
+import { formatInTimeZone, toZonedTime } from "date-fns-tz";
+import { id } from "date-fns/locale";
+const TIMEZONE = "Asia/Jakarta";
 
 const webhookPayloadSchema = z.object({
   sender: z.string(),
@@ -140,16 +144,15 @@ export async function POST(request: NextRequest) {
     // Handler untuk sapaan "Halo GoTEK Bot!"
     const trimmedMessage = message.trim().toLowerCase();
     if (trimmedMessage === "halo gotek bot!" || trimmedMessage === "halo gotek bot" || trimmedMessage === "hi" || trimmedMessage === "halo" || trimmedMessage === "hai" || trimmedMessage === "p" || trimmedMessage === "ping" || trimmedMessage === "test") {
-      const hour = new Date().getHours();
+      const nowWIB = toZonedTime(new Date(), TIMEZONE);
+      const hour = nowWIB.getHours();
       const greeting = hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 18 ? "Selamat sore" : "Selamat malam";
 
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date();
-      endOfDay.setHours(23, 59, 59, 999);
+      const startDayWIB = startOfDay(nowWIB);
+      const endDayWIB = endOfDay(nowWIB);
 
       const todayTxs = await prisma.transaction.findMany({
-        where: { user_id: user.id, created_at: { gte: startOfDay, lte: endOfDay } }
+        where: { user_id: user.id, created_at: { gte: startDayWIB, lte: endDayWIB } }
       });
       
       const todayIncome = todayTxs.filter(t => t.type === "INCOME").reduce((acc, t) => acc + t.amount.toNumber(), 0);
@@ -246,8 +249,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Build response
-      const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+      const dateStr = formatInTimeZone(new Date(), TIMEZONE, "eeee, d MMMM yyyy", { locale: id });
       
       if (transactionLines.length === 1 && successCount === 1) {
         // Single transaction - use original format
@@ -319,9 +321,9 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
+      const nowWIB = toZonedTime(new Date(), TIMEZONE);
+      const currentMonth = nowWIB.getMonth() + 1;
+      const currentYear = nowWIB.getFullYear();
 
       await prisma.budget.upsert({
         where: {
@@ -355,15 +357,14 @@ export async function POST(request: NextRequest) {
       const type = args[1]?.toLowerCase();
 
       if (type === "hari" || type === "today" || type === "harian") {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
+        const nowWIB = toZonedTime(new Date(), TIMEZONE);
+        const startDayWIB = startOfDay(nowWIB);
+        const endDayWIB = endOfDay(nowWIB);
 
         const transactions = await prisma.transaction.findMany({
           where: {
             user_id: user.id,
-            created_at: { gte: startOfDay, lte: endOfDay }
+            created_at: { gte: startDayWIB, lte: endDayWIB }
           },
           include: { category: true }
         });
@@ -373,7 +374,7 @@ export async function POST(request: NextRequest) {
         const balance = income - expense;
         const balanceEmoji = balance >= 0 ? "💚" : "💔";
         const txCount = transactions.length;
-        const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+        const dateStr = formatInTimeZone(nowWIB, TIMEZONE, "eeee, d MMMM yyyy", { locale: id });
 
         let reply = `📊 *Laporan Hari Ini*\n📅 ${dateStr}\n━━━━━━━━━━━━━━━━━\n`;
         reply += `📈 *Pemasukan:* ${fmt(income)}\n`;
@@ -394,16 +395,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: reply });
 
       } else if (type === "bulan" || type === "month" || type === "bulanan") {
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const nowWIB = toZonedTime(new Date(), TIMEZONE);
+        const startMonthWIB = startOfMonth(nowWIB);
+        const endMonthWIB = endOfMonth(nowWIB);
         const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-        const monthName = monthNames[now.getMonth()];
+        const monthName = monthNames[nowWIB.getMonth()];
 
         const transactions = await prisma.transaction.findMany({
           where: {
             user_id: user.id,
-            created_at: { gte: startOfMonth, lte: endOfMonth }
+            created_at: { gte: startMonthWIB, lte: endMonthWIB }
           },
           include: { category: true }
         });
@@ -443,26 +444,17 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({ message: reply });
       } else if (type === "minggu" || type === "week" || type === "mingguan") {
-        const now = new Date();
-        const day = now.getDay(); // 0 (Sun) - 6 (Sat)
-        // Adjust to Monday start
-        const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1);
-        
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(diffToMonday);
-        startOfWeek.setHours(0, 0, 0, 0);
-        
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 6);
-        endOfWeek.setHours(23, 59, 59, 999);
+        const nowWIB = toZonedTime(new Date(), TIMEZONE);
+        const startWeekWIB = startOfWeek(nowWIB, { weekStartsOn: 1 }); // Monday
+        const endWeekWIB = endOfWeek(nowWIB, { weekStartsOn: 1 });
 
-        const formatDate = (d: Date) => d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-        const periodStr = `${formatDate(startOfWeek)} - ${formatDate(endOfWeek)}`;
+        const formatDate = (d: Date) => formatInTimeZone(d, TIMEZONE, "d MMM", { locale: id });
+        const periodStr = `${formatDate(startWeekWIB)} - ${formatDate(endWeekWIB)}`;
 
         const transactions = await prisma.transaction.findMany({
           where: {
             user_id: user.id,
-            created_at: { gte: startOfWeek, lte: endOfWeek }
+            created_at: { gte: startWeekWIB, lte: endWeekWIB }
           },
           include: { category: true }
         });
@@ -534,12 +526,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (command === "cek" && (args[1] === "budget" || args[1] === "anggaran")) {
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
+      const nowWIB = toZonedTime(new Date(), TIMEZONE);
+      const currentMonth = nowWIB.getMonth() + 1;
+      const currentYear = nowWIB.getFullYear();
       const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
       const budgets = await prisma.budget.findMany({
-        where: { user_id: user.id, month: currentMonth, year: now.getFullYear() },
+        where: { user_id: user.id, month: currentMonth, year: currentYear },
         include: { category: true }
       });
 
@@ -558,8 +551,8 @@ export async function POST(request: NextRequest) {
             category_id: b.category_id,
             type: "EXPENSE",
             created_at: {
-              gte: new Date(now.getFullYear(), now.getMonth(), 1),
-              lte: new Date(now.getFullYear(), now.getMonth() + 1, 0)
+              gte: startOfMonth(nowWIB),
+              lte: endOfMonth(nowWIB)
             }
           },
           _sum: { amount: true }
@@ -607,10 +600,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ message: "⚠️ *Tidak Ada Transaksi*\n\nTidak ada transaksi yang bisa dihapus. Mulai catat transaksi baru!" });
       }
 
-      const isToday = new Date().toDateString() === lastTx.created_at.toDateString();
+      const nowWIB = toZonedTime(new Date(), TIMEZONE);
+      const txLocalTime = toZonedTime(lastTx.created_at, TIMEZONE);
+      const isToday = nowWIB.toDateString() === txLocalTime.toDateString();
       if (!isToday) {
         return NextResponse.json({ 
-          message: `⚠️ *Tidak Bisa Dihapus*\n\nTransaksi terakhir sudah bukan hari ini.\nHanya transaksi hari ini yang bisa di-undo.\n\n📝 *Transaksi terakhir:*\nRp ${lastTx.amount.toNumber().toLocaleString("id-ID")} - ${lastTx.description}\n(Tanggal: ${lastTx.created_at.toLocaleDateString('id-ID')})` 
+          message: `⚠️ *Tidak Bisa Dihapus*\n\nTransaksi terakhir sudah bukan hari ini.\nHanya transaksi hari ini yang bisa di-undo.\n\n📝 *Transaksi terakhir:*\nRp ${lastTx.amount.toNumber().toLocaleString("id-ID")} - ${lastTx.description}\n(Tanggal: ${formatInTimeZone(txLocalTime, TIMEZONE, "dd/MM/yyyy")})` 
         });
       }
 
@@ -653,7 +648,7 @@ export async function POST(request: NextRequest) {
       const relation = isHutang ? "Anda meminjam dari" : "Anda meminjamkan ke";
 
       return NextResponse.json({
-        message: `${emoji} *${typeLabel} Tercatat!*\n━━━━━━━━━━━━━━━━━\n👤 *${relation}:* ${parsedData.personName}\n💰 *Jumlah:* Rp ${parsedData.amount.toLocaleString("id-ID")}\n📝 *Keterangan:* ${parsedData.description}\n📅 *Tanggal:* ${new Date().toLocaleDateString('id-ID')}\n━━━━━━━━━━━━━━━━━\n\n💡 _Ketik \"cek hutang\" untuk lihat daftar_\n💡 _Ketik \"lunas @${parsedData.personName}\" jika sudah dibayar_`
+        message: `${emoji} *${typeLabel} Tercatat!*\n━━━━━━━━━━━━━━━━━\n👤 *${relation}:* ${parsedData.personName}\n💰 *Jumlah:* Rp ${parsedData.amount.toLocaleString("id-ID")}\n📝 *Keterangan:* ${parsedData.description}\n📅 *Tanggal:* ${formatInTimeZone(new Date(), TIMEZONE, "dd/MM/yyyy")}\n━━━━━━━━━━━━━━━━━\n\n💡 _Ketik \"cek hutang\" untuk lihat daftar_\n💡 _Ketik \"lunas @${parsedData.personName}\" jika sudah dibayar_`
       });
     }
 
@@ -1014,7 +1009,7 @@ _Ketik *upgrade* untuk berlangganan._`,
     }
 
     if (aiTransactions && aiTransactions.length > 0) {
-      const dateStr = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
+      const dateStr = formatInTimeZone(new Date(), TIMEZONE, "eeee, d MMMM yyyy", { locale: id });
       let reply = `✨ *Asisten AI GoTEK*\n📅 ${dateStr}\n━━━━━━━━━━━━━━━━━\n`;
       let count = 0;
       const errors: string[] = [];
