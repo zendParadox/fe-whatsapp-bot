@@ -185,6 +185,11 @@ export async function POST(request: NextRequest) {
       let successCount = 0;
       const budgetAlerts: string[] = [];
 
+      // Pre-fetch user wallets for manual tx wallet detection
+      const userWallets = (user as Record<string, unknown>).plan_type === "PREMIUM"
+        ? await prisma.wallet.findMany({ where: { user_id: user.id } })
+        : [];
+
       for (const line of transactionLines) {
         const parsedData = parseTransactionMessage(line);
         
@@ -220,6 +225,24 @@ export async function POST(request: NextRequest) {
             totalIncome += parsedData.amount;
           }
 
+          // Detect wallet from manual transaction line
+          let walletId: string | null = null;
+          let walletLabel = "";
+          const lineLower = line.toLowerCase();
+          for (const w of userWallets) {
+            const wName = w.name.toLowerCase();
+            if (lineLower.includes(wName)) {
+              walletId = w.id;
+              walletLabel = w.name;
+              if (parsedData.type === "EXPENSE") {
+                await prisma.wallet.update({ where: { id: w.id }, data: { balance: { decrement: parsedData.amount } } });
+              } else {
+                await prisma.wallet.update({ where: { id: w.id }, data: { balance: { increment: parsedData.amount } } });
+              }
+              break;
+            }
+          }
+
           await prisma.transaction.create({
             data: {
               type: parsedData.type,
@@ -227,16 +250,17 @@ export async function POST(request: NextRequest) {
               description: parsedData.description,
               user_id: user.id,
               category_id: category.id,
-              // payment_method: parsedData.type === "EXPENSE" ? parsedData.paymentMethod : null, // Temporarily disabled
+              wallet_id: walletId,
             },
           });
 
           const icon = parsedData.type === "INCOME" ? "📈" : "📉";
           const formattedAmt = fmt(parsedData.amount);
+          const walletInfo = walletLabel ? ` 💳${walletLabel}` : "";
           results.push({
             success: true,
             icon,
-            text: `${formattedAmt} - ${parsedData.description} (${category.name})`
+            text: `${formattedAmt} - ${parsedData.description} (${category.name})${walletInfo}`
           });
           successCount++;
         } catch (err) {
@@ -609,13 +633,34 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      // Revert wallet balance if transaction was linked to a wallet
+      let walletRevertInfo = "";
+      if (lastTx.wallet_id) {
+        try {
+          const txAmount = lastTx.amount.toNumber();
+          if (lastTx.type === "EXPENSE") {
+            // Expense was deducted, so add it back
+            await prisma.wallet.update({ where: { id: lastTx.wallet_id }, data: { balance: { increment: txAmount } } });
+          } else {
+            // Income was added, so subtract it back
+            await prisma.wallet.update({ where: { id: lastTx.wallet_id }, data: { balance: { decrement: txAmount } } });
+          }
+          const revertedWallet = await prisma.wallet.findUnique({ where: { id: lastTx.wallet_id } });
+          if (revertedWallet) {
+            walletRevertInfo = `\n💳 *Kantong:* ${revertedWallet.name} (saldo dikembalikan)`;
+          }
+        } catch (walletErr) {
+          console.error("Failed to revert wallet balance:", walletErr);
+        }
+      }
+
       await prisma.transaction.delete({ where: { id: lastTx.id } });
 
       const typeEmoji = lastTx.type === "INCOME" ? "📈" : "📉";
       const typeText = lastTx.type === "INCOME" ? "Pemasukan" : "Pengeluaran";
 
       return NextResponse.json({
-        message: `🗑️ *Transaksi Dihapus!*\n━━━━━━━━━━━━━━━━━\n${typeEmoji} *Tipe:* ${typeText}\n💰 *Nominal:* Rp ${lastTx.amount.toNumber().toLocaleString("id-ID")}\n📂 *Kategori:* ${lastTx.category?.name || '-'}\n📝 *Keterangan:* ${lastTx.description}\n━━━━━━━━━━━━━━━━━\n\n✅ Transaksi sudah dibatalkan`
+        message: `🗑️ *Transaksi Dihapus!*\n━━━━━━━━━━━━━━━━━\n${typeEmoji} *Tipe:* ${typeText}\n💰 *Nominal:* Rp ${lastTx.amount.toNumber().toLocaleString("id-ID")}\n📂 *Kategori:* ${lastTx.category?.name || '-'}\n📝 *Keterangan:* ${lastTx.description}${walletRevertInfo}\n━━━━━━━━━━━━━━━━━\n\n✅ Transaksi sudah dibatalkan`
       });
     }
 
@@ -790,11 +835,11 @@ export async function POST(request: NextRequest) {
       }
       const parts = message.replace(/^(tambah|buat)\s+(kantong|wallet)\s+/i, "").trim().split(/\s+/);
       const walletName = parts[0];
-      const initialBalance = parts[1] ? Number(parts[1].replace(/[^\d]/g, "")) : 0;
+      const initialBalance = parts[1] ? (parseSmartAmount(parts[1]) ?? 0) : 0;
 
       if (!walletName) {
         return NextResponse.json({
-          message: "⚠️ Format: `tambah kantong [nama] [saldo_awal]`\n\nContoh: `tambah kantong BCA 5000000`"
+          message: "⚠️ Format: `tambah kantong [nama] [saldo_awal]`\n\nContoh: `tambah kantong BCA 5jt` atau `tambah kantong Gopay 500k`"
         });
       }
 
@@ -1015,6 +1060,11 @@ _Ketik *upgrade* untuk berlangganan._`,
       const errors: string[] = [];
       const budgetAlertsList: string[] = [];
 
+      // Pre-fetch all user wallets once (avoid N+1 queries in loop)
+      const userWallets = await prisma.wallet.findMany({
+        where: { user_id: user.id },
+      });
+
       for (const tx of aiTransactions) {
         try {
           console.log(`📝 Processing transaction: ${tx.description} (${tx.amount})`);
@@ -1041,32 +1091,61 @@ _Ketik *upgrade* untuk berlangganan._`,
           const typeEnum =
             tx.type === "INCOME" ? TransactionType.INCOME : TransactionType.EXPENSE;
 
-          // Deteksi kantong dari pesan (keyword "dari [nama]" atau "ke [nama]")
+          // Deteksi kantong: match wallet name against AI-parsed tx.description
+          // Two-pass approach:
+          // 1st pass: match from tx.description or tx.category (most reliable)
+          // 2nd pass: if no match, try raw message as fallback
           let walletId: string | null = null;
           let walletLabel = "";
-          const walletFromMatch = lower.match(/(?:dari|pakai|pake|via|lewat)\s+(\w+)/i);
-          const walletToMatch = lower.match(/(?:ke|masuk)\s+(\w+)/i);
-          const walletKeyword = tx.type === "INCOME" ? walletToMatch?.[1] : walletFromMatch?.[1];
 
-          if (walletKeyword) {
-            const foundWallet = await prisma.wallet.findFirst({
-              where: { user_id: user.id, name: { equals: walletKeyword, mode: "insensitive" } },
-            });
-            if (foundWallet) {
-              walletId = foundWallet.id;
-              walletLabel = foundWallet.name;
-              // Update saldo wallet
-              if (tx.type === "EXPENSE") {
-                await prisma.wallet.update({
-                  where: { id: foundWallet.id },
-                  data: { balance: { decrement: tx.amount } },
+          const txDescLower = (tx.description || "").toLowerCase();
+          const txCategoryLower = (tx.category || "").toLowerCase();
+
+          // Pass 1: Check AI description and category
+          for (const w of userWallets) {
+            const wName = w.name.toLowerCase();
+            if (txDescLower.includes(wName) || txCategoryLower.includes(wName)) {
+              walletId = w.id;
+              walletLabel = w.name;
+              break;
+            }
+          }
+
+          // Pass 2: If no match from description, check raw message
+          // This handles cases like "beli gorengan dari gopay" where AI description is just "Beli Gorengan"
+          if (!walletId) {
+            for (const w of userWallets) {
+              const wName = w.name.toLowerCase();
+              if (lower.includes(wName)) {
+                // For multi-tx: only assign if this wallet isn't already claimed by another tx's description
+                // (avoid giving Gopay to a tx that should get BCA)
+                const claimedByOtherTx = aiTransactions.some(otherTx => {
+                  if (otherTx === tx) return false;
+                  const otherDesc = (otherTx.description || "").toLowerCase();
+                  const otherCat = (otherTx.category || "").toLowerCase();
+                  return otherDesc.includes(wName) || otherCat.includes(wName);
                 });
-              } else {
-                await prisma.wallet.update({
-                  where: { id: foundWallet.id },
-                  data: { balance: { increment: tx.amount } },
-                });
+                if (!claimedByOtherTx) {
+                  walletId = w.id;
+                  walletLabel = w.name;
+                  break;
+                }
               }
+            }
+          }
+
+          // Update wallet balance if matched
+          if (walletId) {
+            if (tx.type === "EXPENSE") {
+              await prisma.wallet.update({
+                where: { id: walletId },
+                data: { balance: { decrement: tx.amount } },
+              });
+            } else {
+              await prisma.wallet.update({
+                where: { id: walletId },
+                data: { balance: { increment: tx.amount } },
+              });
             }
           }
 

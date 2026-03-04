@@ -18,6 +18,7 @@ import {
   Undo2,
   Sparkles,
   Camera,
+  Wallet,
   BookOpen,
   Hash,
   Lightbulb,
@@ -90,6 +91,7 @@ const tocItems = [
   { id: "undo", icon: "↩️", label: "Undo / Hapus" },
   { id: "ai", icon: "🤖", label: "AI Smart Parser" },
   { id: "struk", icon: "📸", label: "Scan Struk" },
+  { id: "kantong", icon: "💳", label: "Kantong Keuangan" },
   { id: "jumlah", icon: "#️⃣", label: "Format Jumlah" },
 ];
 
@@ -722,6 +724,116 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
               <Tip>
                 Pastikan foto struk <strong>jelas dan terang</strong> agar AI bisa membaca dengan akurat.
                 Struk yang buram atau terlalu gelap mungkin gagal diproses.
+              </Tip>
+            </CardContent>
+          </Card>
+
+          {/* 9 — Kantong Keuangan */}
+          <SectionAnchor id="kantong" />
+          <Card className="glass-card overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-amber-500/5 to-neon-purple/5 border-b border-border">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                    <Wallet className="h-5 w-5 text-amber-500" />
+                  </div>
+                  9. Kantong Keuangan
+                </CardTitle>
+                <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 font-bold border-0 shadow-sm">👑 PREMIUM</Badge>
+              </div>
+              <CardDescription>
+                Lacak saldo di semua rekening bank & e-wallet Anda — BCA, Mandiri, Gopay, OVO, dan lainnya.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              {/* Cek Kantong */}
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <span className="text-amber-500">📋</span> Cek Semua Kantong
+                </h4>
+                <div className="space-y-3">
+                  <ExampleBubble user>kantong</ExampleBubble>
+                  <ExampleBubble>
+                    💰 <strong>Kantong Keuangan Anda</strong>{"\n"}
+                    ━━━━━━━━━━━━━━━━━{"\n\n"}
+                    💰 <strong>Gopay</strong>: Rp 150.000{"\n"}
+                    💰 <strong>BCA</strong>: Rp 5.000.000{"\n"}
+                    💰 <strong>Cash</strong>: Rp 300.000{"\n"}
+                    ━━━━━━━━━━━━━━━━━{"\n"}
+                    💎 <strong>Total:</strong> Rp 5.450.000
+                  </ExampleBubble>
+                </div>
+              </div>
+
+              {/* Tambah Kantong */}
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <span className="text-amber-500">➕</span> Buat Kantong Baru
+                </h4>
+                <div className="bg-muted/30 rounded-lg p-4 mb-3">
+                  <CodeBlock>tambah kantong [nama] [saldo_awal]</CodeBlock>
+                </div>
+                <div className="space-y-3">
+                  <ExampleBubble user>tambah kantong BCA 5000000</ExampleBubble>
+                  <ExampleBubble>
+                    ✅ Kantong <strong>BCA</strong> berhasil dibuat!{"\n"}
+                    💰 Saldo awal: Rp 5.000.000
+                  </ExampleBubble>
+                  <ExampleBubble user>tambah kantong Gopay 150000</ExampleBubble>
+                  <ExampleBubble>
+                    ✅ Kantong <strong>Gopay</strong> berhasil dibuat!{"\n"}
+                    💰 Saldo awal: Rp 150.000
+                  </ExampleBubble>
+                </div>
+              </div>
+
+              {/* Transfer */}
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <span className="text-amber-500">🔄</span> Transfer Antar Kantong
+                </h4>
+                <div className="bg-muted/30 rounded-lg p-4 mb-3">
+                  <CodeBlock>transfer [jumlah] dari [asal] ke [tujuan]</CodeBlock>
+                </div>
+                <div className="space-y-3">
+                  <ExampleBubble user>transfer 500k dari bca ke gopay</ExampleBubble>
+                  <ExampleBubble>
+                    🔄 <strong>Transfer Berhasil!</strong>{"\n"}
+                    ━━━━━━━━━━━━━━━━━{"\n"}
+                    📤 Dari: <strong>BCA</strong>{"\n"}
+                    📥 Ke: <strong>Gopay</strong>{"\n"}
+                    💰 Jumlah: Rp 500.000{"\n"}
+                    ━━━━━━━━━━━━━━━━━{"\n\n"}
+                    Saldo BCA: Rp 4.500.000{"\n"}
+                    Saldo Gopay: Rp 650.000
+                  </ExampleBubble>
+                </div>
+              </div>
+
+              {/* Auto Detect Wallet */}
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <span className="text-amber-500">🤖</span> Deteksi Kantong Otomatis (via AI)
+                </h4>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Saat Anda mencatat transaksi menggunakan AI, GoTEK otomatis mendeteksi kantong yang disebutkan dan memperbarui saldonya.
+                </p>
+                <div className="space-y-3">
+                  <ExampleBubble user>beli kopi 25k dari gopay</ExampleBubble>
+                  <ExampleBubble>
+                    ✨ <strong>Asisten AI GoTEK</strong>{"\n\n"}
+                    📉 <strong>Makanan & Minuman</strong>{"\n"}
+                    {"   "}💰 Nominal: Rp 25.000{"\n"}
+                    {"   "}📝 Ket: Beli Kopi{"\n"}
+                    {"   "}💳 Kantong: Gopay{"\n\n"}
+                    ✅ Saldo Gopay otomatis berkurang Rp 25.000
+                  </ExampleBubble>
+                </div>
+              </div>
+
+              <Tip>
+                Sebutkan nama kantong di pesan Anda agar AI bisa otomatis mendeteksi dan memperbarui saldo.
+                Contoh: <strong>&quot;beli makan dari gopay&quot;</strong> atau <strong>&quot;uang masuk ke BCA&quot;</strong>.
               </Tip>
             </CardContent>
           </Card>
