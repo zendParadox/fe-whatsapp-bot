@@ -941,34 +941,23 @@ masuk 100k uang jajan @bonus\`
       const helpMessage = `🤖 *GoTEK Bot - Panduan Singkat*
 ━━━━━━━━━━━━━━━━━
 
-📝 *CATAT TRANSAKSI*
-\`keluar 18k sabun @kebutuhan pribadi\`
-\`masuk 5jt gaji @pekerjaan\`
+🆓 *FITUR GRATIS:*
+📝 *Catat*: \`keluar 18k sabun @kebutuhan\` atau \`masuk 5jt gaji @kerja\`
+📒 *Hutang*: \`hutang 100k @Budi\` | \`lunas @Budi\`
+🎯 *Budget*: \`budget 1jt @makan\` | \`cek budget\`
+📊 *Laporan*: \`laporan hari\` | \`minggu\` | \`bulan\`
 
-📒 *HUTANG/PIUTANG*
-\`hutang 100k @Budi modal\`
-\`cek hutang\` | \`lunas @Budi\`
-
-🎯 *BUDGET, LAPORAN & SALDO*
-\`budget 1jt @makan\` | \`cek budget\`
-\`laporan hari/minggu/bulan\` | \`cek saldo\`
-
-👑 *PREMIUM*
-\`kantong\` - Cek saldo bank & e-wallet
-\`tambah kantong BCA 5jt\` - Buat kantong
-\`transfer 500k dari bca ke gopay\`
-\`upgrade\` - Info Premium
-
-↩️ \`undo\` - Batalkan transaksi
+👑 *FITUR PREMIUM:*
+🤖 *AI Parser*: Ketik bebas nyatet keuangan atau cukup kirim *FOTO STRUK*!
+💳 *Kantong*: Lacak saldo Bank & E-Wallet (BCA, Gopay, OVO, dll).
+📤 *Export*: Simpan riwayat dalam bentuk PDF/Excel!
 
 ━━━━━━━━━━━━━━━━━
-💡 *TIPS:*
-• Kategori bisa multi-kata
-• Format: 50k, 1.5jt, 500rb
-• Beli dari kantong: \`beli makan 20k dari gopay\`
-• Ketik *penjelasan detail* untuk panduan lengkap
+� *BINGUNG CARANYA?* 🔥
+Penjelasan lengkap format manual, tutorial detail fitur, cara undo (hapus) transaksi, hingga foto panduannya bisa dibaca di sini:
+👉 🌐 *https://gotek.vercel.app/guide*
 
-🌐 https://gotek.vercel.app/guide`;
+_Ketik *upgrade* untuk berlangganan._`;
       return NextResponse.json({ message: helpMessage });
     }
 
@@ -987,7 +976,26 @@ masuk 100k uang jajan @bonus\`
 
     if ((user as Record<string, unknown>).plan_type === "FREE") {
       return NextResponse.json({
-        message: `Halo Sobat GoTEK! 👋✨\n\nPernah ngerasa ribet ngetik pengeluaran satu per satu? Sekarang nggak perlu lagi, karena GoTEK baru saja merilis fitur PREMIUM yang bakal bikin kelola keuangan kamu jalan otomatis! 🚀\n\n👑 Apa Aja Sih Kelebihan GoTEK Premium?\nPunya akun Premium berarti hidup kamu jauh lebih gampang:\n\n📸 Scan Struk Belanja Langsung Jadi\nMales ngetik pengeluaran makan di resto atau belanja bulanan? Cukup difoto, dan AI kami akan langsung membaca nominal struknya buat kamu!\n\n🧠 AI Smart Parser Unlimited\nMau ngobrol pakai bahasa santai buat nyatet keuangan kapan aja? Nggak dibatasi alias bebas kuota harian!\n\n💰 Manajemen Kantong Keuangan (Banks & E-Wallet)\nLacak bukan cuma duit tunai, tapi juga saldo di BCA, Mandiri, Gopay, OVO, dll. Mau transfer gopay ke bank? Tinggal chat Bot!\n\n—\n✨ Gimana Cara Upgrade-nya?\nGampang banget! Kamu bisa langganan mulai dari 1 bulan hingga 1 tahun. Harga dijamin miring banget kalau kamu langganan lebih lama!\n\n🔗 Cek selengkapnya dan Upgrade Akunmu di sini:\nhttps://gotek.vercel.app/pricing\n\nTerima kasih sudah percayain keuanganmu sama GoTEK! Yuk, pantau terus budgetmu tanpa pusing bareng GoTEK Premium. 💸💼`,
+        message: `🤖 *GoTEK Bot - Panduan Singkat*
+━━━━━━━━━━━━━━━━━
+
+🆓 *FITUR GRATIS:*
+📝 *Catat*: \`keluar 18k sabun @kebutuhan\` atau \`masuk 5jt gaji @kerja\`
+📒 *Hutang*: \`hutang 100k @Budi\` | \`lunas @Budi\`
+🎯 *Budget*: \`budget 1jt @makan\` | \`cek budget\`
+📊 *Laporan*: \`laporan hari\` | \`minggu\` | \`bulan\`
+
+👑 *FITUR PREMIUM:*
+🤖 *AI Parser*: Ketik bebas nyatet keuangan atau cukup kirim *FOTO STRUK*!
+💳 *Kantong*: Lacak saldo Bank & E-Wallet (BCA, Gopay, OVO, dll).
+📤 *Export*: Simpan riwayat dalam bentuk PDF/Excel!
+
+━━━━━━━━━━━━━━━━━
+� *BINGUNG CARANYA?* 🔥
+Penjelasan lengkap format manual, tutorial detail fitur, cara undo (hapus) transaksi, hingga foto panduannya bisa dibaca di sini:
+👉 🌐 *https://gotek.vercel.app/guide*
+
+_Ketik *upgrade* untuk berlangganan._`,
       });
     }
 
@@ -1195,34 +1203,23 @@ masuk 100k uang jajan @bonus\`
     const helpMessage = `🤖 *GoTEK Bot - Panduan Singkat*
 ━━━━━━━━━━━━━━━━━
 
-📝 *CATAT TRANSAKSI*
-\`keluar 18k sabun @kebutuhan pribadi\`
-\`masuk 5jt gaji @pekerjaan\`
+🆓 *FITUR GRATIS:*
+📝 *Catat*: \`keluar 18k sabun @kebutuhan\` atau \`masuk 5jt gaji @kerja\`
+📒 *Hutang*: \`hutang 100k @Budi\` | \`lunas @Budi\`
+🎯 *Budget*: \`budget 1jt @makan\` | \`cek budget\`
+📊 *Laporan*: \`laporan hari\` | \`minggu\` | \`bulan\`
 
-📒 *HUTANG/PIUTANG*
-\`hutang 100k @Budi modal\`
-\`cek hutang\` | \`lunas @Budi\`
-
-🎯 *BUDGET, LAPORAN & SALDO*
-\`budget 1jt @makan\` | \`cek budget\`
-\`laporan hari/minggu/bulan\` | \`cek saldo\`
-
-👑 *PREMIUM*
-\`kantong\` - Cek saldo bank & e-wallet
-\`tambah kantong BCA 5jt\` - Buat kantong
-\`transfer 500k dari bca ke gopay\`
-\`upgrade\` - Info Premium
-
-↩️ \`undo\` - Batalkan transaksi
+👑 *FITUR PREMIUM:*
+🤖 *AI Parser*: Ketik bebas nyatet keuangan atau cukup kirim *FOTO STRUK*!
+💳 *Kantong*: Lacak saldo Bank & E-Wallet (BCA, Gopay, OVO, dll).
+📤 *Export*: Simpan riwayat dalam bentuk PDF/Excel!
 
 ━━━━━━━━━━━━━━━━━
-💡 *TIPS:*
-• Kategori bisa multi-kata
-• Format: 50k, 1.5jt, 500rb
-• Beli dari kantong: \`beli makan 20k dari gopay\`
-• Ketik *penjelasan detail* untuk panduan lengkap
+� *BINGUNG CARANYA?* 🔥
+Penjelasan lengkap format manual, tutorial detail fitur, cara undo (hapus) transaksi, hingga foto panduannya bisa dibaca di sini:
+👉 🌐 *https://gotek.vercel.app/guide*
 
-🌐 https://gotek.vercel.app`;
+_Ketik *upgrade* untuk berlangganan._`;
 
     return NextResponse.json({ message: helpMessage });
 
