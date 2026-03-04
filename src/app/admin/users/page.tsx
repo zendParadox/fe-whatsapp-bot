@@ -122,8 +122,9 @@ export default function AdminUsersPage() {
               {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12" />)}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
+            <div className="overflow-x-auto">
+              <Table className="min-w-[600px]">
+                <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead>Nomor HP</TableHead>
@@ -170,6 +171,7 @@ export default function AdminUsersPage() {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

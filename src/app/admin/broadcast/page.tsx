@@ -95,7 +95,7 @@ export default function AdminBroadcastPage() {
         toast.error(data.error || "Gagal mengirim broadcast");
         return;
       }
-      toast.success(`Broadcast sedang dikirim ke ${data.totalRecipients} user (delay 45 detik/pesan)`);
+      toast.success(`Broadcast sedang dikirim ke ${data.totalRecipients} user (delay 75 detik/pesan)`);
       setMessage("");
       // Refresh history
       const histRes = await fetch("/api/admin/broadcast/history");
@@ -193,8 +193,8 @@ export default function AdminBroadcastPage() {
             <AlertDialogTitle>Konfirmasi Broadcast</AlertDialogTitle>
             <AlertDialogDescription>
               Pesan akan dikirim ke <strong>{previewCount}</strong> user ({filterLabel})
-              dengan delay 45 detik per pesan. Estimasi waktu:{" "}
-              <strong>~{Math.ceil(((previewCount || 0) * 45) / 60)} menit</strong>.
+              dengan delay 75 detik per pesan. Estimasi waktu:{" "}
+              <strong>~{Math.ceil(((previewCount || 0) * 75) / 60)} menit</strong>.
               <br /><br />
               Lanjutkan?
             </AlertDialogDescription>
@@ -216,8 +216,9 @@ export default function AdminBroadcastPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
+          <div className="overflow-x-auto">
+            <Table className="min-w-[600px]">
+              <TableHeader>
               <TableRow>
                 <TableHead>Pesan</TableHead>
                 <TableHead>Filter</TableHead>
@@ -251,6 +252,7 @@ export default function AdminBroadcastPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

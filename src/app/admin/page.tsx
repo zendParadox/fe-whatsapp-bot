@@ -144,8 +144,9 @@ export default function AdminDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
+            <div className="overflow-x-auto">
+              <Table className="min-w-[500px]">
+                <TableHeader>
                 <TableRow>
                   <TableHead>Nama</TableHead>
                   <TableHead>Plan</TableHead>
@@ -183,6 +184,7 @@ export default function AdminDashboard() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
 

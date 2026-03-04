@@ -94,8 +94,9 @@ export default function AdminFeedbackPage() {
               {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12" />)}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
+            <div className="overflow-x-auto">
+              <Table className="min-w-[600px]">
+                <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead>Type</TableHead>
@@ -132,6 +133,7 @@ export default function AdminFeedbackPage() {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

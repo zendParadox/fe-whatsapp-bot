@@ -19,11 +19,11 @@ const navItems = [
   { href: "/admin/broadcast", label: "Broadcast", icon: Send },
 ];
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ isMobile = false }: { isMobile?: boolean }) {
   const pathname = usePathname();
 
   return (
-    <aside className="w-64 border-r bg-card min-h-screen p-4 flex flex-col gap-2">
+    <aside className={`w-64 border-r bg-card flex flex-col gap-2 p-4 ${isMobile ? "h-full" : "min-h-screen"}`}>
       {/* Header */}
       <div className="px-3 py-4 mb-2">
         <h2 className="text-lg font-bold bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent">

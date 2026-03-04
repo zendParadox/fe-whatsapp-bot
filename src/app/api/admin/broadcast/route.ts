@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         phones,
         message: message.trim(),
-        delay_seconds: 45,
+        delay_seconds: 75,
       }),
     });
 
