@@ -40,11 +40,26 @@ export async function POST(request: NextRequest) {
 
     // ── Resolve Sender ──
     let normalizedSender = sender;
-    const isLid = sender.endsWith("@lid");
     let lidValue: string | null = null;
 
+    // Normalize: strip @xxx suffix and :device identifier, keep only digits
+    let rawSender = sender;
+    const hasLidSuffix = sender.endsWith("@lid");
+    if (rawSender.includes("@")) {
+      rawSender = rawSender.split("@")[0];
+    }
+    if (rawSender.includes(":")) {
+      rawSender = rawSender.split(":")[0];
+    }
+    rawSender = rawSender.replace(/\D/g, "");
+
+    // Detect LID: either @lid suffix, or by length/prefix pattern (matches image route logic)
+    const isLid = hasLidSuffix ||
+      rawSender.length > 15 ||
+      (!rawSender.startsWith("62") && !rawSender.startsWith("61") && !rawSender.startsWith("0") && rawSender.length > 10);
+
     if (isLid) {
-      lidValue = sender;
+      lidValue = rawSender; // Use the numeric-only LID for DB lookup
       const mapping = await prisma.lidMapping.findFirst({
         where: { lid: lidValue },
         include: { user: true }
@@ -80,7 +95,7 @@ export async function POST(request: NextRequest) {
         });
       }
     } else {
-      normalizedSender = normalizePhone(normalizedSender);
+      normalizedSender = normalizePhone(rawSender);
     }
 
     console.log(`Webhook received sender: ${sender} -> Normalized: ${normalizedSender}${isLid ? ' (via LID mapping)' : ''}`);
