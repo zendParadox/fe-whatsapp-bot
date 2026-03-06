@@ -1,0 +1,28 @@
+{
+  "name": "GoTEK — Asisten Keuangan WhatsApp",
+  "short_name": "GoTEK",
+  "description": "Catat keuangan langsung dari WhatsApp! Bot AI pencatatan pemasukan, pengeluaran, budget, dan laporan keuangan.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a1a",
+  "theme_color": "#00e5ff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["finance", "productivity"],
+  "lang": "id",
+  "dir": "ltr"
+}
