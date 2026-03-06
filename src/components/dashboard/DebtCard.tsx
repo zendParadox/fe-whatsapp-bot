@@ -56,6 +56,7 @@ interface Debt {
   description?: string | null;
   due_date?: string | null;
   created_at: string;
+  wallet_id?: string | null;
 }
 
 interface DebtSummary {
@@ -67,9 +68,11 @@ interface DebtSummary {
 
 interface DebtCardProps {
   onDataChange?: () => void;
+  wallets?: { id: string; name: string }[];
+  planType?: "FREE" | "PREMIUM";
 }
 
-export default function DebtCard({ onDataChange }: DebtCardProps) {
+export default function DebtCard({ onDataChange, wallets = [], planType = "FREE" }: DebtCardProps) {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [summary, setSummary] = useState<DebtSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,7 +93,13 @@ export default function DebtCard({ onDataChange }: DebtCardProps) {
     person_name: "",
     description: "",
     due_date: "",
+    wallet_id: "none",
   });
+
+  // Repayment states
+  const [isRepayOpen, setIsRepayOpen] = useState(false);
+  const [repayDebt, setRepayDebt] = useState<Debt | null>(null);
+  const [repayWalletId, setRepayWalletId] = useState("none");
 
   const formatCurrency = (value: number | string) =>
     formatMoney(Number(value));
@@ -138,6 +147,7 @@ export default function DebtCard({ onDataChange }: DebtCardProps) {
           person_name: form.person_name,
           description: form.description || undefined,
           due_date: form.due_date || undefined,
+          wallet_id: form.wallet_id !== "none" ? form.wallet_id : undefined,
         }),
       });
 
@@ -167,6 +177,7 @@ export default function DebtCard({ onDataChange }: DebtCardProps) {
       person_name: debt.person_name,
       description: debt.description || "",
       due_date: debt.due_date ? debt.due_date.split("T")[0] : "",
+      wallet_id: debt.wallet_id || "none",
     });
     setIsEditOpen(true);
   }
@@ -185,6 +196,7 @@ export default function DebtCard({ onDataChange }: DebtCardProps) {
           person_name: form.person_name,
           description: form.description || null,
           due_date: form.due_date || null,
+          wallet_id: form.wallet_id !== "none" ? form.wallet_id : null,
         }),
       });
 
@@ -204,22 +216,38 @@ export default function DebtCard({ onDataChange }: DebtCardProps) {
   }
 
   // Mark as paid
-  async function handleMarkPaid(debt: Debt) {
+  async function handleMarkPaid() {
+    if (!repayDebt) return;
+    setIsSaving(true);
     try {
-      const res = await fetch(`/api/debts/${debt.id}`, {
+      const res = await fetch(`/api/debts/${repayDebt.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "PAID" }),
+        body: JSON.stringify({ 
+          status: "PAID",
+          repayment_wallet_id: repayWalletId !== "none" ? repayWalletId : undefined
+        }),
       });
 
       if (!res.ok) throw new Error("Gagal mengubah status");
 
-      toast.success(`${debt.type === "HUTANG" ? "Hutang" : "Piutang"} ditandai lunas`);
+      toast.success(`${repayDebt.type === "HUTANG" ? "Hutang" : "Piutang"} ditandai lunas`);
+      setIsRepayOpen(false);
+      setRepayDebt(null);
+      setRepayWalletId("none");
       fetchDebts();
       onDataChange?.();
     } catch (err: any) {
       toast.error(err.message);
+    } finally {
+      setIsSaving(false);
     }
+  }
+
+  function openRepay(debt: Debt) {
+    setRepayDebt(debt);
+    setRepayWalletId("none");
+    setIsRepayOpen(true);
   }
 
   // Delete debt
@@ -249,6 +277,7 @@ export default function DebtCard({ onDataChange }: DebtCardProps) {
       person_name: "",
       description: "",
       due_date: "",
+      wallet_id: "none",
     });
   }
 
@@ -394,7 +423,7 @@ export default function DebtCard({ onDataChange }: DebtCardProps) {
                             size="icon"
                             variant="ghost"
                             className="h-7 w-7"
-                            onClick={() => handleMarkPaid(debt)}
+                            onClick={() => openRepay(debt)}
                             title="Tandai Lunas"
                           >
                             <Check className="h-4 w-4 text-green-600" />
@@ -463,6 +492,25 @@ export default function DebtCard({ onDataChange }: DebtCardProps) {
                 />
               </div>
             </div>
+            {planType === "PREMIUM" && wallets.length > 0 && (
+              <div className="space-y-2">
+                <Label>Pilih Kantong Sumber (Opsional)</Label>
+                <Select
+                  value={form.wallet_id}
+                  onValueChange={(v) => setForm({ ...form, wallet_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Kantong" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Tanpa Kantong</SelectItem>
+                    {wallets.map(w => (
+                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Nama Orang</Label>
               <Input
@@ -591,6 +639,50 @@ export default function DebtCard({ onDataChange }: DebtCardProps) {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+      {/* Repay Confirmation & Wallet Dialog */}
+      <Dialog open={isRepayOpen} onOpenChange={setIsRepayOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tandai Lunas</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Apakah Anda yakin ingin menandai {repayDebt?.type === "HUTANG" ? "hutang" : "piutang"} sebesar {formatCurrency(Number(repayDebt?.amount))} dari {repayDebt?.person_name} sebagai lunas?
+            </p>
+            {planType === "PREMIUM" && wallets.length > 0 && (
+              <div className="space-y-2 mt-4">
+                <Label>Pilih Kantong Penerima / Sumber Pelunasan (Opsional)</Label>
+                <Select
+                  value={repayWalletId}
+                  onValueChange={setRepayWalletId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Kantong" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Kantong Asal (Bawaan)</SelectItem>
+                    {wallets.map(w => (
+                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Jika dikosongkan, saldo akan dikembalikan ke kantong asal saat {repayDebt?.type === "HUTANG" ? "hutang" : "piutang"} dicatat.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRepayOpen(false)}>
+              Batal
+            </Button>
+            <Button onClick={handleMarkPaid} disabled={isSaving}>
+              {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Tandai Lunas
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -31,8 +31,35 @@ async function handleCreateDebt(ctx: CommandContext): Promise<NextResponse> {
     const exampleType = ctx.command === "hutang" ? "hutang" : "piutang";
     const explanation = ctx.command === "hutang" ? "Anda meminjam uang dari orang lain" : "Orang lain meminjam uang dari Anda";
     return NextResponse.json({
-      message: `❌ *Format ${ctx.command.charAt(0).toUpperCase() + ctx.command.slice(1)} Salah*\n\n📌 *Format yang benar:*\n\`${exampleType} 50k @Budi beli pulsa\`\n\n📝 *Penjelasan:*\n• \`${exampleType}\` = ${explanation}\n• \`50k\` = Jumlah (k=ribu, jt=juta)\n• \`@Budi\` = Nama orang\n• \`beli pulsa\` = Keterangan\n\n💡 *Contoh lain:*\n\`${exampleType} 1jt @Ani modal usaha\`\n\`${exampleType} 200k @Doni bayar makan\``
+      message: `❌ *Format ${ctx.command.charAt(0).toUpperCase() + ctx.command.slice(1)} Salah*\n\n📌 *Format yang benar:*\n\`${exampleType} 50k @Budi beli pulsa\`\natau\n\`${exampleType} 50k @Budi beli pulsa #gopay\`\n\n📝 *Penjelasan:*\n• \`${exampleType}\` = ${explanation}\n• \`50k\` = Jumlah (k=ribu, jt=juta)\n• \`@Budi\` = Nama orang\n• \`beli pulsa\` = Keterangan\n• \`#gopay\` = Kantong (opsional)\n\n💡 *Contoh lain:*\n\`${exampleType} 1jt @Ani modal usaha #bca\``
     });
+  }
+
+  let finalWalletId = null;
+  let walletNameDisplay = "";
+  
+  if (parsedData.paymentMethod && ctx.user.plan_type === "PREMIUM") {
+     const wallet = await prisma.wallet.findFirst({
+       where: { 
+         user_id: ctx.user.id,
+         name: { equals: parsedData.paymentMethod, mode: "insensitive"} 
+       }
+     });
+     
+     if (wallet) {
+       finalWalletId = wallet.id;
+       walletNameDisplay = `\n🏦 *Kantong:* ${wallet.name}`;
+       
+       const amountNum = parsedData.amount;
+       await prisma.wallet.update({
+         where: { id: wallet.id },
+         data: {
+           balance: {
+             [parsedData.type === "HUTANG" ? "increment" : "decrement"]: amountNum
+           }
+         }
+       });
+     }
   }
 
   await prisma.debt.create({
@@ -42,8 +69,9 @@ async function handleCreateDebt(ctx: CommandContext): Promise<NextResponse> {
       amount: new Decimal(parsedData.amount),
       person_name: parsedData.personName,
       description: parsedData.description,
+      wallet_id: finalWalletId,
       status: DebtStatus.UNPAID
-    }
+    } as any
   });
 
   const isHutang = parsedData.type === DebtType.HUTANG;
@@ -52,7 +80,7 @@ async function handleCreateDebt(ctx: CommandContext): Promise<NextResponse> {
   const relation = isHutang ? "Anda meminjam dari" : "Anda meminjamkan ke";
 
   return NextResponse.json({
-    message: `${emoji} *${typeLabel} Tercatat!*\n━━━━━━━━━━━━━━━━━\n👤 *${relation}:* ${parsedData.personName}\n💰 *Jumlah:* Rp ${parsedData.amount.toLocaleString("id-ID")}\n📝 *Keterangan:* ${parsedData.description}\n📅 *Tanggal:* ${formatInTimeZone(new Date(), TIMEZONE, "dd/MM/yyyy")}\n━━━━━━━━━━━━━━━━━\n\n💡 _Ketik \"cek hutang\" untuk lihat daftar_\n💡 _Ketik \"lunas @${parsedData.personName}\" jika sudah dibayar_`
+    message: `${emoji} *${typeLabel} Tercatat!*\n━━━━━━━━━━━━━━━━━\n👤 *${relation}:* ${parsedData.personName}\n💰 *Jumlah:* Rp ${parsedData.amount.toLocaleString("id-ID")}\n📝 *Keterangan:* ${parsedData.description}${walletNameDisplay}\n📅 *Tanggal:* ${formatInTimeZone(new Date(), TIMEZONE, "dd/MM/yyyy")}\n━━━━━━━━━━━━━━━━━\n\n💡 _Ketik \"cek hutang\" untuk lihat daftar_\n💡 _Ketik \"lunas @${parsedData.personName}\" jika sudah dibayar_`
   });
 }
 
@@ -110,13 +138,21 @@ async function handleCheckDebt(ctx: CommandContext): Promise<NextResponse> {
 }
 
 async function handlePayDebt(ctx: CommandContext): Promise<NextResponse> {
+  const parts = ctx.message.split(" ");
   const personMatch = ctx.message.match(/@(\w+)/);
   const personName = personMatch && personMatch[1] ? personMatch[1] : null;
 
   if (!personName) {
     return NextResponse.json({
-      message: "❌ *Format Lunas Salah*\n\n📌 *Format yang benar:*\n\`lunas @Budi\`\n\n📝 *Penjelasan:*\nSebutkan nama orang yang hutang/piutangnya sudah dibayar.\n\n💡 _Ketik \"cek hutang\" untuk lihat daftar_"
+      message: "❌ *Format Lunas Salah*\n\n📌 *Format yang benar:*\n\`lunas @Budi\`\natau\n\`lunas @Budi #cash\`\n\n📝 *Penjelasan:*\nSebutkan nama orang yang hutang/piutangnya sudah dibayar.\n\n💡 _Ketik \"cek hutang\" untuk lihat daftar_"
     });
+  }
+
+  // Extract payment method (the LAST # in the string)
+  const lastHashIndex = ctx.message.lastIndexOf("#");
+  let paymentMethod: string | null = null;
+  if (lastHashIndex !== -1) {
+    paymentMethod = ctx.message.substring(lastHashIndex + 1).trim() || null;
   }
 
   const unpaidDebts = await prisma.debt.findMany({
@@ -133,18 +169,56 @@ async function handlePayDebt(ctx: CommandContext): Promise<NextResponse> {
     });
   }
 
+  let finalWalletId = null;
+  let repaymentWalletInfo = "";
+
+  if (ctx.user.plan_type === "PREMIUM" && paymentMethod) {
+    const wallet = await prisma.wallet.findFirst({
+      where: { 
+        user_id: ctx.user.id,
+        name: { equals: paymentMethod, mode: "insensitive"} 
+      }
+    });
+    if (wallet) {
+      finalWalletId = wallet.id;
+      repaymentWalletInfo = `\n🏦 *Kantong Tujuan:* ${wallet.name}`;
+    }
+  }
+
+  for (const debt of unpaidDebts) {
+    // Determine which wallet gets updated: target repayment wallet OR the original debt wallet
+    const targetWalletId = finalWalletId || (debt as any).wallet_id;
+    
+    if (targetWalletId && ctx.user.plan_type === "PREMIUM") {
+      const wallet = await prisma.wallet.findFirst({
+        where: { id: targetWalletId, user_id: ctx.user.id }
+      });
+      
+      if (wallet) {
+        // REPAYMENT LOGIC:
+        // HUTANG (we borrowed before, now we repay) -> balance decreases
+        // PIUTANG (we lent before, now we get paid back) -> balance increases
+        await prisma.wallet.update({
+          where: { id: wallet.id },
+          data: {
+            balance: {
+              [debt.type === "HUTANG" ? "decrement" : "increment"]: Number(debt.amount)
+            }
+          }
+        });
+      }
+    }
+    
+    // Mark as paid
+    await prisma.debt.update({
+      where: { id: debt.id },
+      data: { status: DebtStatus.PAID }
+    });
+  }
+
   const totalAmount = unpaidDebts.reduce((acc, d) => acc + d.amount.toNumber(), 0);
   const hasHutang = unpaidDebts.some(d => d.type === DebtType.HUTANG);
   const hasPiutang = unpaidDebts.some(d => d.type === DebtType.PIUTANG);
-
-  await prisma.debt.updateMany({
-    where: {
-      user_id: ctx.user.id,
-      person_name: { equals: personName, mode: "insensitive" },
-      status: DebtStatus.UNPAID
-    },
-    data: { status: DebtStatus.PAID }
-  });
 
   let typeInfo = "";
   if (hasHutang && hasPiutang) typeInfo = "hutang & piutang";
@@ -152,6 +226,6 @@ async function handlePayDebt(ctx: CommandContext): Promise<NextResponse> {
   else typeInfo = "piutang";
 
   return NextResponse.json({
-    message: `✅ *LUNAS!*\n━━━━━━━━━━━━━━━━━\n👤 *Nama:* ${personName}\n💰 *Total:* Rp ${totalAmount.toLocaleString("id-ID")}\n📒 *Jenis:* ${unpaidDebts.length} ${typeInfo}\n━━━━━━━━━━━━━━━━━\n\n🎉 Semua ${typeInfo} dengan *${personName}* sudah lunas!`
+    message: `✅ *LUNAS!*\n━━━━━━━━━━━━━━━━━\n👤 *Nama:* ${personName}\n💰 *Total:* Rp ${totalAmount.toLocaleString("id-ID")}\n📒 *Jenis:* ${unpaidDebts.length} ${typeInfo}${repaymentWalletInfo}\n━━━━━━━━━━━━━━━━━\n\n🎉 Semua ${typeInfo} dengan *${personName}* sudah lunas!`
   });
 }

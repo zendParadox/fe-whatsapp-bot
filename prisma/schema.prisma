@@ -132,8 +132,13 @@ model Debt {
   user_id     String
   user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
+  // Kantong (Wallet) — opsional
+  wallet_id   String?
+  wallet      Wallet?  @relation(fields: [wallet_id], references: [id], onDelete: SetNull)
+
   @@index([user_id])
   @@index([user_id, status])  // Filter by status (UNPAID/PAID)
+  @@index([wallet_id])
 }
 
 // 🏷️ Model untuk kategori transaksi
@@ -263,6 +268,7 @@ model Wallet {
   user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   transactions Transaction[]
+  debts        Debt[]
 
   @@unique([user_id, name])
   @@index([user_id])

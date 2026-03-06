@@ -12,6 +12,7 @@ const createDebtSchema = z.object({
   person_name: z.string().min(1, "Nama orang wajib diisi"),
   description: z.string().optional(),
   due_date: z.string().optional(), // ISO date string
+  wallet_id: z.string().nullable().optional(),
 });
 
 // GET: Ambil semua hutang/piutang user
@@ -97,7 +98,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { amount, type, person_name, description, due_date } = validation.data;
+    const { amount, type, person_name, description, due_date, wallet_id } = validation.data;
+
+    // Check user plan for premium features (wallet)
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { plan_type: true }
+    });
+    
+    let finalWalletId = null;
+    if (wallet_id && user?.plan_type === "PREMIUM") {
+       const wallet = await prisma.wallet.findFirst({
+         where: { id: wallet_id, user_id: payload.userId }
+       });
+       
+       if (wallet) {
+         finalWalletId = wallet.id;
+         // Update wallet balance
+         // HUTANG (we borrow money) -> balance increases
+         // PIUTANG (we lend money) -> balance decreases
+         await prisma.wallet.update({
+           where: { id: wallet.id },
+           data: {
+             balance: {
+               [type === "HUTANG" ? "increment" : "decrement"]: amount
+             }
+           }
+         });
+       }
+    }
 
     const debt = await prisma.debt.create({
       data: {
@@ -105,9 +134,10 @@ export async function POST(request: NextRequest) {
         type,
         person_name,
         description: description || null,
+        wallet_id: finalWalletId,
         due_date: due_date ? new Date(due_date) : null,
         user_id: payload.userId,
-      },
+      } as any,
     });
 
     return NextResponse.json(debt, { status: 201 });

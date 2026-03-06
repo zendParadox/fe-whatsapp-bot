@@ -49,22 +49,31 @@ export function parseTransactionMessage(message: string) {
     return null;
   }
 
-  // Match multi-word category: @kategori sampai # atau akhir string
-  // Regex: @(text) sampai sebelum # atau end of line
-  const categoryMatch = message.match(/@([^#]+?)(?:\s*#|$)/);
-  const category = categoryMatch?.[1]?.trim().toLowerCase() || "lainnya";
+  // Extract payment method first (the LAST # in the string)
+  const lastHashIndex = message.lastIndexOf("#");
+  let paymentMethod: string | null = null;
+  let messageWithoutPayment = message;
+  
+  if (lastHashIndex !== -1) {
+    paymentMethod = message.substring(lastHashIndex + 1).trim() || null;
+    messageWithoutPayment = message.substring(0, lastHashIndex).trim();
+  }
 
-  // Match multi-word payment method: #metode bayar sampai akhir string
-  const paymentMethodMatch = message.match(/#(.+)$/);
-  const paymentMethod = paymentMethodMatch?.[1]?.trim() || null;
+  // Extract category (the LAST @ in the string before payment method)
+  const lastAtIndex = messageWithoutPayment.lastIndexOf("@");
+  let categoryStr = "lainnya";
+  let descriptionParts = messageWithoutPayment;
 
-  // Extract description: hapus command, amount, @category, dan #payment
-  const description = message
-    .replace(new RegExp(`^${command}\\s+`, "i"), "") // hapus command
-    .replace(new RegExp(`^${parts[1]}\\s*`, "i"), "") // hapus amount
-    .replace(/@[^#]+(?=\s*#|$)/, "") // hapus @category (multi-word)
-    .replace(/#.+$/, "") // hapus #payment (multi-word)
-    .trim() || "Transaksi WhatsApp";
+  if (lastAtIndex !== -1) {
+    categoryStr = messageWithoutPayment.substring(lastAtIndex + 1).trim() || "lainnya";
+    descriptionParts = messageWithoutPayment.substring(0, lastAtIndex).trim();
+  }
+  
+  const category = categoryStr.toLowerCase();
+
+  // Extract description: remove command and amount from the beginning
+  const descriptionRegex = new RegExp(`^${command}\\s+${parts[1]}\\s*`, "i");
+  const description = descriptionParts.replace(descriptionRegex, "").trim() || "Transaksi WhatsApp";
 
   return { type, amount, description, category, paymentMethod };
 }
@@ -72,7 +81,7 @@ export function parseTransactionMessage(message: string) {
 
 /**
  * Parses Debt message
- * Format: hutang 50k @Budi beli pulsa
+ * Format: hutang 50k @Budi beli pulsa #gopay
  */
 export function parseDebtMessage(message: string) {
   const parts = message.trim().split(" ");
@@ -92,16 +101,32 @@ export function parseDebtMessage(message: string) {
       return null;
   }
 
-  const personMatch = message.match(/@(\w+)/);
-  const personName = personMatch && personMatch[1] ? personMatch[1] : null;
+  // Extract payment method (the LAST # in the string)
+  const lastHashIndex = message.lastIndexOf("#");
+  let paymentMethod: string | null = null;
+  let messageWithoutPayment = message;
+
+  if (lastHashIndex !== -1) {
+    paymentMethod = message.substring(lastHashIndex + 1).trim() || null;
+    messageWithoutPayment = message.substring(0, lastHashIndex).trim();
+  }
+
+  // Extract personName (the LAST @ in the string before payment method)
+  // Note: we just need the single word after @ for personName
+  let personName: string | null = null;
+  let descriptionParts = messageWithoutPayment;
+
+  const personMatch = messageWithoutPayment.match(/@(\w+)/);
+  if (personMatch && personMatch[1]) {
+    personName = personMatch[1];
+    // Remove the @PersonName part from description parts
+    descriptionParts = messageWithoutPayment.replace(new RegExp(`@${personName}\\s*`, "i"), "");
+  }
 
   if (!personName) return null;
 
-  const description = message
-      .replace(new RegExp(`^${command}`, "i"), "")
-      .replace(parts[1], "")
-      .replace(/@\w+/g, "")
-      .trim() || "Catatan Hutang";
+  const descriptionRegex = new RegExp(`^${command}\\s+${parts[1]}\\s*`, "i");
+  const description = descriptionParts.replace(descriptionRegex, "").trim() || "Catatan Hutang";
 
-  return { type, amount, personName, description };
+  return { type, amount, personName, description, paymentMethod };
 }

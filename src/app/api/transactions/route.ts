@@ -106,7 +106,7 @@ async function handleTransactionsPOST(request: Request) {
     const userId = payload.userId as string;
 
     const body = await request.json();
-    const { amount, type, description, category_id, date } = body;
+    const { amount, type, description, category_id, date, wallet_id } = body;
 
     // Basic validation
     if (!amount || !type) {
@@ -116,6 +116,33 @@ async function handleTransactionsPOST(request: Request) {
       );
     }
     
+    // Check user plan for premium features (wallet)
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { plan_type: true }
+    });
+    
+    let finalWalletId = null;
+    if (wallet_id && user?.plan_type === "PREMIUM") {
+       const wallet = await prisma.wallet.findFirst({
+         where: { id: wallet_id, user_id: userId }
+       });
+       
+       if (wallet) {
+         finalWalletId = wallet.id;
+         // Update wallet balance
+         const amountNum = Number(amount);
+         await prisma.wallet.update({
+           where: { id: wallet.id },
+           data: {
+             balance: {
+               [type === "EXPENSE" ? "decrement" : "increment"]: amountNum
+             }
+           }
+         });
+       }
+    }
+
     // Create transaction
     const newTx = await prisma.transaction.create({
       data: {
@@ -124,6 +151,7 @@ async function handleTransactionsPOST(request: Request) {
         type: type, // INCOME or EXPENSE
         description: description || "",
         category_id: category_id || null, // Optional
+        wallet_id: finalWalletId, // Premium only
         // If date provided, use it, otherwise default (now)
         created_at: date ? new Date(date) : undefined
       }

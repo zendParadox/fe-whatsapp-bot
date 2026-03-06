@@ -55,7 +55,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash } from "lucide-react";
+import { Edit, Trash, TrendingDown, ChevronRight, Plus } from "lucide-react";
 import RecentTransactionsCard from "@/components/dashboard/RecentTransactionsCard";
 import SmartAiInput from "@/components/dashboard/SmartAiInput";
 import WhatsAppBotBanner from "@/components/dashboard/WhatsAppBotBanner";
@@ -84,6 +84,7 @@ interface Transaction {
   category?: string | CategoryObj | null;
   description?: string | null;
   created_at: string;
+  wallet_id?: string | null;
 }
 
 interface Summary {
@@ -228,6 +229,7 @@ export default function Dashboard() {
     categoryId: "",
     description: "",
     createdAt: "", // ISO date string for editing
+    wallet_id: "none",
   });
   const [deletingTx, setDeletingTx] = useState<Transaction | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -374,6 +376,21 @@ export default function Dashboard() {
       categoryId: categoryId,
       description: tx.description ?? "",
       createdAt: new Date(tx.created_at).toISOString().split('T')[0], // Format: YYYY-MM-DD
+      wallet_id: tx.wallet_id || "none", // Assuming backend returns wallet_id if any, though GET doesn't strictly need it to just show. We'll set it to none or existing
+    });
+    setIsDialogOpen(true);
+  }
+
+  function openAdd() {
+    setEditingTx(null);
+    setForm({
+      category: "",
+      type: "EXPENSE",
+      amount: "",
+      categoryId: "",
+      description: "",
+      createdAt: new Date().toISOString().split('T')[0],
+      wallet_id: "none",
     });
     setIsDialogOpen(true);
   }
@@ -413,17 +430,27 @@ export default function Dashboard() {
         payload.description = form.description;
       if (form.categoryId) payload.category_id = form.categoryId;
       if (form.createdAt) payload.created_at = new Date(form.createdAt).toISOString();
+      if (form.wallet_id !== "none") payload.wallet_id = form.wallet_id;
 
-      const res = await fetch(`/api/transactions/${editingTx.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      let res;
+      if (editingTx) {
+        res = await fetch(`/api/transactions/${editingTx.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch(`/api/transactions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
 
       if (!res.ok) {
         const text = await res.text().catch(() => null);
         throw new Error(
-          `Gagal menyimpan perubahan: ${res.status} ${text ?? ""}`
+          `Gagal menyimpan ${editingTx ? 'perubahan' : 'transaksi'}: ${res.status} ${text ?? ""}`
         );
       }
 
@@ -434,7 +461,7 @@ export default function Dashboard() {
       setRefreshKey(k => k + 1);
 
       // show success toast
-      toast.success("Perubahan transaksi berhasil disimpan.");
+      toast.success(editingTx ? "Perubahan transaksi berhasil disimpan." : "Transaksi baru berhasil ditambahkan.");
     } catch (err) {
       console.error(err);
       toast.error("Terjadi kesalahan saat menyimpan. Periksa console.");
@@ -754,9 +781,19 @@ export default function Dashboard() {
             formatCurrency={formatCurrency}
             onRefresh={() => setRefreshKey(k => k + 1)}
           />
-          <DebtCard onDataChange={() => setRefreshKey(k => k + 1)} />
+          <DebtCard 
+            onDataChange={() => setRefreshKey(k => k + 1)} 
+            wallets={data.wallets || []}
+            planType={data.plan_type || "FREE"}
+          />
         </div>
-        <div className="lg:col-span-3 overflow-x-auto">
+        <div className="lg:col-span-3 overflow-x-auto relative">
+          <div className="absolute top-4 sm:top-5 right-4 sm:right-6 z-10 flex gap-2">
+            <Button size="sm" onClick={openAdd}>
+              <Plus className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Tambah Manual</span>
+            </Button>
+          </div>
           <RecentTransactionsCard
             currentPeriod={currentPeriod}
             getCategoryName={getCategoryName}
@@ -775,11 +812,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Edit Dialog */}
+      {/* Edit/Add Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={(v) => setIsDialogOpen(v)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Edit Transaksi</DialogTitle>
+            <DialogTitle>{editingTx ? "Edit Transaksi" : "Tambah Transaksi Manual"}</DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-2 py-2">
@@ -850,11 +887,35 @@ export default function Dashboard() {
                   <SelectValue placeholder="Pilih type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="INCOME">INCOME</SelectItem>
-                  <SelectItem value="EXPENSE">EXPENSE</SelectItem>
+                  <SelectItem value="INCOME">Pemasukan (INCOME)</SelectItem>
+                  <SelectItem value="EXPENSE">Pengeluaran (EXPENSE)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Wallet Selection (Premium Only, Add Mode Only) */}
+            {!editingTx && data.plan_type === "PREMIUM" && data.wallets && data.wallets.length > 0 && (
+              <div>
+                <Label className="mb-1">Kantong (Opsional)</Label>
+                <Select
+                  value={form.wallet_id}
+                  onValueChange={(v) => handleFormChange("wallet_id", v)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Pilih Kantong" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Tanpa Kantong</SelectItem>
+                    {data.wallets.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">Saldo kantong akan otomatis menyesuaikan.</p>
+              </div>
+            )}
 
             {/* Amount */}
             <div>

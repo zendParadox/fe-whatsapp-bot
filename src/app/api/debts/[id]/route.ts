@@ -13,6 +13,7 @@ const updateDebtSchema = z.object({
   person_name: z.string().min(1, "Nama orang wajib diisi").optional(),
   description: z.string().optional(),
   due_date: z.string().nullable().optional(),
+  repayment_wallet_id: z.string().nullable().optional(),
 });
 
 // GET: Ambil detail satu hutang/piutang
@@ -90,7 +91,43 @@ export async function PUT(
       return NextResponse.json({ error: "Data tidak ditemukan" }, { status: 404 });
     }
 
-    const { amount, type, status, person_name, description, due_date } = validation.data;
+    const { amount, type, status, person_name, description, due_date, repayment_wallet_id } = validation.data;
+
+    // Check if status changed to PAID and we need to update wallet balances
+    if (status === "PAID" && existing.status === "UNPAID") {
+      // Determine which wallet gets updated: target repayment wallet OR the original debt wallet
+      const targetWalletId = repayment_wallet_id || (existing as any).wallet_id;
+      
+      if (targetWalletId) {
+        const user = await prisma.user.findUnique({
+          where: { id: payload.userId },
+          select: { plan_type: true }
+        });
+        
+        if (user?.plan_type === "PREMIUM") {
+          const wallet = await prisma.wallet.findFirst({
+            where: { id: targetWalletId, user_id: payload.userId }
+          });
+          
+          if (wallet) {
+            // REPAYMENT LOGIC:
+            // HUTANG (we borrowed before, now we repay) -> balance decreases
+            // PIUTANG (we lent before, now we get paid back) -> balance increases
+            const finalType = type || existing.type;
+            const finalAmount = amount || Number(existing.amount);
+            
+            await prisma.wallet.update({
+              where: { id: wallet.id },
+              data: {
+                balance: {
+                  [finalType === "HUTANG" ? "decrement" : "increment"]: finalAmount
+                }
+              }
+            });
+          }
+        }
+      }
+    }
 
     const updated = await prisma.debt.update({
       where: { id },
@@ -139,6 +176,30 @@ export async function DELETE(
 
     if (!existing) {
       return NextResponse.json({ error: "Data tidak ditemukan" }, { status: 404 });
+    }
+
+    // Revert Wallet Balance if UNPAID
+    // If it was PAID, it already affected the repayment wallet, so we don't automatically revert here (complex edge case).
+    if ((existing as any).wallet_id && existing.status === "UNPAID") {
+      const user = await prisma.user.findUnique({
+        where: { id: payload.userId },
+        select: { plan_type: true }
+      });
+      
+      if (user?.plan_type === "PREMIUM") {
+        const amountNum = Number(existing.amount);
+        // REVERT logic: reverse what happened during POST
+        // Original HUTANG (borrowed) added -> Revert by subtracting
+        // Original PIUTANG (lent) subtracted -> Revert by adding
+        await prisma.wallet.update({
+          where: { id: (existing as any).wallet_id },
+          data: {
+            balance: {
+              [existing.type === "HUTANG" ? "decrement" : "increment"]: amountNum
+            }
+          }
+        });
+      }
     }
 
     await prisma.debt.delete({ where: { id } });

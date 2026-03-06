@@ -100,16 +100,58 @@ export async function DELETE(
   if (!id) return NextResponse.json({ message: "Missing id" }, { status: 400 });
 
   try {
-    await prisma.transaction.delete({ where: { id } });
-    return NextResponse.json({ message: "Deleted" }, { status: 200 });
-  } catch (err: any) {
-    console.error(`DELETE /api/transactions/[id] error:`, err);
-    if (err?.code === "P2025") {
+    const { cookies } = await import("next/headers");
+    const { verifyToken } = await import("@/lib/auth");
+    
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
+    
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const payload = verifyToken(token);
+    if (!payload?.userId) {
+      return NextResponse.json({ message: "Invalid token" }, { status: 401 });
+    }
+    const userId = payload.userId as string;
+
+    const tx = await prisma.transaction.findFirst({
+      where: { id, user_id: userId }
+    });
+
+    if (!tx) {
       return NextResponse.json(
         { message: "Transaction not found" },
         { status: 404 }
       );
     }
+
+    // Check if we need to revert wallet balance
+    if (tx.wallet_id) {
+       const user = await prisma.user.findUnique({
+         where: { id: userId },
+         select: { plan_type: true }
+       });
+       
+       if (user?.plan_type === "PREMIUM") {
+         const amountNum = Number(tx.amount);
+         // REVERT logic: if expense -> add back. if income -> subtract
+         await prisma.wallet.update({
+           where: { id: tx.wallet_id },
+           data: {
+             balance: {
+               [tx.type === "EXPENSE" ? "increment" : "decrement"]: amountNum
+             }
+           }
+         });
+       }
+    }
+
+    await prisma.transaction.delete({ where: { id } });
+    return NextResponse.json({ message: "Deleted" }, { status: 200 });
+  } catch (err: any) {
+    console.error(`DELETE /api/transactions/[id] error:`, err);
     return NextResponse.json(
       { message: err?.message ?? "Internal Server Error" },
       { status: 500 }
