@@ -14,6 +14,7 @@ import { handleDebt } from "./handlers/debt";
 import { handleWallet } from "./handlers/wallet";
 import { handleHelp, handleFreeUserFallback, handleFallbackHelp } from "./handlers/help";
 import { handleAITransaction } from "./handlers/ai-transaction";
+import { handleSplitBill } from "./handlers/splitbill";
 
 const webhookPayloadSchema = z.object({
   sender: z.string(),
@@ -144,6 +145,7 @@ export async function POST(request: NextRequest) {
       handleBudget,
       handleReport,
       handleUndo,
+      handleSplitBill,
       handleDebt,
       handleWallet,
       handleHelp,

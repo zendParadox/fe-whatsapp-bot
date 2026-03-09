@@ -74,6 +74,9 @@ model User {
   // Kantong Keuangan (Wallet)
   wallets              Wallet[]
 
+  // Shared Wallet Memberships
+  walletMemberships    WalletMember[]
+
   // Pembayaran Manual
   manual_payments      ManualPayment[]
 }
@@ -261,6 +264,8 @@ model Wallet {
   name         String   // "BCA", "Gopay", "Cash", dll
   icon         String?  // Emoji: "🏦", "💚", "💵"
   balance      Decimal  @db.Decimal(15, 2) @default(0)
+  is_shared    Boolean  @default(false)
+  invite_code  String?  @unique // Kode unik untuk join shared wallet
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
 
@@ -269,9 +274,34 @@ model Wallet {
 
   transactions Transaction[]
   debts        Debt[]
+  members      WalletMember[]
 
   @@unique([user_id, name])
   @@index([user_id])
+  @@index([invite_code])
+}
+
+// 🔗 Enum untuk role anggota shared wallet
+enum WalletMemberRole {
+  ADMIN   // Owner / pembuat wallet
+  MEMBER  // Anggota yang diundang
+}
+
+// 🔗 Model untuk anggota shared wallet
+model WalletMember {
+  id         String           @id @default(uuid())
+  role       WalletMemberRole @default(MEMBER)
+  joined_at  DateTime         @default(now())
+
+  wallet_id  String
+  wallet     Wallet @relation(fields: [wallet_id], references: [id], onDelete: Cascade)
+
+  user_id    String
+  user       User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([wallet_id, user_id])
+  @@index([user_id])
+  @@index([wallet_id])
 }
 
 // 📢 Model untuk menyimpan riwayat broadcast

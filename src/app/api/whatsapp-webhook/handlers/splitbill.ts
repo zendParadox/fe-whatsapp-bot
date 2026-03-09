@@ -1,0 +1,99 @@
+import { NextResponse } from "next/server";
+import { Decimal } from "@prisma/client/runtime/library";
+import { DebtType, DebtStatus, TransactionType } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { parseSplitBillMessage } from "@/lib/whatsapp/parser";
+import { formatInTimeZone } from "date-fns-tz";
+import type { CommandContext } from "../lib/context";
+
+const TIMEZONE = "Asia/Jakarta";
+
+export async function handleSplitBill(ctx: CommandContext): Promise<NextResponse | null> {
+  const cmd = ctx.command;
+  if (!["patungan", "split", "bagi"].includes(cmd)) return null;
+
+  const parsed = parseSplitBillMessage(ctx.message);
+
+  if (!parsed) {
+    return NextResponse.json({
+      message: `❌ *Format Patungan Salah*\n\n📌 *Cara Pakai:*\n\n*Bagi Rata:*\n\`patungan 300k makan @andi @budi @cindy\`\n\n*Bagi Kustom (beda-beda):*\n\`patungan makan @andi 50k @budi 78500 @cindy 108700\`\n\n*Dengan Kantong (Premium):*\n\`patungan 300k makan @andi @budi #bca\`\n\n📝 *Penjelasan:*\n• \`patungan\` / \`split\` / \`bagi\` = Kata kunci\n• \`300k\` = Total tagihan (opsional di mode kustom)\n• \`@nama jumlah\` = Nama orang dan nominal masing-masing\n• \`#bca\` = Kantong/wallet (opsional, Premium)\n\n💡 _User yang mengirim pesan ikut dihitung sebagai salah satu pembayar._`
+    });
+  }
+
+  // ── Wallet Lookup (Premium only) ──
+  let walletId: string | null = null;
+  let walletName: string | null = null;
+
+  if (parsed.paymentMethod && ctx.user.plan_type === "PREMIUM") {
+    const wallet = await prisma.wallet.findFirst({
+      where: {
+        user_id: ctx.user.id,
+        name: { equals: parsed.paymentMethod, mode: "insensitive" },
+      },
+    });
+    if (wallet) {
+      walletId = wallet.id;
+      walletName = wallet.name;
+    }
+  }
+
+  // ── Create expense for user's own portion ──
+  if (parsed.userPortion > 0) {
+    await prisma.transaction.create({
+      data: {
+        user_id: ctx.user.id,
+        type: TransactionType.EXPENSE,
+        amount: new Decimal(parsed.userPortion),
+        description: `[Patungan] ${parsed.description}`,
+        ...(walletId ? { wallet_id: walletId } : {}),
+      } as any,
+    });
+  }
+
+  // ── Create piutang for each person ──
+  for (const split of parsed.splits) {
+    await prisma.debt.create({
+      data: {
+        user_id: ctx.user.id,
+        type: DebtType.PIUTANG,
+        amount: new Decimal(split.amount),
+        person_name: split.name,
+        description: `[Patungan] ${parsed.description}`,
+        status: DebtStatus.UNPAID,
+        ...(walletId ? { wallet_id: walletId } : {}),
+      } as any,
+    });
+  }
+
+  // ── Deduct wallet by TOTAL (user's portion + all piutang) ──
+  if (walletId && ctx.user.plan_type === "PREMIUM") {
+    await prisma.wallet.update({
+      where: { id: walletId },
+      data: {
+        balance: { decrement: parsed.totalAmount },
+      },
+    });
+  }
+
+  // ── Build response ──
+  const splitsTotal = parsed.splits.reduce((acc, s) => acc + s.amount, 0);
+  const names = parsed.splits.map(s => s.name);
+
+  let details = "";
+  if (parsed.mode === "EQUAL") {
+    const allNames = ["Anda", ...names].join(", ");
+    details += `👥 Dibagi rata: ${parsed.splits.length + 1} orang (${allNames})\n`;
+    details += `💵 Masing-masing: Rp ${parsed.userPortion.toLocaleString("id-ID")}\n`;
+  } else {
+    details += `✅ Pengeluaran Anda: Rp ${parsed.userPortion.toLocaleString("id-ID")}\n`;
+    for (const s of parsed.splits) {
+      details += `✅ Piutang ${s.name}: Rp ${s.amount.toLocaleString("id-ID")}\n`;
+    }
+  }
+
+  const walletInfo = walletName ? `\n🏦 *Kantong:* ${walletName} (-Rp ${parsed.totalAmount.toLocaleString("id-ID")})` : "";
+
+  return NextResponse.json({
+    message: `🍕 *Split Bill Tercatat!*\n━━━━━━━━━━━━━━━━━\n💰 *Total:* Rp ${parsed.totalAmount.toLocaleString("id-ID")} (${parsed.description})\n📅 *Tanggal:* ${formatInTimeZone(new Date(), TIMEZONE, "dd/MM/yyyy")}\n\n${details}${walletInfo}\n━━━━━━━━━━━━━━━━━\n\n💡 _Ketik "cek hutang" untuk lihat semua piutang_\n💡 _Ketik "lunas @${names[0]}" jika sudah dibayar_`
+  });
+}

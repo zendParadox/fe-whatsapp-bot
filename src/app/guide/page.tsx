@@ -24,6 +24,7 @@ import {
   Lightbulb,
   ChevronRight,
   MessageSquare,
+  Users,
 } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 
@@ -88,10 +89,12 @@ const tocItems = [
   { id: "laporan", icon: "📊", label: "Laporan Keuangan" },
   { id: "budget", icon: "🎯", label: "Budget / Anggaran" },
   { id: "hutang", icon: "🤝", label: "Hutang & Piutang" },
+  { id: "patungan", icon: "🍕", label: "Split Bill / Patungan" },
   { id: "undo", icon: "↩️", label: "Undo / Hapus" },
   { id: "ai", icon: "🤖", label: "AI Smart Parser" },
   { id: "struk", icon: "📸", label: "Scan Struk" },
   { id: "kantong", icon: "💳", label: "Kantong Keuangan" },
+  { id: "shared", icon: "👥", label: "Shared Wallet" },
   { id: "jumlah", icon: "#️⃣", label: "Format Jumlah" },
 ];
 
@@ -582,7 +585,92 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
             </CardContent>
           </Card>
 
-          {/* 6 — Undo */}
+          {/* 6 — Split Bill / Patungan */}
+          <SectionAnchor id="patungan" />
+          <Card className="glass-card overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-orange-500/5 to-neon-cyan/5 border-b border-border">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-10 w-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-orange-500" />
+                  </div>
+                  6. Split Bill / Patungan
+                </CardTitle>
+                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">FREE</Badge>
+              </div>
+              <CardDescription>
+                Patungan makan bareng? Otomatis bagi tagihan dan catat piutang ke setiap teman.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              {/* Bagi Rata */}
+              <div>
+                <h3 className="font-bold text-base mb-3">🍕 Patungan Bagi Rata</h3>
+                <div className="bg-muted/30 rounded-lg p-4 mb-3">
+                  <CodeBlock>patungan [total] [keterangan] @nama1 @nama2 @nama3</CodeBlock>
+                </div>
+                <div className="space-y-3">
+                  <ExampleBubble user>patungan 300k makan kfc @andi @budi @cindy</ExampleBubble>
+                  <ExampleBubble>
+                    🍕 <strong>Split Bill Tercatat!</strong>{"\n"}
+                    ━━━━━━━━━━━━━━━━━{"\n"}
+                    💰 Total: Rp 300.000 (makan kfc){"\n"}
+                    👥 Dibagi rata: 4 orang (Anda, andi, budi, cindy){"\n"}
+                    💵 Masing-masing: Rp 75.000{"\n"}
+                    ━━━━━━━━━━━━━━━━━{"\n\n"}
+                    💡 <em>Ketik "cek hutang" untuk lihat semua piutang</em>
+                  </ExampleBubble>
+                </div>
+              </div>
+
+              {/* Bagi Kustom */}
+              <div>
+                <h3 className="font-bold text-base mb-3">💸 Patungan Beda Nominal</h3>
+                <div className="bg-muted/30 rounded-lg p-4 mb-3">
+                  <CodeBlock>patungan [keterangan] @nama1 [jumlah] @nama2 [jumlah]</CodeBlock>
+                </div>
+                <div className="space-y-3">
+                  <ExampleBubble user>patungan makan @andi 50k @budi 78500 @cindy 108700</ExampleBubble>
+                  <ExampleBubble>
+                    🍕 <strong>Split Bill Tercatat!</strong>{"\n"}
+                    ━━━━━━━━━━━━━━━━━{"\n"}
+                    💰 Total: Rp 237.200 (makan){"\n\n"}
+                    ✅ Pengeluaran Anda: Rp 0{"\n"}
+                    ✅ Piutang andi: Rp 50.000{"\n"}
+                    ✅ Piutang budi: Rp 78.500{"\n"}
+                    ✅ Piutang cindy: Rp 108.700{"\n"}
+                    ━━━━━━━━━━━━━━━━━
+                  </ExampleBubble>
+                </div>
+                <p className="text-sm text-muted-foreground mt-3">
+                  Jika Anda juga ikut bayar, sertakan total di depan:{" "}
+                  <code className="text-neon-cyan">patungan 300k makan @andi 50k @budi 78500 @cindy 108700</code>{" "}
+                  — sisa Rp 62.800 akan dicatat sebagai pengeluaran Anda.
+                </p>
+              </div>
+
+              {/* Dengan Kantong */}
+              <div>
+                <h3 className="font-bold text-base mb-3">🏦 Patungan + Kantong</h3>
+                <div className="space-y-3">
+                  <ExampleBubble user>patungan 200k makan @andi @budi #bca</ExampleBubble>
+                  <ExampleBubble>
+                    🍕 <strong>Split Bill Tercatat!</strong>{"\n"}
+                    💰 Total: Rp 200.000{"\n"}
+                    👥 Masing-masing: Rp 66.667{"\n\n"}
+                    🏦 Kantong: BCA (-Rp 200.000)
+                  </ExampleBubble>
+                </div>
+              </div>
+
+              <Tip>
+                Kata kunci <strong>patungan</strong>, <strong>split</strong>, dan <strong>bagi</strong> semuanya bisa digunakan.
+                Piutang yang tercatat bisa dilunaskan dengan mengetik <code className="text-neon-cyan">lunas @nama</code>.
+              </Tip>
+            </CardContent>
+          </Card>
+
+          {/* 7 — Undo */}
           <SectionAnchor id="undo" />
           <Card className="glass-card overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-neon-cyan/5 to-transparent border-b border-border">
@@ -591,7 +679,7 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                   <div className="h-10 w-10 rounded-xl bg-neon-cyan/10 flex items-center justify-center">
                     <Undo2 className="h-5 w-5 text-neon-cyan" />
                   </div>
-                  6. Undo / Hapus Transaksi
+                  7. Undo / Hapus Transaksi
                 </CardTitle>
                 <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">FREE</Badge>
               </div>
@@ -639,7 +727,7 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                   <div className="h-10 w-10 rounded-xl bg-neon-purple/10 flex items-center justify-center">
                     <Sparkles className="h-5 w-5 text-neon-purple" />
                   </div>
-                  7. AI Smart Parser (Gemini)
+                  8. AI Smart Parser (Gemini)
                 </CardTitle>
                 <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 font-bold border-0 shadow-sm">👑 PREMIUM</Badge>
               </div>
@@ -686,7 +774,7 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                   <div className="h-10 w-10 rounded-xl bg-neon-pink/10 flex items-center justify-center">
                     <Camera className="h-5 w-5 text-neon-pink" />
                   </div>
-                  8. Scan Struk / Nota (Gambar)
+                  9. Scan Struk / Nota (Gambar)
                 </CardTitle>
                 <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 font-bold border-0 shadow-sm">👑 PREMIUM</Badge>
               </div>
@@ -737,7 +825,7 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                   <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
                     <Wallet className="h-5 w-5 text-amber-500" />
                   </div>
-                  9. Kantong Keuangan
+                  10. Kantong Keuangan
                 </CardTitle>
                 <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 font-bold border-0 shadow-sm">👑 PREMIUM</Badge>
               </div>
@@ -838,7 +926,87 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
             </CardContent>
           </Card>
 
-          {/* Format Jumlah */}
+          {/* 11 — Shared Wallet / Kantong Bersama */}
+          <SectionAnchor id="shared" />
+          <Card className="glass-card overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-blue-500/5 to-neon-purple/5 border-b border-border">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-blue-500" />
+                  </div>
+                  11. Shared Wallet / Kantong Bersama
+                </CardTitle>
+                <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 font-bold border-0 shadow-sm">👑 PREMIUM</Badge>
+              </div>
+              <CardDescription>
+                Bagikan kantong ke pasangan, keluarga, atau tim. Semua anggota bisa catat transaksi ke kantong yang sama.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              {/* Share Kantong */}
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <span className="text-blue-500">🔗</span> Bagikan Kantong
+                </h4>
+                <div className="bg-muted/30 rounded-lg p-4 mb-3">
+                  <CodeBlock>share kantong [nama]</CodeBlock>
+                </div>
+                <div className="space-y-3">
+                  <ExampleBubble user>share kantong BCA</ExampleBubble>
+                  <ExampleBubble>
+                    🔗 <strong>Kantong Berhasil Dibagikan!</strong>{"\n"}
+                    ━━━━━━━━━━━━━━━━━{"\n"}
+                    💰 Kantong: <strong>BCA</strong>{"\n"}
+                    🔑 Kode Undangan: <strong>FAM-XYZ123</strong>{"\n"}
+                    ━━━━━━━━━━━━━━━━━{"\n\n"}
+                    Bagikan kode ini ke orang lain.{"\n"}
+                    Mereka cukup ketik:{"\n"}
+                    <code>gabung FAM-XYZ123</code>
+                  </ExampleBubble>
+                </div>
+              </div>
+
+              {/* Gabung Kantong */}
+              <div>
+                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                  <span className="text-blue-500">🚀</span> Bergabung ke Kantong Bersama
+                </h4>
+                <div className="bg-muted/30 rounded-lg p-4 mb-3">
+                  <CodeBlock>gabung [kode_undangan]</CodeBlock>
+                </div>
+                <div className="space-y-3">
+                  <ExampleBubble user>gabung FAM-XYZ123</ExampleBubble>
+                  <ExampleBubble>
+                    ✅ <strong>Berhasil Bergabung!</strong>{"\n"}
+                    ━━━━━━━━━━━━━━━━━{"\n"}
+                    🔗 Kantong: <strong>BCA</strong>{"\n"}
+                    👤 Pemilik: Ahmad{"\n"}
+                    💰 Saldo: Rp 5.000.000{"\n"}
+                    ━━━━━━━━━━━━━━━━━{"\n\n"}
+                    Sekarang Anda bisa menggunakan kantong ini saat mencatat transaksi dengan <code>#BCA</code>.
+                  </ExampleBubble>
+                </div>
+              </div>
+
+              {/* Use Cases */}
+              <div className="bg-blue-500/5 border border-blue-500/10 rounded-lg p-4">
+                <p className="font-medium text-blue-500 mb-2">💡 Contoh Penggunaan:</p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• <strong>Suami-Istri:</strong> Berbagi kantong "Keluarga" untuk belanja rumah tangga</li>
+                  <li>• <strong>Kost/Kontrakan:</strong> Berbagi kantong "Kas Kost" untuk iuran bersama</li>
+                  <li>• <strong>Tim Kerja:</strong> Berbagi kantong "Operasional" untuk pencatatan bersama</li>
+                </ul>
+              </div>
+
+              <Tip>
+                Hanya pemilik (<strong>kreator</strong>) yang bisa membagikan kantong.
+                Anggota yang bergabung bisa <strong>mencatat transaksi</strong> ke kantong tersebut menggunakan <code className="text-neon-cyan">#nama_kantong</code>.
+              </Tip>
+            </CardContent>
+          </Card>
+
+          {/* 12 — Format Jumlah */}
           <SectionAnchor id="jumlah" />
           <Card className="glass-card overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-neon-cyan/5 to-neon-purple/5 border-b border-border">
@@ -847,7 +1015,7 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                   <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-neon-cyan/10 to-neon-purple/10 flex items-center justify-center">
                     <Hash className="h-5 w-5 text-neon-cyan" />
                   </div>
-                  Format Jumlah
+                  12. Format Jumlah
                 </CardTitle>
                 <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">FREE</Badge>
               </div>
