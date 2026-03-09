@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { parseSplitBillMessage } from "@/lib/whatsapp/parser";
 import { formatInTimeZone } from "date-fns-tz";
 import type { CommandContext } from "../lib/context";
+import { findAccessibleWalletByName } from "../lib/wallet-utils";
 
 const TIMEZONE = "Asia/Jakarta";
 
@@ -25,12 +26,7 @@ export async function handleSplitBill(ctx: CommandContext): Promise<NextResponse
   let walletName: string | null = null;
 
   if (parsed.paymentMethod && ctx.user.plan_type === "PREMIUM") {
-    const wallet = await prisma.wallet.findFirst({
-      where: {
-        user_id: ctx.user.id,
-        name: { equals: parsed.paymentMethod, mode: "insensitive" },
-      },
-    });
+    const wallet = await findAccessibleWalletByName(ctx.user.id, parsed.paymentMethod);
     if (wallet) {
       walletId = wallet.id;
       walletName = wallet.name;

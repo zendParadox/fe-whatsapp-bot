@@ -7,6 +7,7 @@ import { checkBudgetStatus } from "@/lib/whatsapp/service";
 import { formatInTimeZone } from "date-fns-tz";
 import { id } from "date-fns/locale";
 import type { CommandContext } from "../lib/context";
+import { findAccessibleWallets } from "../lib/wallet-utils";
 
 const TIMEZONE = "Asia/Jakarta";
 
@@ -34,8 +35,8 @@ export async function handleAITransaction(ctx: CommandContext): Promise<NextResp
   const errors: string[] = [];
   const budgetAlertsList: string[] = [];
 
-  // Pre-fetch all user wallets once
-  const userWallets = await prisma.wallet.findMany({ where: { user_id: ctx.user.id } });
+  // Pre-fetch all user wallets (owned + shared) once
+  const userWallets = await findAccessibleWallets(ctx.user.id);
 
   for (const tx of aiTransactions) {
     try {

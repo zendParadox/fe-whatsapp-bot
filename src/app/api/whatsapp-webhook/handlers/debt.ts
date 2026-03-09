@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { parseDebtMessage } from "@/lib/whatsapp/parser";
 import { formatInTimeZone } from "date-fns-tz";
 import type { CommandContext } from "../lib/context";
+import { findAccessibleWalletByName } from "../lib/wallet-utils";
 
 const TIMEZONE = "Asia/Jakarta";
 
@@ -39,12 +40,7 @@ async function handleCreateDebt(ctx: CommandContext): Promise<NextResponse> {
   let walletNameDisplay = "";
   
   if (parsedData.paymentMethod && ctx.user.plan_type === "PREMIUM") {
-     const wallet = await prisma.wallet.findFirst({
-       where: { 
-         user_id: ctx.user.id,
-         name: { equals: parsedData.paymentMethod, mode: "insensitive"} 
-       }
-     });
+     const wallet = await findAccessibleWalletByName(ctx.user.id, parsedData.paymentMethod);
      
      if (wallet) {
        finalWalletId = wallet.id;
