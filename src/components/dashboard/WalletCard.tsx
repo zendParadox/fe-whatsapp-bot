@@ -23,9 +23,12 @@ import {
   Landmark,
   Smartphone,
   Banknote,
+  ChevronRight,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface WalletData {
   id: string;
@@ -33,6 +36,8 @@ interface WalletData {
   icon: string | null;
   balance: number | string;
   created_at: string;
+  role?: string;
+  is_shared?: boolean;
 }
 
 interface WalletCardProps {
@@ -85,6 +90,7 @@ export default function WalletCard({
   onRefresh,
 }: WalletCardProps) {
   const isFree = planType === "FREE";
+  const router = useRouter();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [newName, setNewName] = useState("");
@@ -263,7 +269,8 @@ export default function WalletCard({
             {wallets.map((w) => (
               <div
                 key={w.id}
-                className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-muted/50 transition-colors group"
+                className="flex items-center justify-between py-2.5 px-2 rounded-lg hover:bg-muted/50 transition-colors group cursor-pointer"
+                onClick={() => router.push(`/dashboard/wallet/${w.id}`)}
               >
                 <div className="flex items-center gap-3">
                   <span className="text-xl">{getWalletIcon(w.name, w.icon)}</span>
@@ -271,6 +278,14 @@ export default function WalletCard({
                     <p className="text-sm font-medium flex items-center gap-1.5">
                       {w.name}
                       {getWalletTypeIcon(w.name)}
+                      {w.is_shared && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded-full font-medium">
+                          <Users className="w-2.5 h-2.5" /> Shared
+                        </span>
+                      )}
+                      {w.role === "MEMBER" && (
+                        <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium">Member</span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -282,22 +297,25 @@ export default function WalletCard({
                   >
                     {formatCurrency(Number(w.balance))}
                   </span>
-                  <div className="hidden group-hover:flex items-center gap-1">
-                    <button
-                      onClick={() => openEdit(w)}
-                      className="p-1 rounded hover:bg-muted transition-colors"
-                      title="Edit"
-                    >
-                      <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(w)}
-                      className="p-1 rounded hover:bg-red-500/10 transition-colors"
-                      title="Hapus"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                    </button>
-                  </div>
+                  {(!w.role || w.role === "OWNER" || w.role === "ADMIN") && (
+                    <div className="hidden group-hover:flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => openEdit(w)}
+                        className="p-1 rounded hover:bg-muted transition-colors"
+                        title="Edit"
+                      >
+                        <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(w)}
+                        className="p-1 rounded hover:bg-red-500/10 transition-colors"
+                        title="Hapus"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      </button>
+                    </div>
+                  )}
+                  <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
             ))}

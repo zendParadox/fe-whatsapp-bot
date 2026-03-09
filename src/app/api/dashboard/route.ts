@@ -248,8 +248,31 @@ async function handleDashboardGET(request: NextRequest) {
     }
     responseData.totalSaldo = totalAllTimeIncome - totalAllTimeExpense;
 
-    // --- 5. INCLUDE WALLETS (only for Premium) ---
-    const wallets = currentUser?.plan_type === "PREMIUM" ? walletsRaw : [];
+    // --- 5. INCLUDE WALLETS (only for Premium) — own + shared ---
+    let wallets: any[] = [];
+    if (currentUser?.plan_type === "PREMIUM") {
+      const ownWallets = (walletsRaw || []).map((w: any) => ({
+        ...w,
+        balance: Number(w.balance),
+        role: "OWNER",
+      }));
+
+      // Fetch shared wallets via WalletMember
+      const memberships = await prisma.walletMember.findMany({
+        where: { user_id: userId },
+        include: { wallet: true },
+      });
+      const sharedWallets = memberships
+        .filter((m: any) => m.wallet.user_id !== userId)
+        .map((m: any) => ({
+          ...m.wallet,
+          balance: Number(m.wallet.balance),
+          role: m.role,
+          is_shared: true,
+        }));
+
+      wallets = [...ownWallets, ...sharedWallets];
+    }
 
     return NextResponse.json({ ...responseData, wallets });
   } catch (error) {

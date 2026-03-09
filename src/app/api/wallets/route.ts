@@ -25,10 +25,28 @@ export async function GET() {
       return NextResponse.json({ error: "Fitur ini hanya untuk pengguna Premium." }, { status: 403 });
     }
 
-    const wallets = await prisma.wallet.findMany({
+    const ownWallets = await prisma.wallet.findMany({
       where: { user_id: userId },
       orderBy: { created_at: "asc" },
     });
+
+    // Include shared wallets via WalletMember
+    const memberships = await prisma.walletMember.findMany({
+      where: { user_id: userId },
+      include: { wallet: true },
+    });
+    const sharedWallets = memberships
+      .filter(m => m.wallet.user_id !== userId)
+      .map(m => ({
+        ...m.wallet,
+        role: m.role,
+        is_shared: true,
+      }));
+
+    const wallets = [
+      ...ownWallets.map(w => ({ ...w, role: "OWNER" as const })),
+      ...sharedWallets,
+    ];
 
     return NextResponse.json(wallets);
   } catch (error) {

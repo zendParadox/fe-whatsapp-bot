@@ -893,8 +893,8 @@ export default function Dashboard() {
               </Select>
             </div>
 
-            {/* Wallet Selection (Premium Only, Add Mode Only) */}
-            {!editingTx && data.plan_type === "PREMIUM" && data.wallets && data.wallets.length > 0 && (
+            {/* Wallet Selection (Premium Only) */}
+            {data.plan_type === "PREMIUM" && data.wallets && data.wallets.length > 0 && (
               <div>
                 <Label className="mb-1">Kantong (Opsional)</Label>
                 <Select
