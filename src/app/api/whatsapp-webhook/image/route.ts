@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       } else {
         return NextResponse.json({
           message:
-            '🔗 *Perangkat Tertaut Terdeteksi*\n\nAnda belum menghubungkan akun. Kirim nomor telepon Anda terlebih dahulu (tanpa gambar).\n\nContoh: `081234567890`',
+            '🔗 *Hubungkan Akun Anda*\n\nNomor Anda belum terhubung ke akun GoTEK. Kirim nomor telepon Anda terlebih dahulu (tanpa gambar).\n\nContoh: `081234567890`',
         });
       }
     } else {

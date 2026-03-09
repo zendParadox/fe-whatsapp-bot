@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
         console.log(`⚠️ No LID mapping found for: ${lidValue}`);
         return NextResponse.json({
-          message: `🔗 *Perangkat Tertaut Terdeteksi*\n\nAnda sedang menggunakan WhatsApp Web/Desktop.\n\nUntuk menghubungkan akun, silakan *balas pesan ini dengan nomor telepon Anda* yang sudah terdaftar.\n\nContoh: \`081234567890\``
+          message: `🔗 *Hubungkan Akun Anda*\n\nNomor Anda belum terhubung ke akun GoTEK.\n\nUntuk menghubungkan, silakan *balas pesan ini dengan nomor telepon Anda* yang sudah terdaftar.\n\nContoh: \`081234567890\``
         });
       }
     } else {
