@@ -137,6 +137,7 @@ export async function POST(request: NextRequest) {
         wallet_id: finalWalletId,
         due_date: due_date ? new Date(due_date) : null,
         user_id: payload.userId,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
     });
 

@@ -46,6 +46,7 @@ export async function handleSplitBill(ctx: CommandContext): Promise<NextResponse
         amount: new Decimal(parsed.userPortion),
         description: `[Patungan] ${parsed.description}`,
         ...(walletId ? { wallet_id: walletId } : {}),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
     });
   }
@@ -61,6 +62,7 @@ export async function handleSplitBill(ctx: CommandContext): Promise<NextResponse
         description: `[Patungan] ${parsed.description}`,
         status: DebtStatus.UNPAID,
         ...(walletId ? { wallet_id: walletId } : {}),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any,
     });
   }
@@ -76,7 +78,6 @@ export async function handleSplitBill(ctx: CommandContext): Promise<NextResponse
   }
 
   // ── Build response ──
-  const splitsTotal = parsed.splits.reduce((acc, s) => acc + s.amount, 0);
   const names = parsed.splits.map(s => s.name);
 
   let details = "";

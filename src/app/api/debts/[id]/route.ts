@@ -96,7 +96,7 @@ export async function PUT(
     // Check if status changed to PAID and we need to update wallet balances
     if (status === "PAID" && existing.status === "UNPAID") {
       // Determine which wallet gets updated: target repayment wallet OR the original debt wallet
-      const targetWalletId = repayment_wallet_id || (existing as any).wallet_id;
+      const targetWalletId = repayment_wallet_id || (existing as Record<string, unknown>).wallet_id as string | null;
       
       if (targetWalletId) {
         const user = await prisma.user.findUnique({
@@ -180,7 +180,7 @@ export async function DELETE(
 
     // Revert Wallet Balance if UNPAID
     // If it was PAID, it already affected the repayment wallet, so we don't automatically revert here (complex edge case).
-    if ((existing as any).wallet_id && existing.status === "UNPAID") {
+    if ((existing as Record<string, unknown>).wallet_id && existing.status === "UNPAID") {
       const user = await prisma.user.findUnique({
         where: { id: payload.userId },
         select: { plan_type: true }
@@ -192,7 +192,7 @@ export async function DELETE(
         // Original HUTANG (borrowed) added -> Revert by subtracting
         // Original PIUTANG (lent) subtracted -> Revert by adding
         await prisma.wallet.update({
-          where: { id: (existing as any).wallet_id },
+          where: { id: (existing as Record<string, unknown>).wallet_id as string },
           data: {
             balance: {
               [existing.type === "HUTANG" ? "decrement" : "increment"]: amountNum

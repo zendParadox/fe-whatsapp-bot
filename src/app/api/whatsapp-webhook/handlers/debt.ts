@@ -71,6 +71,7 @@ async function handleCreateDebt(ctx: CommandContext): Promise<NextResponse> {
       description: parsedData.description,
       wallet_id: finalWalletId,
       status: DebtStatus.UNPAID
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any
   });
 
@@ -138,7 +139,6 @@ async function handleCheckDebt(ctx: CommandContext): Promise<NextResponse> {
 }
 
 async function handlePayDebt(ctx: CommandContext): Promise<NextResponse> {
-  const parts = ctx.message.split(" ");
   const personMatch = ctx.message.match(/@(\w+)/);
   const personName = personMatch && personMatch[1] ? personMatch[1] : null;
 
@@ -187,7 +187,7 @@ async function handlePayDebt(ctx: CommandContext): Promise<NextResponse> {
 
   for (const debt of unpaidDebts) {
     // Determine which wallet gets updated: target repayment wallet OR the original debt wallet
-    const targetWalletId = finalWalletId || (debt as any).wallet_id;
+    const targetWalletId = finalWalletId || (debt as Record<string, unknown>).wallet_id as string | null;
     
     if (targetWalletId && ctx.user.plan_type === "PREMIUM") {
       const wallet = await prisma.wallet.findFirst({

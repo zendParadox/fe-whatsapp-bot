@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import { 
-  CheckCircle, XCircle, Search, FileImage, 
+  CheckCircle, XCircle, FileImage, 
   ExternalLink, Loader2, RefreshCw, AlertCircle
 } from "lucide-react";
 import { 
@@ -16,7 +16,8 @@ import {
   DialogHeader, DialogTitle, DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -256,10 +257,13 @@ export default function AdminPaymentsPage() {
                 </div>
                 {/* Changed aspect ratio to auto height to support very long screenshots naturally */}
                 <div className="relative w-full border bg-black border-border shadow-md rounded-lg overflow-hidden flex justify-center">
-                   <img 
+                   <Image
                     src={selectedPayment.receipt_image_url} 
                     alt="Bukti Transfer" 
                     className="max-w-full h-auto object-contain"
+                    width={600}
+                    height={800}
+                    unoptimized
                   />
                 </div>
               </div>

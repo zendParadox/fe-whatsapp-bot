@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 import { snap } from "@/lib/midtrans";
 import { verifyToken } from "@/lib/auth";

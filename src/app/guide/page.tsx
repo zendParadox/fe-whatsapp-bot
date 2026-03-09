@@ -618,7 +618,7 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                     👥 Dibagi rata: 4 orang (Anda, andi, budi, cindy){"\n"}
                     💵 Masing-masing: Rp 75.000{"\n"}
                     ━━━━━━━━━━━━━━━━━{"\n\n"}
-                    💡 <em>Ketik "cek hutang" untuk lihat semua piutang</em>
+                    💡 <em>Ketik &quot;cek hutang&quot; untuk lihat semua piutang</em>
                   </ExampleBubble>
                 </div>
               </div>
@@ -993,9 +993,9 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
               <div className="bg-blue-500/5 border border-blue-500/10 rounded-lg p-4">
                 <p className="font-medium text-blue-500 mb-2">💡 Contoh Penggunaan:</p>
                 <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• <strong>Suami-Istri:</strong> Berbagi kantong "Keluarga" untuk belanja rumah tangga</li>
-                  <li>• <strong>Kost/Kontrakan:</strong> Berbagi kantong "Kas Kost" untuk iuran bersama</li>
-                  <li>• <strong>Tim Kerja:</strong> Berbagi kantong "Operasional" untuk pencatatan bersama</li>
+                  <li>• <strong>Suami-Istri:</strong> Berbagi kantong &quot;Keluarga&quot; untuk belanja rumah tangga</li>
+                  <li>• <strong>Kost/Kontrakan:</strong> Berbagi kantong &quot;Kas Kost&quot; untuk iuran bersama</li>
+                  <li>• <strong>Tim Kerja:</strong> Berbagi kantong &quot;Operasional&quot; untuk pencatatan bersama</li>
                 </ul>
               </div>
 
