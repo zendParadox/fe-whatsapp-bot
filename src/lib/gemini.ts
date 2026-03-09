@@ -17,6 +17,7 @@ export interface ParsedTransaction {
   category: string;
   description: string;
   confidence: number;
+  wallet?: string; // Nama kantong/dompet, misal: "Cash", "Gopay", "BCA"
 }
 
 /**
@@ -82,7 +83,8 @@ export async function parseTransactionFromText(
         "type": "INCOME" | "EXPENSE",
         "category": string,
         "description": string,
-        "confidence": number
+        "confidence": number,
+        "wallet": string | null
       }
     ]
 
@@ -91,8 +93,9 @@ export async function parseTransactionFromText(
     2. Jika tentang menerima uang (gaji, dapat arisan, dikasih, menang), maka "INCOME".
     3. Hapus "Rp", ".", dan "," dari nominal. Jadikan integer.
     4. "category" harus dalam Bahasa Indonesia singkat dan relevan (contoh: "Makanan & Minuman", "Transportasi", "Gaji", "Belanja", "Tagihan").
-    5. "description" harus dirapikan, sopan, dengan huruf kapital di awal kata (Title Case). Jangan gunakan singkatan alay.
+    5. "description" harus dirapikan, sopan, dengan huruf kapital di awal kata (Title Case). Jangan gunakan singkatan alay. Jangan masukkan nama kantong/dompet ke description.
     6. Jika ada banyak transaksi sekaligus ("beli A 50k lalu bensin 20k"), pecah jadi array beberapa objek!
+    7. "wallet" adalah nama kantong/dompet/metode pembayaran yang disebutkan user untuk MASING-MASING transaksi. Contoh: "Cash", "Gopay", "BCA", "Dana", "OVO", "ShopeePay". Jika user menulis "kantong cash" atau "dari gopay" atau "via bca" untuk suatu transaksi, masukkan nama kantongnya. Jika tidak disebutkan, isi null.
   `;
 
   // Try with key rotation on 429 errors

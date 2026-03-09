@@ -57,39 +57,45 @@ export async function handleAITransaction(ctx: CommandContext): Promise<NextResp
 
       const typeEnum = tx.type === "INCOME" ? TransactionType.INCOME : TransactionType.EXPENSE;
 
-      // Two-pass wallet detection
+      // Multi-pass wallet detection
       let walletId: string | null = null;
       let walletLabel = "";
 
       const txDescLower = (tx.description || "").toLowerCase();
       const txCategoryLower = (tx.category || "").toLowerCase();
 
-      // Pass 1: Check AI description and category
-      for (const w of userWallets) {
-        const wName = w.name.toLowerCase();
-        if (txDescLower.includes(wName) || txCategoryLower.includes(wName)) {
-          walletId = w.id;
-          walletLabel = w.name;
-          break;
+      // Pass 0: Use AI-extracted wallet name (highest priority, per-transaction)
+      if (tx.wallet) {
+        const aiWalletName = tx.wallet.toLowerCase();
+        for (const w of userWallets) {
+          if (w.name.toLowerCase() === aiWalletName) {
+            walletId = w.id;
+            walletLabel = w.name;
+            break;
+          }
         }
       }
 
-      // Pass 2: Check raw message (fallback)
+      // Pass 1: Check AI description and category (fallback)
       if (!walletId) {
         for (const w of userWallets) {
           const wName = w.name.toLowerCase();
+          if (txDescLower.includes(wName) || txCategoryLower.includes(wName)) {
+            walletId = w.id;
+            walletLabel = w.name;
+            break;
+          }
+        }
+      }
+
+      // Pass 2: Check raw message (last resort — only if single transaction)
+      if (!walletId && aiTransactions.length === 1) {
+        for (const w of userWallets) {
+          const wName = w.name.toLowerCase();
           if (ctx.lower.includes(wName)) {
-            const claimedByOtherTx = aiTransactions.some(otherTx => {
-              if (otherTx === tx) return false;
-              const otherDesc = (otherTx.description || "").toLowerCase();
-              const otherCat = (otherTx.category || "").toLowerCase();
-              return otherDesc.includes(wName) || otherCat.includes(wName);
-            });
-            if (!claimedByOtherTx) {
-              walletId = w.id;
-              walletLabel = w.name;
-              break;
-            }
+            walletId = w.id;
+            walletLabel = w.name;
+            break;
           }
         }
       }

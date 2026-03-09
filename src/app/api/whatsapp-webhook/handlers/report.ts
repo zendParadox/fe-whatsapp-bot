@@ -30,12 +30,17 @@ export async function handleReport(ctx: CommandContext): Promise<NextResponse | 
 }
 
 async function handleDailyReport(ctx: CommandContext): Promise<NextResponse> {
-  const nowWIB = toZonedTime(new Date(), TIMEZONE);
+  const now = new Date();
+  const nowWIB = toZonedTime(now, TIMEZONE);
   const startDayWIB = startOfDay(nowWIB);
   const endDayWIB = endOfDay(nowWIB);
 
+  // Convert WIB boundaries back to UTC for DB query
+  const startUTC = new Date(startDayWIB.getTime() - 7 * 60 * 60 * 1000);
+  const endUTC = new Date(endDayWIB.getTime() - 7 * 60 * 60 * 1000);
+
   const transactions = await prisma.transaction.findMany({
-    where: { user_id: ctx.user.id, created_at: { gte: startDayWIB, lte: endDayWIB } },
+    where: { user_id: ctx.user.id, created_at: { gte: startUTC, lte: endUTC } },
     include: { category: true }
   });
 
@@ -44,7 +49,7 @@ async function handleDailyReport(ctx: CommandContext): Promise<NextResponse> {
   const balance = income - expense;
   const balanceEmoji = balance >= 0 ? "💚" : "💔";
   const txCount = transactions.length;
-  const dateStr = formatInTimeZone(nowWIB, TIMEZONE, "eeee, d MMMM yyyy", { locale: id });
+  const dateStr = formatInTimeZone(now, TIMEZONE, "eeee, d MMMM yyyy", { locale: id });
 
   let reply = `📊 *Laporan Hari Ini*\n📅 ${dateStr}\n━━━━━━━━━━━━━━━━━\n`;
   reply += `📈 *Pemasukan:* ${ctx.fmt(income)}\n`;
@@ -66,14 +71,19 @@ async function handleDailyReport(ctx: CommandContext): Promise<NextResponse> {
 }
 
 async function handleMonthlyReport(ctx: CommandContext): Promise<NextResponse> {
-  const nowWIB = toZonedTime(new Date(), TIMEZONE);
+  const now = new Date();
+  const nowWIB = toZonedTime(now, TIMEZONE);
   const startMonthWIB = startOfMonth(nowWIB);
   const endMonthWIB = endOfMonth(nowWIB);
   const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
   const monthName = monthNames[nowWIB.getMonth()];
 
+  // Convert WIB boundaries back to UTC for DB query
+  const startUTC = new Date(startMonthWIB.getTime() - 7 * 60 * 60 * 1000);
+  const endUTC = new Date(endMonthWIB.getTime() - 7 * 60 * 60 * 1000);
+
   const transactions = await prisma.transaction.findMany({
-    where: { user_id: ctx.user.id, created_at: { gte: startMonthWIB, lte: endMonthWIB } },
+    where: { user_id: ctx.user.id, created_at: { gte: startUTC, lte: endUTC } },
     include: { category: true }
   });
 
@@ -94,15 +104,21 @@ async function handleMonthlyReport(ctx: CommandContext): Promise<NextResponse> {
 }
 
 async function handleWeeklyReport(ctx: CommandContext): Promise<NextResponse> {
-  const nowWIB = toZonedTime(new Date(), TIMEZONE);
+  const now = new Date();
+  const nowWIB = toZonedTime(now, TIMEZONE);
   const startWeekWIB = startOfWeek(nowWIB, { weekStartsOn: 1 });
   const endWeekWIB = endOfWeek(nowWIB, { weekStartsOn: 1 });
 
   const fmtDate = (d: Date) => formatInTimeZone(d, TIMEZONE, "d MMM", { locale: id });
-  const periodStr = `${fmtDate(startWeekWIB)} - ${fmtDate(endWeekWIB)}`;
+
+  // Convert WIB boundaries back to UTC for DB query
+  const startUTC = new Date(startWeekWIB.getTime() - 7 * 60 * 60 * 1000);
+  const endUTC = new Date(endWeekWIB.getTime() - 7 * 60 * 60 * 1000);
+
+  const periodStr = `${fmtDate(startUTC)} - ${fmtDate(endUTC)}`;
 
   const transactions = await prisma.transaction.findMany({
-    where: { user_id: ctx.user.id, created_at: { gte: startWeekWIB, lte: endWeekWIB } },
+    where: { user_id: ctx.user.id, created_at: { gte: startUTC, lte: endUTC } },
     include: { category: true }
   });
 
