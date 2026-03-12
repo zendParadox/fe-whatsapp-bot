@@ -29,9 +29,10 @@ import {
   Check,
   Landmark,
   FileSpreadsheet,
-  Lock,
   ShieldCheck,
   Star,
+  Users,
+  Lock
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -383,8 +384,8 @@ export default function HomePage() {
             </h1>
             
             <p className="max-w-2xl mx-auto text-base sm:text-lg md:text-xl text-muted-foreground mb-8 sm:mb-10 leading-relaxed px-2">
-              Kelola pemasukan, pengeluaran, dan budget bulanan Anda langsung
-              dari WhatsApp. Cepat, praktis, dan futuristik.
+              Kelola pemasukan, pengeluaran, kantong grup, dan patungan 
+              bulanan Anda langsung dari WhatsApp. Cepat, praktis, dan futuristik tanpa perlu unduh aplikasi.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
@@ -555,16 +556,16 @@ export default function HomePage() {
                 </div>
                 <CardHeader>
                   <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4 group-hover:bg-green-500/20 transition-colors">
-                    <Landmark className="h-6 w-6 text-green-500" />
+                    <Users className="h-6 w-6 text-green-500" />
                   </div>
-                  <CardTitle className="text-lg">Kantong Keuangan</CardTitle>
+                  <CardTitle className="text-lg">Kantong Grup &amp; Patungan</CardTitle>
                   <CardDescription className="text-muted-foreground text-xs">
-                    Lacak saldo bank &amp; e-wallet. BCA, Gopay, ShopeePay — semua dalam satu tempat.
+                    Undang bot ke grup WA. Catat pengeluaran bersama (patungan) tanpa bikin grup berisik. Bot hanya nyahut jika di-tag @gotek.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="p-2.5 bg-muted rounded-lg text-xs font-mono border border-border text-foreground">
-                    &quot;20k dari gopay&quot; → <span className="text-green-500">💚 -Rp 20k</span>
+                    &quot;patungan 200k @Andi @Budi @gotek&quot; → <span className="text-green-500">✅ Tercatat</span>
                   </div>
                 </CardContent>
               </Card>
@@ -632,7 +633,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-xl font-bold mb-2">Mulai Mencatat</h3>
                 <p className="text-muted-foreground text-sm px-4">
-                  Kirim transaksi Anda dan bot akan mencatatnya secara otomatis.
+                  Kirim transaksi Anda di DM, atau undang bot ke Grup WhatsApp lalu tag @gotek.
                 </p>
               </div>
             </div>

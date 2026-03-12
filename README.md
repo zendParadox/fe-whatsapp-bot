@@ -42,6 +42,12 @@ laporan bulan
 - Tandai lunas dengan mudah
 - Summary net balance
 
+### 👥 Kantong Grup & Patungan (Split Bill)
+
+- Undang bot ke grup WA komunitas, keluarga, atau teman kos
+- Catat pengeluaran bersama dengan mudah (contoh: `patungan 200k @Andi @Budi @gotek`)
+- **Anti-Spam (Silent Mode)**: Bot 100% diam dan hanya merespons jika di-tag secara eksplisit (`@gotek`, `@bot`, atau `@asisten`)
+
 ### 🤖 AI Parser (Gemini)
 
 Bot memahami pesan natural language:
@@ -151,18 +157,19 @@ src/
 
 ## 📱 WhatsApp Bot Commands
 
-| Command          | Description     | Example                    |
-| ---------------- | --------------- | -------------------------- |
-| `masuk/keluar`   | Catat transaksi | `keluar 50k kopi @minuman` |
-| `hutang/piutang` | Catat hutang    | `hutang 100k @Budi modal`  |
-| `cek hutang`     | Lihat daftar    | `cek hutang`               |
-| `lunas`          | Tandai lunas    | `lunas @Budi`              |
-| `budget`         | Set budget      | `budget 1jt @makan`        |
-| `cek budget`     | Lihat status    | `cek budget`               |
-| `laporan hari`   | Laporan harian  | `laporan hari`             |
-| `laporan bulan`  | Laporan bulanan | `laporan bulan`            |
-| `undo`           | Hapus terakhir  | `undo`                     |
-| `help`           | Panduan         | `help`                     |
+| Command          | Description     | Example                            |
+| ---------------- | --------------- | ---------------------------------- |
+| `masuk/keluar`   | Catat transaksi | `keluar 50k kopi @minuman`         |
+| `hutang/piutang` | Catat hutang    | `hutang 100k @Budi modal`          |
+| `cek hutang`     | Lihat daftar    | `cek hutang`                       |
+| `lunas`          | Tandai lunas    | `lunas @Budi`                      |
+| `budget`         | Set budget      | `budget 1jt @makan`                |
+| `cek budget`     | Lihat status    | `cek budget`                       |
+| `patungan`       | Split bill grup | `patungan 200k @Andi @Budi @gotek` |
+| `laporan hari`   | Laporan harian  | `laporan hari`                     |
+| `laporan bulan`  | Laporan bulanan | `laporan bulan`                    |
+| `undo`           | Hapus terakhir  | `undo`                             |
+| `help`           | Panduan         | `help`                             |
 
 ## 🌐 Deployment
 

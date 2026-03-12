@@ -8,11 +8,18 @@ export async function resolveContactName(lidOrName: string): Promise<string> {
   if (!lidOrName) return "Tanpa Nama";
   
   try {
+    // Strip out @lid or @s.whatsapp.net from the input before querying
+    // This handles both "1109" and "1109@lid" correctly
+    const cleanId = lidOrName.split('@')[0];
+
+    // If there's no number left, fallback
+    if (!cleanId) return lidOrName;
+
     const userMatch = await prisma.user.findFirst({
       where: {
         OR: [
-          { whatsapp_jid: { contains: lidOrName } },
-          { lidMappings: { some: { lid: lidOrName } } }
+          { whatsapp_jid: { contains: cleanId } },
+          { lidMappings: { some: { lid: { contains: cleanId } } } }
         ]
       },
       select: { name: true }

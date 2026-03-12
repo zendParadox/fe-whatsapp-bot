@@ -96,6 +96,7 @@ const tocItems = [
   { id: "kantong", icon: "💳", label: "Kantong Keuangan" },
   { id: "shared", icon: "👥", label: "Shared Wallet" },
   { id: "jumlah", icon: "#️⃣", label: "Format Jumlah" },
+  { id: "grup-whatsapp", icon: "💬", label: "GoTEK di Grup WhatsApp" },
 ];
 
 /* ─── Page ─── */
@@ -1066,6 +1067,62 @@ keluar 15k parkir @transportasi`}</ExampleBubble>
                 Semua format di atas bisa digunakan di <strong>semua command</strong>:
                 transaksi, budget, hutang, dan piutang. Pilih cara penulisan yang paling nyaman untuk Anda!
               </Tip>
+            </CardContent>
+          </Card>
+
+          {/* 12 — GoTEK di Grup WhatsApp */}
+          <SectionAnchor id="grup-whatsapp" />
+          <Card className="glass-card overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-neon-purple/5 to-transparent border-b border-border">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <div className="h-10 w-10 rounded-xl bg-neon-purple/10 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-neon-purple" />
+                  </div>
+                  12. GoTEK di Grup WhatsApp
+                </CardTitle>
+                <Badge variant="secondary" className="bg-neon-purple/10 text-neon-purple hover:bg-neon-purple/20">NEW</Badge>
+              </div>
+              <CardDescription>
+                Bawa GoTEK ke tongkrongan. Catat patungan atau saldo kas uang kas grup tanpa ribet
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              <div className="space-y-4">
+                <h3 className="font-bold text-base flex items-center gap-2">
+                  1. Cara Mengundang Bot
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Cukup masukkan nomor WhatsApp GoTEK ke dalam grup obrolan Anda seperti menambahkan teman biasa.
+                </p>
+                <Tip>
+                  Setiap anggota grup yang menggunakan bot akan <strong>terhubung ke akun GoTEK pribadinya masing-masing</strong>. Jika teman Anda belum menghubungkan nomornya, bot akan memintanya mendaftar terlebih dahulu saat ia mencoba mencatat patungan.
+                </Tip>
+              </div>
+
+              <div className="space-y-4 mt-6">
+                <h3 className="font-bold text-base flex items-center gap-2">
+                  2. Aturan Anti-Spam (Silent Mode)
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  GoTEK dirancang <strong>100% diam</strong> di dalam grup. Bot tidak akan membaca apalagi membalas obrolan sehari-hari Anda untuk mencegah spam. Bot hanya akan aktif jika <strong>MENDAPATKAN TAG (@)</strong> secara eksplisit dari anggota grup.
+                </p>
+                
+                <h4 className="font-semibold text-sm mt-3">✅ Cara Benar Mencatat di Grup:</h4>
+                <p className="text-sm text-muted-foreground">
+                  Wajib tambahkan kata <code className="text-neon-cyan">@gotek</code>, <code className="text-neon-cyan">@bot</code>, atau <code className="text-neon-cyan">@asisten</code> di manapun di dalam kalimat Anda.
+                </p>
+                <div className="space-y-2 mt-2">
+                  <ExampleBubble user>patungan 200k @Andi @Budi @gotek</ExampleBubble>
+                  <ExampleBubble user>@gotek keluar 50k beli galon buat kosan</ExampleBubble>
+                </div>
+                
+                <h4 className="font-semibold text-sm mt-4">❌ Cara Salah (Bot Akan Diam):</h4>
+                <div className="space-y-2 mt-2 opacity-70">
+                  <ExampleBubble user>patungan 200k beli makan @Andi</ExampleBubble>
+                  <p className="text-xs text-muted-foreground italic ml-2">^ Bot tidak membalas karena tidak ada tulisan @gotek</p>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
