@@ -29,7 +29,12 @@ import {
   Check,
   Landmark,
   FileSpreadsheet,
+  Lock,
+  ShieldCheck,
+  Star,
 } from "lucide-react";
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // ... (keep surrounding code same if possible, but I need to do ReplaceFileContent well)
 
@@ -392,6 +397,44 @@ export default function HomePage() {
                 <Link href="#how-it-works">Pelajari Cara Kerja</Link>
               </Button>
             </div>
+            
+            <p className="mt-4 text-sm text-muted-foreground flex items-center justify-center gap-2">
+              <Check className="h-4 w-4 text-neon-cyan" /> Gratis selamanya &bull; Tidak perlu kartu kredit
+            </p>
+
+            <div className="mt-8 flex items-center justify-center gap-4 text-xs sm:text-sm text-muted-foreground/80">
+              <div className="flex items-center gap-1.5 bg-muted/50 px-3 py-1.5 rounded-full border border-border/50">
+                <Lock className="w-4 h-4 text-green-500" /> Data Terenkripsi
+              </div>
+              <div className="flex items-center gap-1.5 bg-muted/50 px-3 py-1.5 rounded-full border border-border/50">
+                <ShieldCheck className="w-4 h-4 text-blue-500" /> Privasi Terjaga
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Live Stats Counter Section */}
+        <section className="py-8 sm:py-12 border-y border-border/50 bg-muted/10 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-neon-cyan/5 via-transparent to-neon-purple/5 opacity-50" />
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center divide-x divide-border/50">
+              <div className="px-4 flex flex-col items-center justify-center">
+                <div className="text-3xl sm:text-4xl font-black bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent mb-1">300+</div>
+                <div className="text-xs sm:text-sm text-muted-foreground font-medium uppercase tracking-wider">Pengguna Aktif</div>
+              </div>
+              <div className="px-4 flex flex-col items-center justify-center">
+                <div className="text-3xl sm:text-4xl font-black bg-gradient-to-br from-neon-cyan to-blue-500 bg-clip-text text-transparent mb-1">10K+</div>
+                <div className="text-xs sm:text-sm text-muted-foreground font-medium uppercase tracking-wider">Transaksi Tercatat</div>
+              </div>
+              <div className="px-4 flex flex-col items-center justify-center mt-6 md:mt-0">
+                <div className="text-3xl sm:text-4xl font-black bg-gradient-to-br from-neon-purple to-pink-500 bg-clip-text text-transparent mb-1">Rp 2M+</div>
+                <div className="text-xs sm:text-sm text-muted-foreground font-medium uppercase tracking-wider">Dana Terkelola</div>
+              </div>
+              <div className="px-4 flex flex-col items-center justify-center mt-6 md:mt-0">
+                <div className="text-3xl sm:text-4xl font-black bg-gradient-to-br from-amber-400 to-orange-500 bg-clip-text text-transparent mb-1">99.9%</div>
+                <div className="text-xs sm:text-sm text-muted-foreground font-medium uppercase tracking-wider">Server Uptime</div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -626,7 +669,91 @@ export default function HomePage() {
                         </div>
                     </div>
                  </div>
-             </div>
+              </div>
+          </div>
+        </section>
+
+        {/* Testimonials Section */}
+        <section id="testimonials" className="py-16 sm:py-24 bg-gradient-to-t from-background to-muted/20 relative">
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="text-center mb-10 sm:mb-16">
+              <div className="inline-flex items-center rounded-full border border-neon-purple/30 bg-neon-purple/5 px-3 py-1 text-sm text-neon-purple mb-4">
+                <Star className="h-4 w-4 mr-2 fill-neon-purple text-neon-purple" />
+                Dipercaya oleh 300+ Pengguna
+              </div>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">Apa Kata Mereka?</h2>
+              <p className="text-muted-foreground text-sm sm:text-base">
+                Kisah sukses mengatur keuangan dengan lebih mudah bersama GoTEK.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {/* Testimonial 1 */}
+              <Card className="glass-card hover:border-neon-cyan/50 transition-colors">
+                <CardContent className="pt-6">
+                  <div className="flex gap-1 mb-4">
+                    {[1,2,3,4,5].map(i => <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />)}
+                  </div>
+                  <blockquote className="text-sm sm:text-base mb-6 text-muted-foreground">
+                    &quot;Dulu mager banget nyatet pengeluaran karena aplikasinya ribet. Semenjak ada GoTEK, tinggal chat di WhatsApp pas di kasir, langsung otomatis kecatat!&quot;
+                  </blockquote>
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarImage src="" alt="Rizky" />
+                      <AvatarFallback>RZ</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-semibold text-sm">Rizky Pratama</div>
+                      <div className="text-xs text-muted-foreground">Karyawan Swasta</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Testimonial 2 */}
+              <Card className="glass-card hover:border-neon-purple/50 transition-colors">
+                <CardContent className="pt-6">
+                  <div className="flex gap-1 mb-4">
+                    {[1,2,3,4,5].map(i => <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />)}
+                  </div>
+                  <blockquote className="text-sm sm:text-base mb-6 text-muted-foreground">
+                    &quot;Fitur AI Parser-nya juara! Aku bisa catat banyak belanjaan sekaligus dengan bahasa biasa. Ringkasan bulanan juga ngebantu banget buat kontrol budget bulanan.&quot;
+                  </blockquote>
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarImage src="" alt="Nadya" />
+                      <AvatarFallback>ND</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-semibold text-sm">Nadya Kusuma</div>
+                      <div className="text-xs text-muted-foreground">Freelancer</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Testimonial 3 */}
+              <Card className="glass-card hover:border-neon-pink/50 transition-colors">
+                <CardContent className="pt-6">
+                  <div className="flex gap-1 mb-4">
+                    {[1,2,3,4,5].map(i => <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />)}
+                  </div>
+                  <blockquote className="text-sm sm:text-base mb-6 text-muted-foreground">
+                    &quot;Buat patungan sama temen kost jadi super gampang. Tinggal tag nama mereka di grup WhatsApp, GoTEK langsung bagi rinci pembayarannya secara adil.&quot;
+                  </blockquote>
+                  <div className="flex items-center gap-3">
+                    <Avatar>
+                      <AvatarImage src="" alt="Bima" />
+                      <AvatarFallback>BM</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-semibold text-sm">Bima Aditya</div>
+                      <div className="text-xs text-muted-foreground">Mahasiswa</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </section>
 

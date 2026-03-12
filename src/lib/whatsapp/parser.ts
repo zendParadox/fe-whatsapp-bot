@@ -4,11 +4,14 @@ import { TransactionType, DebtType } from "@prisma/client";
  * Parses a string amount compatible with suffixes.
  * @example "50k" -> 50000
  * @example "1.5jt" -> 1500000
+ * @example "1.184.000" -> 1184000
+ * @example "1.184k" -> 1184000
  * @example "50000" -> 50000
+ * @example "13,5k" -> 13500
  */
 export function parseSmartAmount(amountStr: string): number | null {
   if (!amountStr) return null;
-  const lower = amountStr.toLowerCase();
+  const lower = amountStr.toLowerCase().trim();
   let multiplier = 1;
 
   if (lower.endsWith("k") || lower.endsWith("rb")) {
@@ -17,7 +20,36 @@ export function parseSmartAmount(amountStr: string): number | null {
     multiplier = 1000000;
   }
 
-  const cleanNum = parseFloat(lower.replace(/[^\d.,]/g, "").replace(",", "."));
+  // Extract only digits, dots, and commas
+  let numStr = lower.replace(/[^\d.,]/g, "");
+  
+  // Replace comma with dot (Indonesian decimal: 13,5 -> 13.5)
+  numStr = numStr.replace(",", ".");
+  
+  // Handle Indonesian thousands separator (dots):
+  // "1.184.000" -> "1184000", "1.184" with k suffix -> "1184"
+  // But keep "1.5" as decimal when used with jt/m suffix
+  const dotCount = (numStr.match(/\./g) || []).length;
+  
+  if (dotCount >= 2) {
+    // Multiple dots = all are thousands separators: 1.184.000 -> 1184000
+    numStr = numStr.replace(/\./g, "");
+  } else if (dotCount === 1) {
+    // Single dot: check if it's thousands separator or decimal
+    const parts = numStr.split(".");
+    if (parts[1] && parts[1].length === 3 && multiplier === 1) {
+      // 3 digits after dot without suffix = thousands separator: 1.184 with no suffix is ambiguous
+      // but 1.184.000 is already handled above, and "1.184" alone is likely 1184
+      // However with a suffix like "k", 1.184k should be 1184k = 1,184,000
+      numStr = numStr.replace(".", "");
+    } else if (parts[1] && parts[1].length === 3 && multiplier > 1) {
+      // "1.184k" = 1184 * 1000 = 1,184,000 (dot is thousands separator)
+      numStr = numStr.replace(".", "");
+    }
+    // else: "1.5jt" -> keep as 1.5 (decimal), "13.5k" -> keep as 13.5
+  }
+
+  const cleanNum = parseFloat(numStr);
   if (isNaN(cleanNum)) return null;
 
   return cleanNum * multiplier;
@@ -36,7 +68,21 @@ export function parseTransactionMessage(message: string) {
   if (parts.length < 2) return null;
 
   const command = parts[0].toLowerCase();
-  const amount = parseSmartAmount(parts[1]);
+  
+  // Find amount: it could be the 2nd word, 3rd word, etc. but before @ or #
+  let amountStr = "";
+  let amount = null;
+
+  for (let i = 1; i < parts.length; i++) {
+    if (parts[i].startsWith("@") || parts[i].startsWith("#")) break;
+    const parsed = parseSmartAmount(parts[i]);
+    if (parsed !== null && parsed > 0) {
+      if (amount === null || parsed > amount) {
+        amount = parsed;
+        amountStr = parts[i];
+      }
+    }
+  }
 
   if (amount === null || amount <= 0) return null;
 
@@ -71,12 +117,30 @@ export function parseTransactionMessage(message: string) {
   
   const category = categoryStr.toLowerCase();
 
-  // Extract description: remove command and amount from the beginning
-  const descriptionRegex = new RegExp(`^${command}\\s+${parts[1]}\\s*`, "i");
-  const description = descriptionParts.replace(descriptionRegex, "").trim() || "Transaksi WhatsApp";
+  // Extract description: everything before @/# except command and amount
+  const descriptionPartsArr = descriptionParts.split(" ");
+  // Remove the command (first word)
+  if (descriptionPartsArr[0].toLowerCase() === command) {
+    descriptionPartsArr.shift();
+  }
+  
+  // Find where the amount string is and remove it
+  const amountIndexInDesc = descriptionPartsArr.findIndex(
+    w => w.toLowerCase() === amountStr.toLowerCase()
+  );
+  if (amountIndexInDesc !== -1) {
+    descriptionPartsArr.splice(amountIndexInDesc, 1);
+  }
+
+  let description = descriptionPartsArr.join(" ").trim();
+  
+  // If description is empty after stripping command and amount
+  if (!description) description = "Transaksi WhatsApp";
 
   return { type, amount, description, category, paymentMethod };
 }
+
+
 
 
 /**
@@ -88,7 +152,20 @@ export function parseDebtMessage(message: string) {
   if (parts.length < 3) return null; 
 
   const command = parts[0].toLowerCase();
-  const amount = parseSmartAmount(parts[1]);
+  
+  let amountStr = "";
+  let amount = null;
+
+  for (let i = 1; i < parts.length; i++) {
+    if (parts[i].startsWith("@") || parts[i].startsWith("#")) break;
+    const parsed = parseSmartAmount(parts[i]);
+    if (parsed !== null && parsed > 0) {
+      if (amount === null || parsed > amount) {
+        amount = parsed;
+        amountStr = parts[i];
+      }
+    }
+  }
   
   if (amount === null || amount <= 0) return null;
 
@@ -125,8 +202,24 @@ export function parseDebtMessage(message: string) {
 
   if (!personName) return null;
 
-  const descriptionRegex = new RegExp(`^${command}\\s+${parts[1]}\\s*`, "i");
-  const description = descriptionParts.replace(descriptionRegex, "").trim() || "Catatan Hutang";
+  // Extract description: everything before @/# except command and amount
+  const descriptionPartsArr = descriptionParts.split(" ");
+  // Remove the command (first word)
+  if (descriptionPartsArr[0].toLowerCase() === command) {
+    descriptionPartsArr.shift();
+  }
+  
+  // Find where the amount string is and remove it
+  const amountIndexInDesc = descriptionPartsArr.findIndex(
+    w => w.toLowerCase() === amountStr.toLowerCase()
+  );
+  if (amountIndexInDesc !== -1) {
+    descriptionPartsArr.splice(amountIndexInDesc, 1);
+  }
+
+  let description = descriptionPartsArr.join(" ").trim();
+  
+  if (!description) description = "Catatan Hutang";
 
   return { type, amount, personName, description, paymentMethod };
 }
@@ -165,17 +258,31 @@ export function parseSplitBillMessage(message: string) {
   // 3. Remove the keyword from the beginning
   const afterKeyword = body.replace(new RegExp(`^${firstWord}\\s*`, "i"), "").trim();
 
-  // 4. Try to parse a global total amount right after the keyword
+  // 4. Try to parse a global total amount anywhere before the first @
   const words = afterKeyword.split(/\s+/);
   let globalTotal: number | null = null;
-  let descriptionStart = afterKeyword;
+  let globalTotalStr = "";
 
-  if (words.length > 0) {
-    const possibleAmount = parseSmartAmount(words[0]);
+  for (let i = 0; i < words.length; i++) {
+    if (words[i].startsWith("@") || words[i].startsWith("#")) break;
+    const possibleAmount = parseSmartAmount(words[i]);
     if (possibleAmount !== null && possibleAmount > 0) {
-      globalTotal = possibleAmount;
-      descriptionStart = words.slice(1).join(" ");
+      if (globalTotal === null || possibleAmount > globalTotal) {
+        globalTotal = possibleAmount;
+        globalTotalStr = words[i];
+      }
     }
+  }
+
+  let descriptionStart = afterKeyword;
+  if (globalTotalStr) {
+    // Remove the global amount from the string
+    const descWords = descriptionStart.split(" ");
+    const amountIdx = descWords.findIndex(w => w.toLowerCase() === globalTotalStr.toLowerCase());
+    if (amountIdx !== -1) {
+      descWords.splice(amountIdx, 1);
+    }
+    descriptionStart = descWords.join(" ").trim();
   }
 
   // 5. Extract @mentions with optional amounts

@@ -8,4 +8,5 @@ export type CommandContext = {
   command: string;
   args: string[];
   fmt: (amount: number) => string;
+  isGroup: boolean;
 };

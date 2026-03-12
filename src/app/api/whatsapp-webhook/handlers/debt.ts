@@ -4,6 +4,7 @@ import { DebtType, DebtStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { parseDebtMessage } from "@/lib/whatsapp/parser";
 import { formatInTimeZone } from "date-fns-tz";
+import { resolveContactName } from "@/lib/whatsapp/resolve-name";
 import type { CommandContext } from "../lib/context";
 import { findAccessibleWalletByName } from "../lib/wallet-utils";
 
@@ -58,12 +59,14 @@ async function handleCreateDebt(ctx: CommandContext): Promise<NextResponse> {
      }
   }
 
+  const resolvedName = await resolveContactName(parsedData.personName);
+
   await prisma.debt.create({
     data: {
       user_id: ctx.user.id,
       type: parsedData.type,
       amount: new Decimal(parsedData.amount),
-      person_name: parsedData.personName,
+      person_name: resolvedName,
       description: parsedData.description,
       wallet_id: finalWalletId,
       status: DebtStatus.UNPAID
@@ -77,7 +80,7 @@ async function handleCreateDebt(ctx: CommandContext): Promise<NextResponse> {
   const relation = isHutang ? "Anda meminjam dari" : "Anda meminjamkan ke";
 
   return NextResponse.json({
-    message: `${emoji} *${typeLabel} Tercatat!*\n━━━━━━━━━━━━━━━━━\n👤 *${relation}:* ${parsedData.personName}\n💰 *Jumlah:* Rp ${parsedData.amount.toLocaleString("id-ID")}\n📝 *Keterangan:* ${parsedData.description}${walletNameDisplay}\n📅 *Tanggal:* ${formatInTimeZone(new Date(), TIMEZONE, "dd/MM/yyyy")}\n━━━━━━━━━━━━━━━━━\n\n💡 _Ketik \"cek hutang\" untuk lihat daftar_\n💡 _Ketik \"lunas @${parsedData.personName}\" jika sudah dibayar_`
+    message: `${emoji} *${typeLabel} Tercatat!*\n━━━━━━━━━━━━━━━━━\n👤 *${relation}:* ${resolvedName}\n💰 *Jumlah:* Rp ${parsedData.amount.toLocaleString("id-ID")}\n📝 *Keterangan:* ${parsedData.description}${walletNameDisplay}\n📅 *Tanggal:* ${formatInTimeZone(new Date(), TIMEZONE, "dd/MM/yyyy")}\n━━━━━━━━━━━━━━━━━\n\n💡 _Ketik \"cek hutang\" untuk lihat daftar_\n💡 _Ketik \"lunas @${resolvedName}\" jika sudah dibayar_`
   });
 }
 
@@ -136,7 +139,12 @@ async function handleCheckDebt(ctx: CommandContext): Promise<NextResponse> {
 
 async function handlePayDebt(ctx: CommandContext): Promise<NextResponse> {
   const personMatch = ctx.message.match(/@(\w+)/);
-  const personName = personMatch && personMatch[1] ? personMatch[1] : null;
+  let personName = personMatch && personMatch[1] ? personMatch[1] : null;
+
+  if (personName) {
+    // If they provided a raw LID, resolve it to the human name stored in the DB
+    personName = await resolveContactName(personName);
+  }
 
   if (!personName) {
     return NextResponse.json({

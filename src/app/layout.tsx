@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
-import TopProgress from "@/components/ui/TopProgress";
+import NextTopLoader from "nextjs-toploader";
 import { ThemeProvider } from "@/components/theme-provider";
 import Script from "next/script";
 
@@ -119,7 +119,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <TopProgress colorClass="bg-primary" height="h-1" />
+          <NextTopLoader
+            color="#22d3ee"
+            height={3}
+            showSpinner={false}
+            shadow="0 0 10px #22d3ee, 0 0 5px #22d3ee"
+          />
           {children}
           <Toaster richColors />
         </ThemeProvider>

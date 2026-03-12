@@ -4,6 +4,7 @@ import { DebtType, DebtStatus, TransactionType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { parseSplitBillMessage } from "@/lib/whatsapp/parser";
 import { formatInTimeZone } from "date-fns-tz";
+import { resolveContactName } from "@/lib/whatsapp/resolve-name";
 import type { CommandContext } from "../lib/context";
 import { findAccessibleWalletByName } from "../lib/wallet-utils";
 
@@ -48,13 +49,18 @@ export async function handleSplitBill(ctx: CommandContext): Promise<NextResponse
   }
 
   // ── Create piutang for each person ──
+  const resolvedNames: Record<string, string> = {};
+
   for (const split of parsed.splits) {
+    const resolved = await resolveContactName(split.name);
+    resolvedNames[split.name] = resolved;
+
     await prisma.debt.create({
       data: {
         user_id: ctx.user.id,
         type: DebtType.PIUTANG,
         amount: new Decimal(split.amount),
-        person_name: split.name,
+        person_name: resolved,
         description: `[Patungan] ${parsed.description}`,
         status: DebtStatus.UNPAID,
         ...(walletId ? { wallet_id: walletId } : {}),
@@ -74,7 +80,7 @@ export async function handleSplitBill(ctx: CommandContext): Promise<NextResponse
   }
 
   // ── Build response ──
-  const names = parsed.splits.map(s => s.name);
+  const names = parsed.splits.map(s => resolvedNames[s.name]);
 
   let details = "";
   if (parsed.mode === "EQUAL") {
@@ -84,13 +90,13 @@ export async function handleSplitBill(ctx: CommandContext): Promise<NextResponse
   } else {
     details += `✅ Pengeluaran Anda: Rp ${parsed.userPortion.toLocaleString("id-ID")}\n`;
     for (const s of parsed.splits) {
-      details += `✅ Piutang ${s.name}: Rp ${s.amount.toLocaleString("id-ID")}\n`;
+      details += `✅ Piutang ${resolvedNames[s.name]}: Rp ${s.amount.toLocaleString("id-ID")}\n`;
     }
   }
 
   const walletInfo = walletName ? `\n🏦 *Kantong:* ${walletName} (-Rp ${parsed.totalAmount.toLocaleString("id-ID")})` : "";
 
   return NextResponse.json({
-    message: `🍕 *Split Bill Tercatat!*\n━━━━━━━━━━━━━━━━━\n💰 *Total:* Rp ${parsed.totalAmount.toLocaleString("id-ID")} (${parsed.description})\n📅 *Tanggal:* ${formatInTimeZone(new Date(), TIMEZONE, "dd/MM/yyyy")}\n\n${details}${walletInfo}\n━━━━━━━━━━━━━━━━━\n\n💡 _Ketik "cek hutang" untuk lihat semua piutang_\n💡 _Ketik "lunas @${names[0]}" jika sudah dibayar_`
+    message: `🍕 *Split Bill Tercatat!*\n━━━━━━━━━━━━━━━━━\n💰 *Total:* Rp ${parsed.totalAmount.toLocaleString("id-ID")} (${parsed.description})\n📅 *Tanggal:* ${formatInTimeZone(new Date(), TIMEZONE, "dd/MM/yyyy")}\n\n${details}${walletInfo}\n━━━━━━━━━━━━━━━━━\n\n💡 _Ketik "cek hutang" untuk lihat semua piutang_\n💡 _Ketik "lunas @${names[0] || 'nama'}" jika sudah dibayar_`
   });
 }

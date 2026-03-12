@@ -19,6 +19,7 @@ import { handleSplitBill } from "./handlers/splitbill";
 const webhookPayloadSchema = z.object({
   sender: z.string(),
   message: z.string(),
+  chat_id: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { sender, message } = parsed.data;
+    const { sender, message, chat_id } = parsed.data;
 
     if (!message || message.trim().length === 0) {
       return NextResponse.json({ message: "Empty message" });
@@ -121,21 +122,44 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // ── Build Context ──
     const fmt = (amount: number) => formatMoneyBot(amount, user.currency);
-    const trimmedMessage = message.trim().toLowerCase();
-    const args = message.trim().split(" ");
-    const command = args[0].toLowerCase();
-    const lower = message.toLowerCase().trim();
+    const initialLower = message.toLowerCase().trim();
+    
+    // Determine if the message came from a group
+    // The new Go bot payload sends chat_id explicitly. If missing, fallback to checking sender (for backward compatibility)
+    const isGroup = (chat_id && chat_id.includes("@g.us")) || sender.includes("@g.us");
+
+    // ── Group Chat Mention Filter ──
+    if (isGroup) {
+      // Allow if the message explicitly tags the bot with '@' variations, 
+      // or if it's explicitly summoning the bot via prefix.
+      const isBotMentioned = initialLower.includes("@gotek") || 
+                             initialLower.includes("@bot") || 
+                             initialLower.includes("@asisten");
+      
+      if (!isBotMentioned) {
+        console.log(`Msg from group ignored (Bot not explicitly tagged): ${initialLower.substring(0, 20)}...`);
+        return NextResponse.json({ message: "" }, { status: 200 });
+      }
+    }
+
+    // ── Sanitize Bot Mentions ──
+    // Strip out the bot mention so it doesn't accidentally interfere with categories (e.g., @makan) or persons (e.g., @Budi)
+    const sanitizedMessage = message.replace(/@(gotek|bot|asisten)/gi, "").replace(/\s+/g, " ").trim();
+    const args = sanitizedMessage.split(" ");
+    const command = args[0]?.toLowerCase() || "";
+    const lower = sanitizedMessage.toLowerCase();
+    const trimmedMessage = sanitizedMessage.toLowerCase();
 
     const ctx: CommandContext = {
       user,
-      message,
+      message: sanitizedMessage,
       lower,
       trimmedMessage,
       command,
       args,
       fmt,
+      isGroup,
     };
 
     // ── Dispatch to Handlers (in order of priority) ──
@@ -159,7 +183,11 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Fallback: no handler matched ──
-    return await handleFallbackHelp();
+    const fallbackResponse = await handleFallbackHelp(ctx);
+    if (fallbackResponse) return fallbackResponse;
+
+    // Return empty response so the bot stays silent
+    return NextResponse.json({ message: "" }, { status: 200 });
 
   } catch (error) {
     console.error("Webhook Error:", error);

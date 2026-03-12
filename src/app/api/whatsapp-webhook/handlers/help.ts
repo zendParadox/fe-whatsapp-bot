@@ -20,17 +20,24 @@ export async function handleHelp(ctx: CommandContext): Promise<NextResponse | nu
   return null;
 }
 
-// Free user fallback — shown when no other command matches
+// Free user fallback — shown when no other command matches, ONLY if bot is mentioned (if in group)
 export async function handleFreeUserFallback(ctx: CommandContext): Promise<NextResponse | null> {
   if ((ctx.user as Record<string, unknown>).plan_type === "FREE") {
-    return NextResponse.json({ message: getFreeUserHelp() });
+    // In private chats, always show help. In groups, only if explicitly mentioned.
+    if (!ctx.isGroup || ctx.lower.includes("gotek") || ctx.lower.includes("bot") || ctx.lower.match(/^(help|bantuan|panduan|tanya)/)) {
+      return NextResponse.json({ message: getFreeUserHelp() });
+    }
   }
   return null;
 }
 
 // Fallback help for any unrecognized command
-export async function handleFallbackHelp(): Promise<NextResponse> {
-  return NextResponse.json({ message: getShortHelp() });
+export async function handleFallbackHelp(ctx: CommandContext): Promise<NextResponse | null> {
+  // In private chats, always show help. In groups, only if explicitly mentioned.
+  if (!ctx.isGroup || ctx.lower.includes("gotek") || ctx.lower.includes("bot") || ctx.lower.match(/^(help|bantuan|panduan|tanya)/)) {
+    return NextResponse.json({ message: getShortHelp() });
+  }
+  return null;
 }
 
 function handleUpgrade(ctx: CommandContext): NextResponse {
