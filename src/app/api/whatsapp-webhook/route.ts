@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     // ── Sanitize Bot Mentions ──
     // Strip out the bot mention so it doesn't accidentally interfere with categories (e.g., @makan) or persons (e.g., @Budi)
-    const sanitizedMessage = message.replace(/@(gotek|bot|asisten)/gi, "").replace(/[ \t]+/g, " ").trim();
+    const sanitizedMessage = message.replace(/@(gotek|bot|asisten|66190395355362)/gi, "").replace(/[ \t]+/g, " ").trim();
     const args = sanitizedMessage.split(/\s+/);
     const command = args[0]?.toLowerCase() || "";
     const lower = sanitizedMessage.toLowerCase();
