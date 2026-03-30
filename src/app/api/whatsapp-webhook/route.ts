@@ -135,7 +135,8 @@ export async function POST(request: NextRequest) {
       // or if it's explicitly summoning the bot via prefix.
       const isBotMentioned = initialLower.includes("@gotek") || 
                              initialLower.includes("@bot") || 
-                             initialLower.includes("@asisten");
+                             initialLower.includes("@asisten") ||
+                             initialLower.includes("@66190395355362");
       
       if (!isBotMentioned) {
         console.log(`Msg from group ignored (Bot not explicitly tagged): ${initialLower.substring(0, 20)}...`);
@@ -145,8 +146,8 @@ export async function POST(request: NextRequest) {
 
     // ── Sanitize Bot Mentions ──
     // Strip out the bot mention so it doesn't accidentally interfere with categories (e.g., @makan) or persons (e.g., @Budi)
-    const sanitizedMessage = message.replace(/@(gotek|bot|asisten)/gi, "").replace(/\s+/g, " ").trim();
-    const args = sanitizedMessage.split(" ");
+    const sanitizedMessage = message.replace(/@(gotek|bot|asisten)/gi, "").replace(/[ \t]+/g, " ").trim();
+    const args = sanitizedMessage.split(/\s+/);
     const command = args[0]?.toLowerCase() || "";
     const lower = sanitizedMessage.toLowerCase();
     const trimmedMessage = sanitizedMessage.toLowerCase();
