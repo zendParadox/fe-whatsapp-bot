@@ -140,7 +140,14 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     console.error("QRIS Charge Error:", error);
     return NextResponse.json(
-      { error: "Gagal membuat transaksi QRIS. Silakan coba lagi." },
+      { 
+        error: "Gagal membuat transaksi QRIS. Silakan coba lagi.",
+        details: error instanceof Error ? error.message : String(error),
+        // we can also safely log stringified error to give more context 
+        // e.g. Axios error or Midtrans API error response
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        api_response: (error as any)?.ApiResponse
+      },
       { status: 500 }
     );
   }
