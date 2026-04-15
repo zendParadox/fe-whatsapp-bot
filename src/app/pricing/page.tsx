@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,34 +16,19 @@ import {
   ArrowLeft,
   QrCode,
   ShieldCheck,
-  Timer,
   RefreshCw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
-import Image from "next/image";
 
-type PageState = "idle" | "loading" | "qris" | "success";
-
-interface QrisData {
-  qr_url: string;
-  qr_string: string;
-  order_id: string;
-  amount: number;
-  months: number;
-  expiry_time: string;
-}
+type PageState = "idle" | "loading" | "success";
 
 export default function PricingPage() {
   const [pageState, setPageState] = useState<PageState>("idle");
   const [selectedMonths, setSelectedMonths] = useState<number>(1);
-  const [qrisData, setQrisData] = useState<QrisData | null>(null);
-  const [countdown, setCountdown] = useState<number>(0);
   const [backPath, setBackPath] = useState("/");
   const [backLabel, setBackLabel] = useState("Kembali");
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const router = useRouter();
 
   // Dynamic back navigation based on referrer
@@ -69,12 +54,29 @@ export default function PricingPage() {
     }
   }, []);
 
-  // Cleanup intervals on unmount
+  // Load Midtrans Snap Script
   useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-      if (countdownRef.current) clearInterval(countdownRef.current);
-    };
+    const isSandbox =
+      process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY?.includes("sandbox") ||
+      process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY?.includes("SB");
+
+    const snapScriptUrl = isSandbox
+      ? "https://app.sandbox.midtrans.com/snap/snap.js"
+      : "https://app.midtrans.com/snap/snap.js";
+
+    const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "";
+
+    if (!document.querySelector(`script[src="${snapScriptUrl}"]`)) {
+      const script = document.createElement("script");
+      script.src = snapScriptUrl;
+      script.setAttribute("data-client-key", clientKey);
+      script.async = true;
+      document.body.appendChild(script);
+
+      return () => {
+        document.body.removeChild(script);
+      };
+    }
   }, []);
 
   const getDurationPrice = (months: number) => {
@@ -96,67 +98,12 @@ export default function PricingPage() {
     return Math.floor(getDurationPrice(months) / months);
   };
 
-  // Start polling for payment status
-  const startPolling = useCallback((orderId: string) => {
-    if (pollingRef.current) clearInterval(pollingRef.current);
-
-    pollingRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/subscription/verify?order_id=${orderId}`);
-        const data = await res.json();
-
-        if (data.status === "settlement") {
-          // Payment confirmed!
-          if (pollingRef.current) clearInterval(pollingRef.current);
-          if (countdownRef.current) clearInterval(countdownRef.current);
-          setPageState("success");
-          toast.success("Pembayaran berhasil! 🎉");
-        } else if (
-          data.status === "expire" ||
-          data.status === "cancel" ||
-          data.status === "deny"
-        ) {
-          if (pollingRef.current) clearInterval(pollingRef.current);
-          if (countdownRef.current) clearInterval(countdownRef.current);
-          toast.error(`Pembayaran ${data.status}. Silakan coba lagi.`);
-          setPageState("idle");
-          setQrisData(null);
-        }
-      } catch {
-        // Silently continue polling
-      }
-    }, 3000);
-  }, []);
-
-  // Start countdown timer
-  const startCountdown = useCallback((expiryTime: string) => {
-    if (countdownRef.current) clearInterval(countdownRef.current);
-
-    const updateCountdown = () => {
-      const now = Date.now();
-      const expiry = new Date(expiryTime).getTime();
-      const remaining = Math.max(0, Math.floor((expiry - now) / 1000));
-      setCountdown(remaining);
-
-      if (remaining <= 0) {
-        if (countdownRef.current) clearInterval(countdownRef.current);
-        if (pollingRef.current) clearInterval(pollingRef.current);
-        toast.error("QR Code sudah expired. Silakan buat ulang.");
-        setPageState("idle");
-        setQrisData(null);
-      }
-    };
-
-    updateCountdown();
-    countdownRef.current = setInterval(updateCountdown, 1000);
-  }, []);
-
-  // Handle subscribe — create QRIS transaction
+  // Handle subscribe — create Snap transaction
   const handleSubscribe = async () => {
     setPageState("loading");
 
     try {
-      const res = await fetch("/api/subscription/qris", {
+      const res = await fetch("/api/subscription/snap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ months: selectedMonths }),
@@ -172,36 +119,51 @@ export default function PricingPage() {
 
       if (!res.ok) throw new Error(data.error || "Gagal membuat transaksi");
 
-      setQrisData(data);
-      setPageState("qris");
-      startPolling(data.order_id);
-      startCountdown(data.expiry_time);
+      if (window.snap) {
+        window.snap.pay(data.token, {
+          onSuccess: async function (result: any) {
+            // Payment success! Validate softly with backend
+            toast.success("Pembayaran berhasil! Memverifikasi...");
+            try {
+              const verifyRes = await fetch(
+                `/api/subscription/verify?order_id=${data.order_id}`,
+              );
+              const verifyData = await verifyRes.json();
+              if (verifyData.status === "settlement") {
+                setPageState("success");
+              } else {
+                toast.error("Gagal verifikasi pembayaran.");
+                setPageState("idle");
+              }
+            } catch (e) {
+              setPageState("success"); // Asumsikan sukses, nanti webhook memvalidasi di background
+            }
+          },
+          onPending: function (result: any) {
+            toast.info("Pembayaran tertunda. Silakan selesaikan pembayaran Anda!");
+            setPageState("idle");
+          },
+          onError: function (result: any) {
+            toast.error("Pembayaran gagal atau terjadi kesalahan.");
+            setPageState("idle");
+          },
+          onClose: function () {
+            toast.warning("Anda menutup pop-up sebelum menyelesaikan pembayaran.");
+            setPageState("idle");
+          },
+        });
+      } else {
+        toast.error("Gagal memuat sistem pembayaran. Silakan refresh halaman.");
+        setPageState("idle");
+      }
     } catch (err: unknown) {
       console.error(err);
       toast.error(
-        err instanceof Error ? err.message : "Gagal membuat transaksi QRIS.",
+        err instanceof Error ? err.message : "Gagal membuat transaksi Snap.",
       );
       setPageState("idle");
     }
   };
-
-  // Cancel and go back
-  const handleCancel = () => {
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    setPageState("idle");
-    setQrisData(null);
-  };
-
-  // Format countdown as mm:ss
-  const formatCountdown = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
-
-  // Countdown progress (0 to 1)
-  const countdownProgress = Math.max(0, countdown / (15 * 60));
 
   return (
     <div className="dark text-foreground min-h-screen bg-background relative overflow-hidden flex flex-col items-center justify-start sm:justify-center py-6 sm:py-12 px-4 sm:px-6 lg:px-8">
@@ -262,180 +224,12 @@ export default function PricingPage() {
             <div className="absolute inset-0 rounded-full border-4 border-ai-cyan/20" />
             <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-ai-cyan animate-spin" />
             <div className="absolute inset-3 rounded-full bg-background flex items-center justify-center">
-              <QrCode className="w-8 h-8 text-ai-cyan animate-pulse" />
+              <RefreshCw className="w-8 h-8 text-ai-cyan animate-pulse" />
             </div>
           </div>
           <p className="text-muted-foreground text-sm sm:text-base">
-            Membuat QR Code pembayaran...
+            Memuat gateway pembayaran...
           </p>
-        </div>
-      )}
-
-      {/* QRIS STATE — Show QR Code */}
-      {pageState === "qris" && qrisData && (
-        <div className="relative z-10 w-full max-w-md mx-auto mt-12 sm:mt-0 animate-in fade-in slide-in-from-bottom-4">
-          <Card className="bg-background/80 backdrop-blur border-border overflow-hidden">
-            {/* Gradient top accent */}
-            <div className="h-1 bg-gradient-to-r from-ai-cyan via-ai-purple to-ai-pink" />
-
-            <CardHeader className="text-center pb-3 px-4 sm:px-6">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <ShieldCheck className="w-5 h-5 text-green-500" />
-                <span className="text-xs font-semibold text-green-500 uppercase tracking-wider">
-                  Pembayaran Aman
-                </span>
-              </div>
-              <CardTitle className="text-lg sm:text-xl">
-                Scan QR untuk Bayar
-              </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">
-                Gunakan aplikasi e-wallet atau mobile banking yang mendukung
-                QRIS.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-4 px-4 sm:px-6">
-              {/* Amount display */}
-              <div className="bg-muted/60 p-3 rounded-lg flex justify-between items-center">
-                <div>
-                  <p className="text-xs text-muted-foreground">
-                    Total Tagihan ({qrisData.months} Bulan)
-                  </p>
-                  <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-ai-cyan to-ai-purple bg-clip-text text-transparent">
-                    Rp {qrisData.amount.toLocaleString("id-ID")}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Per bulan</p>
-                  <p className="text-sm font-bold">
-                    Rp{" "}
-                    {getPricePerMonth(qrisData.months).toLocaleString("id-ID")}
-                  </p>
-                </div>
-              </div>
-
-              {/* QR Code with animated border */}
-              <div className="relative flex items-center justify-center">
-                {/* Animated gradient ring */}
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-ai-cyan via-ai-purple to-ai-pink p-[2px] animate-pulse">
-                  <div className="w-full h-full rounded-2xl bg-background" />
-                </div>
-
-                <div className="relative bg-white rounded-xl p-4 m-[3px] w-full aspect-square max-w-[280px] mx-auto flex items-center justify-center">
-                  {qrisData.qr_url ? (
-                    <Image
-                      src={qrisData.qr_url}
-                      alt="QRIS QR Code"
-                      width={260}
-                      height={260}
-                      className="w-full h-full object-contain"
-                      unoptimized
-                    />
-                  ) : (
-                    <div className="text-center text-muted-foreground space-y-2">
-                      <QrCode className="w-16 h-16 mx-auto opacity-30" />
-                      <p className="text-xs">QR code tidak tersedia</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Countdown Timer */}
-              <div className="flex items-center justify-center gap-3 py-2">
-                <div className="relative w-10 h-10">
-                  {/* Background circle */}
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 40 40">
-                    <circle
-                      cx="20"
-                      cy="20"
-                      r="16"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      className="text-muted/30"
-                    />
-                    <circle
-                      cx="20"
-                      cy="20"
-                      r="16"
-                      fill="none"
-                      stroke="url(#timerGradient)"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeDasharray={`${countdownProgress * 100.53} 100.53`}
-                      className="transition-all duration-1000 ease-linear"
-                    />
-                    <defs>
-                      <linearGradient
-                        id="timerGradient"
-                        x1="0%"
-                        y1="0%"
-                        x2="100%"
-                        y2="0%"
-                      >
-                        <stop offset="0%" stopColor="hsl(var(--ai-cyan))" />
-                        <stop offset="100%" stopColor="hsl(var(--ai-purple))" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                  <Timer className="absolute inset-0 m-auto w-4 h-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <p
-                    className={`text-lg font-mono font-bold tracking-wider ${countdown <= 60 ? "text-red-500 animate-pulse" : "text-foreground"}`}
-                  >
-                    {formatCountdown(countdown)}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Berlaku hingga expire
-                  </p>
-                </div>
-              </div>
-
-              {/* Supported payment apps */}
-              <div className="text-center space-y-1.5 pt-1 border-t border-border/50">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
-                  Didukung oleh
-                </p>
-                <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground flex-wrap">
-                  {[
-                    "GoPay",
-                    "OVO",
-                    "DANA",
-                    "ShopeePay",
-                    "LinkAja",
-                    "BCA Mobile",
-                    "BRI Mobile",
-                  ].map((app) => (
-                    <span
-                      key={app}
-                      className="bg-muted/50 rounded-full px-2 py-0.5 text-[10px] sm:text-xs"
-                    >
-                      {app}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-
-            <CardFooter className="flex gap-3 border-t bg-muted/20 pt-4 pb-4 px-4 sm:px-6">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={handleCancel}
-              >
-                Batal
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1 gap-2"
-                onClick={handleSubscribe}
-              >
-                <RefreshCw className="w-4 h-4" />
-                Refresh QR
-              </Button>
-            </CardFooter>
-          </Card>
         </div>
       )}
 
@@ -637,7 +431,7 @@ export default function PricingPage() {
                   onClick={handleSubscribe}
                 >
                   <QrCode className="w-5 h-5" />
-                  Bayar via QRIS — Rp{" "}
+                  Bayar Sekarang — Rp{" "}
                   {getDurationPrice(selectedMonths).toLocaleString("id-ID")}
                 </Button>
               </CardFooter>
@@ -654,8 +448,7 @@ export default function PricingPage() {
               </p>
             </div>
             <p className="text-[10px] sm:text-xs text-muted-foreground">
-              Scan QRIS dengan GoPay, OVO, DANA, ShopeePay, LinkAja, atau Mobile
-              Banking
+              Dukung multi-pembayaran menggunakan e-wallet (QRIS) dan Virtual Account.
             </p>
           </div>
         </>
