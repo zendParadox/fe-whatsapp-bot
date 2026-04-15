@@ -121,7 +121,7 @@ export default function PricingPage() {
 
       if (window.snap) {
         window.snap.pay(data.token, {
-          onSuccess: async function (result: any) {
+          onSuccess: async function () {
             // Payment success! Validate softly with backend
             toast.success("Pembayaran berhasil! Memverifikasi...");
             try {
@@ -135,15 +135,15 @@ export default function PricingPage() {
                 toast.error("Gagal verifikasi pembayaran.");
                 setPageState("idle");
               }
-            } catch (e) {
+            } catch {
               setPageState("success"); // Asumsikan sukses, nanti webhook memvalidasi di background
             }
           },
-          onPending: function (result: any) {
+          onPending: function () {
             toast.info("Pembayaran tertunda. Silakan selesaikan pembayaran Anda!");
             setPageState("idle");
           },
-          onError: function (result: any) {
+          onError: function () {
             toast.error("Pembayaran gagal atau terjadi kesalahan.");
             setPageState("idle");
           },

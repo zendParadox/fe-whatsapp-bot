@@ -8,12 +8,10 @@ import {
   ChevronDown,
   Crown,
   Sparkles,
-  Sun,
-  Moon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useTheme } from "next-themes";
+
 import Link from "next/link";
 
 interface ProfileMenuProps {
@@ -32,7 +30,7 @@ export default function ProfileMenu({
   variant = "icon",
 }: ProfileMenuProps) {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
+  
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);

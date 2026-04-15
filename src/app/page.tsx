@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ModeToggle } from "@/components/mode-toggle";
-
 // Landing Components
 import { AnimatedHero } from "@/components/landing/AnimatedHero";
 import { StatsSection } from "@/components/landing/StatsSection";
