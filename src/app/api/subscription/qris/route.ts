@@ -11,17 +11,22 @@ import { prisma } from "@/lib/prisma";
  */
 function getDurationPrice(months: number): number {
   switch (months) {
-    case 1: return 15000;
-    case 3: return 39000;
-    case 6: return 66000;
-    case 12: return 108000;
-    default: return 15000 * months;
+    case 1:
+      return 15000;
+    case 3:
+      return 39000;
+    case 6:
+      return 66000;
+    case 12:
+      return 108000;
+    default:
+      return 15000 * months;
   }
 }
 
 /**
  * POST /api/subscription/qris
- * 
+ *
  * Membuat transaksi Dynamic QRIS via Midtrans Core API.
  * Body: { months: number }
  * Returns: { qr_url, qr_string, order_id, amount, expiry_time }
@@ -68,7 +73,7 @@ export async function POST(req: Request) {
         gross_amount: amount,
       },
       qris: {
-        acquirer: "gopay",
+        // acquirer: "gopay",
       },
       customer_details: {
         first_name: user.name || "GoTEK",
@@ -99,7 +104,7 @@ export async function POST(req: Request) {
     if (chargeResponse.actions && Array.isArray(chargeResponse.actions)) {
       const qrAction = chargeResponse.actions.find(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (a: any) => a.name === "generate-qr-code"
+        (a: any) => a.name === "generate-qr-code",
       );
       if (qrAction) {
         qrUrl = qrAction.url;
@@ -140,15 +145,15 @@ export async function POST(req: Request) {
   } catch (error: unknown) {
     console.error("QRIS Charge Error:", error);
     return NextResponse.json(
-      { 
+      {
         error: "Gagal membuat transaksi QRIS. Silakan coba lagi.",
         details: error instanceof Error ? error.message : String(error),
-        // we can also safely log stringified error to give more context 
+        // we can also safely log stringified error to give more context
         // e.g. Axios error or Midtrans API error response
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        api_response: (error as any)?.ApiResponse
+        api_response: (error as any)?.ApiResponse,
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
