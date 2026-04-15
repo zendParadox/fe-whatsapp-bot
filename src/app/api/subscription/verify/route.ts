@@ -84,8 +84,14 @@ export async function GET(request: Request) {
       });
 
       // 2. Upgrade user ke PREMIUM
-      const validUntil = new Date();
-      validUntil.setDate(validUntil.getDate() + 30);
+      const monthsDuration = sub.months || 1;
+      const now = new Date();
+      // Stack on existing premium if still active
+      const baseDate = (sub.user.premium_valid_until && sub.user.premium_valid_until > now) 
+        ? sub.user.premium_valid_until 
+        : now;
+      const validUntil = new Date(baseDate);
+      validUntil.setMonth(validUntil.getMonth() + monthsDuration);
 
       await prisma.user.update({
         where: { id: sub.user_id },

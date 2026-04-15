@@ -1,4 +1,3 @@
-/*eslint-disable*/
 /**
  * Unified AI Provider - Exclusive Gemini Integration
  * All requests are automatically routed to Google Gemini API

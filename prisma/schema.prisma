@@ -248,8 +248,10 @@ model Subscription {
   order_id         String   @unique // Berasal dari kita (contoh: SUB-12345)
   amount           Decimal  @db.Decimal(12, 2)
   status           String   // 'pending', 'settlement', 'expire', 'cancel'
+  months           Int      @default(1) // Durasi langganan dalam bulan
   payment_type     String?  // qris, bank_transfer, gopay, dll
   midtrans_url     String?  // Link pembayaran (Snap URL)
+  qr_url           String?  // QR code URL untuk QRIS
   created_at       DateTime @default(now())
   updated_at       DateTime @updatedAt
 

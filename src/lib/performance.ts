@@ -9,7 +9,8 @@ import { NextResponse } from "next/server";
 
 type NextHandler = (
   request: Request,
-  context?: Record<string, unknown>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  context?: any
 ) => Promise<NextResponse | Response>;
 
 interface PerformanceLog {
@@ -128,7 +129,8 @@ export function withPerformanceTracking(
 ): NextHandler {
   const SLOW_API_THRESHOLD_MS = 500;
 
-  return async (request: Request, context?: Record<string, unknown>) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return async (request: Request, context?: any) => {
     const start = performance.now();
     const method = request.method;
 

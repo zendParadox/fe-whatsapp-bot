@@ -2,7 +2,15 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, LogOut, ChevronDown, Crown, Sparkles, Sun, Moon } from "lucide-react";
+import {
+  Settings,
+  LogOut,
+  ChevronDown,
+  Crown,
+  Sparkles,
+  Sun,
+  Moon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
@@ -130,7 +138,9 @@ export default function ProfileMenu({
             )}
           </div>
           <span className="hidden sm:inline">{userName || "Profile"}</span>
-          <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+          <ChevronDown
+            className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          />
         </Button>
       )}
 
@@ -154,9 +164,15 @@ export default function ProfileMenu({
                 </span>
               )}
               {isPremium && daysLeft !== null && (
-                <span className={`text-[10px] font-medium ${
-                  daysLeft <= 0 ? "text-red-500" : daysLeft <= 7 ? "text-amber-500" : "text-emerald-500"
-                }`}>
+                <span
+                  className={`text-[10px] font-medium ${
+                    daysLeft <= 0
+                      ? "text-red-500"
+                      : daysLeft <= 7
+                        ? "text-amber-500"
+                        : "text-emerald-500"
+                  }`}
+                >
                   {daysLeft <= 0 ? "Expired" : `${daysLeft} hari lagi`}
                 </span>
               )}
@@ -194,12 +210,14 @@ export default function ProfileMenu({
               }}
               className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors"
             >
-              <span className="w-4 h-4 flex items-center justify-center">💬</span>
+              <span className="w-4 h-4 flex items-center justify-center">
+                💬
+              </span>
               Beri Masukan
             </button>
 
             {/* Dark Mode Toggle */}
-            <button
+            {/* <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center gap-3 transition-colors"
             >
@@ -209,7 +227,7 @@ export default function ProfileMenu({
                 <Moon className="w-4 h-4" />
               )}
               {theme === "dark" ? "Mode Terang" : "Mode Gelap"}
-            </button>
+            </button> */}
 
             <button
               onClick={handleLogout}

@@ -83,13 +83,16 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md space-y-4">
+    <div className="dark min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden text-foreground">
+      {/* Animated Grid Background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:34px_34px] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+
+      <div className="w-full max-w-md space-y-4 relative z-10">
         <Button
           variant="ghost"
           size="sm"
           asChild
-          className="group transition-all duration-200 hover:bg-primary/10"
+          className="group transition-all duration-200 hover:bg-white/5"
         >
           <Link href="/" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
@@ -97,14 +100,14 @@ export default function RegisterPage() {
           </Link>
         </Button>
 
-        <Card className="w-full shadow-lg border-0 bg-card/80 backdrop-blur-sm">
+        <Card className="w-full glass-card">
           <CardHeader className="text-center pb-2">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-ai-cyan/10 shadow-[0_0_15px_rgba(var(--color-ai-cyan),0.2)]">
               {/* <UserPlus className="h-6 w-6 text-primary" /> */}
               <Image src="/images/gotek-g.png" alt="Logo" width={50} height={50} />
             </div>
-            <CardTitle className="text-2xl font-bold">Daftar Akun Baru</CardTitle>
-            <CardDescription className="text-muted-foreground">
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-ai-cyan to-ai-purple bg-clip-text text-transparent">Daftar Akun Baru</CardTitle>
+            <CardDescription className="text-zinc-400">
               Masukkan detail Anda di bawah untuk membuat akun.
             </CardDescription>
           </CardHeader>
@@ -119,7 +122,7 @@ export default function RegisterPage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="John Doe"
                   disabled={loading}
-                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                  className="bg-black/50 border-white/10 focus:border-ai-cyan transition-all focus:ring-1 focus:ring-ai-cyan/50"
                 />
               </div>
               <div className="space-y-2">
@@ -132,7 +135,7 @@ export default function RegisterPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="anda@email.com"
                   disabled={loading}
-                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                  className="bg-black/50 border-white/10 focus:border-ai-cyan transition-all focus:ring-1 focus:ring-ai-cyan/50"
                 />
               </div>
               <div className="space-y-2">
@@ -144,7 +147,7 @@ export default function RegisterPage() {
                   onChange={handlePhoneChange}
                   placeholder="Contoh: 081234567890"
                   disabled={loading}
-                  className="transition-all focus:ring-2 focus:ring-primary/20"
+                  className="bg-black/50 border-white/10 focus:border-ai-cyan transition-all focus:ring-1 focus:ring-ai-cyan/50"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -158,7 +161,7 @@ export default function RegisterPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     disabled={loading}
-                    className="transition-all focus:ring-2 focus:ring-primary/20"
+                    className="bg-black/50 border-white/10 focus:border-ai-cyan transition-all focus:ring-1 focus:ring-ai-cyan/50"
                   />
                 </div>
                 <div className="space-y-2">
@@ -171,13 +174,13 @@ export default function RegisterPage() {
                     onChange={(e) => setConfirm(e.target.value)}
                     placeholder="••••••••"
                     disabled={loading}
-                    className="transition-all focus:ring-2 focus:ring-primary/20"
+                    className="bg-black/50 border-white/10 focus:border-ai-cyan transition-all focus:ring-1 focus:ring-ai-cyan/50"
                   />
                 </div>
               </div>
               <Button 
                 type="submit" 
-                className="w-full font-semibold transition-all duration-200 hover:shadow-md" 
+                className="w-full font-bold transition-all duration-300 shadow-[0_0_15px_rgba(var(--color-ai-cyan),0.3)] hover:shadow-[0_0_25px_rgba(var(--color-ai-cyan),0.5)] bg-gradient-to-r from-ai-cyan to-ai-purple text-white border-0 hover:scale-[1.02]" 
                 disabled={loading}
               >
                 {loading ? (
@@ -213,7 +216,7 @@ export default function RegisterPage() {
             <Button
               variant="outline"
               asChild
-              className="w-full group transition-all duration-200 hover:bg-primary hover:text-primary-foreground hover:border-primary"
+              className="w-full group transition-all duration-200 hover:bg-white/5 border-white/10"
             >
               <Link href="/login" className="flex items-center justify-center gap-2">
                 <LogIn className="h-4 w-4 transition-transform group-hover:scale-110" />

@@ -50,9 +50,15 @@ export async function POST(req: NextRequest) {
         }
       });
 
-      // 2. Set user as PREMIUM and set valid_until to 30 days from now
-      const validUntil = new Date();
-      validUntil.setDate(validUntil.getDate() + 30); // Valid for 30 days
+      // 2. Set user as PREMIUM based on subscription months
+      const monthsDuration = sub.months || 1;
+      const now = new Date();
+      // If user already has active premium, stack on top of existing expiry
+      const baseDate = (sub.user.premium_valid_until && sub.user.premium_valid_until > now) 
+        ? sub.user.premium_valid_until 
+        : now;
+      const validUntil = new Date(baseDate);
+      validUntil.setMonth(validUntil.getMonth() + monthsDuration);
 
       await prisma.user.update({
         where: { id: sub.user_id },

@@ -107,7 +107,13 @@ interface DashboardData {
   budgetData: { category: string; budget: number; actual: number }[];
   totalSaldo: number;
   plan_type?: "FREE" | "PREMIUM";
-  wallets?: { id: string; name: string; icon: string | null; balance: number | string; created_at: string }[];
+  wallets?: {
+    id: string;
+    name: string;
+    icon: string | null;
+    balance: number | string;
+    created_at: string;
+  }[];
 }
 
 interface UserProfile {
@@ -170,7 +176,8 @@ function BudgetStatus({
         <span
           className={`font-mono ${
             isOverBudget ? "text-red-500" : "text-muted-foreground"
-          }`}>
+          }`}
+        >
           {formatter(item.actual)} / {formatter(item.budget)}
         </span>
       </div>
@@ -319,7 +326,8 @@ export default function Dashboard() {
 
         const apiData: DashboardData = await res.json();
         setData(apiData);
-        if ((apiData as any).currency) setUserCurrency((apiData as any).currency);
+        if ((apiData as any).currency)
+          setUserCurrency((apiData as any).currency);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -352,8 +360,7 @@ export default function Dashboard() {
 
   const [userCurrency, setUserCurrency] = useState<string>("IDR");
 
-  const formatCurrency = (value: number) =>
-    formatMoney(value, userCurrency);
+  const formatCurrency = (value: number) => formatMoney(value, userCurrency);
 
   function openEdit(tx: Transaction) {
     setEditingTx(tx);
@@ -370,12 +377,14 @@ export default function Dashboard() {
 
     setForm({
       category:
-        typeof tx.category === "string" ? tx.category : tx.category?.name ?? "",
+        typeof tx.category === "string"
+          ? tx.category
+          : (tx.category?.name ?? ""),
       type: tx.type,
       amount: String(tx.amount),
       categoryId: categoryId,
       description: tx.description ?? "",
-      createdAt: new Date(tx.created_at).toISOString().split('T')[0], // Format: YYYY-MM-DD
+      createdAt: new Date(tx.created_at).toISOString().split("T")[0], // Format: YYYY-MM-DD
       wallet_id: tx.wallet_id || "none", // Assuming backend returns wallet_id if any, though GET doesn't strictly need it to just show. We'll set it to none or existing
     });
     setIsDialogOpen(true);
@@ -389,7 +398,7 @@ export default function Dashboard() {
       amount: "",
       categoryId: "",
       description: "",
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString().split("T")[0],
       wallet_id: "none",
     });
     setIsDialogOpen(true);
@@ -397,7 +406,7 @@ export default function Dashboard() {
 
   function handleFormChange<K extends keyof typeof form>(
     key: K,
-    value: (typeof form)[K]
+    value: (typeof form)[K],
   ) {
     setForm((s) => ({ ...s, [key]: value }));
   }
@@ -429,7 +438,8 @@ export default function Dashboard() {
       if (form.description !== undefined)
         payload.description = form.description;
       if (form.categoryId) payload.category_id = form.categoryId;
-      if (form.createdAt) payload.created_at = new Date(form.createdAt).toISOString();
+      if (form.createdAt)
+        payload.created_at = new Date(form.createdAt).toISOString();
       if (form.wallet_id !== "none") payload.wallet_id = form.wallet_id;
 
       let res;
@@ -450,7 +460,7 @@ export default function Dashboard() {
       if (!res.ok) {
         const text = await res.text().catch(() => null);
         throw new Error(
-          `Gagal menyimpan ${editingTx ? 'perubahan' : 'transaksi'}: ${res.status} ${text ?? ""}`
+          `Gagal menyimpan ${editingTx ? "perubahan" : "transaksi"}: ${res.status} ${text ?? ""}`,
         );
       }
 
@@ -458,10 +468,14 @@ export default function Dashboard() {
       setEditingTx(null);
 
       // refresh data via refreshKey (triggers useEffect)
-      setRefreshKey(k => k + 1);
+      setRefreshKey((k) => k + 1);
 
       // show success toast
-      toast.success(editingTx ? "Perubahan transaksi berhasil disimpan." : "Transaksi baru berhasil ditambahkan.");
+      toast.success(
+        editingTx
+          ? "Perubahan transaksi berhasil disimpan."
+          : "Transaksi baru berhasil ditambahkan.",
+      );
     } catch (err) {
       console.error(err);
       toast.error("Terjadi kesalahan saat menyimpan. Periksa console.");
@@ -481,7 +495,7 @@ export default function Dashboard() {
       if (!res.ok) throw new Error("Gagal menghapus");
       setDeletingTx(null);
       // refresh data via refreshKey (triggers useEffect)
-      setRefreshKey(k => k + 1);
+      setRefreshKey((k) => k + 1);
       toast.success("Transaksi dihapus.");
     } catch (err) {
       console.error(err);
@@ -562,11 +576,14 @@ export default function Dashboard() {
           {/* Judul */}
           <div className="flex items-center gap-3">
             <div className="flex flex-col">
-              <Link href="/" className="flex items-center gap-2 text-xl font-bold tracking-tighter">
-          <h1 className="bg-gradient-to-r text-3xl from-neon-cyan to-neon-purple bg-clip-text text-transparent dark:text-glow">
-            GoTEK
-          </h1>
-        </Link>
+              <Link
+                href="/"
+                className="flex items-center gap-2 text-xl font-bold tracking-tighter"
+              >
+                <h1 className="bg-gradient-to-r text-3xl from-ai-cyan to-ai-purple bg-clip-text text-transparent dark:text-glow">
+                  GoTEK
+                </h1>
+              </Link>
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 Ringkasan & laporan keuangan Anda
               </span>
@@ -575,8 +592,8 @@ export default function Dashboard() {
 
           {/* Mobile: Profile Menu */}
           <div className="md:hidden">
-            <ProfileMenu 
-              variant="icon" 
+            <ProfileMenu
+              variant="icon"
               userName={userProfile?.name}
               avatarUrl={userProfile?.avatar_url}
               planType={userProfile?.plan_type || data?.plan_type}
@@ -596,8 +613,8 @@ export default function Dashboard() {
             </Button>
 
             {/* Profile Menu with Logout */}
-            <ProfileMenu 
-              variant="full" 
+            <ProfileMenu
+              variant="full"
               userName={userProfile?.name}
               avatarUrl={userProfile?.avatar_url}
               planType={userProfile?.plan_type || data?.plan_type}
@@ -625,15 +642,19 @@ export default function Dashboard() {
       <WhatsAppBotBanner />
 
       {/* Smart Analysis Input */}
-      <SmartAiInput 
+      {/* <SmartAiInput 
         categories={categories} 
         onTransactionAdded={() => setRefreshKey(k => k + 1)} 
         planType={data.plan_type || "FREE"}
-      />
+      /> */}
 
       {/* AI Analysis Button + Export Buttons */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-        <AiAnalysisButton onClick={fetchAiAnalysis} isLoading={isAiLoading} planType={data.plan_type || "FREE"} />
+      <div className="flex flex-col justify-center sm:justify-center items-center sm:items-center gap-3">
+        <AiAnalysisButton
+          onClick={fetchAiAnalysis}
+          isLoading={isAiLoading}
+          planType={data.plan_type || "FREE"}
+        />
         <ExportReportButtons
           transactions={currentPeriod.transactions}
           summary={currentPeriod.summary}
@@ -655,15 +676,19 @@ export default function Dashboard() {
       />
 
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
-        <Card className="bg-gradient-to-br from-neon-purple/10 to-neon-pink/10 border-neon-purple/30">
+        <Card className="bg-gradient-to-br from-ai-purple/10 to-ai-pink/10 border-ai-purple/30">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-neon-purple">Total Saldo (Keseluruhan)</CardTitle>
+            <CardTitle className="text-sm font-medium text-ai-purple">
+              Total Saldo (Keseluruhan)
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent">
+            <div className="text-2xl font-bold bg-gradient-to-r from-ai-cyan to-ai-purple bg-clip-text text-transparent">
               {formatCurrency(data.totalSaldo)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Akumulasi sepanjang waktu</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Akumulasi sepanjang waktu
+            </p>
           </CardContent>
         </Card>
         <ComparisonCard
@@ -742,7 +767,8 @@ export default function Dashboard() {
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label>
+                    label
+                  >
                     {pieChartData.map((_, index) => (
                       <Cell
                         key={`cell-${index}`}
@@ -770,19 +796,27 @@ export default function Dashboard() {
           <BudgetCard
             budgetData={budgetData}
             categories={categories}
-            month={activeDateRange?.from ? activeDateRange.from.getMonth() + 1 : new Date().getMonth() + 1}
-            year={activeDateRange?.from ? activeDateRange.from.getFullYear() : new Date().getFullYear()}
-            onBudgetChange={() => setRefreshKey(k => k + 1)}
+            month={
+              activeDateRange?.from
+                ? activeDateRange.from.getMonth() + 1
+                : new Date().getMonth() + 1
+            }
+            year={
+              activeDateRange?.from
+                ? activeDateRange.from.getFullYear()
+                : new Date().getFullYear()
+            }
+            onBudgetChange={() => setRefreshKey((k) => k + 1)}
             formatter={formatCurrency}
           />
           <WalletCard
             wallets={data.wallets || []}
             planType={data.plan_type || "FREE"}
             formatCurrency={formatCurrency}
-            onRefresh={() => setRefreshKey(k => k + 1)}
+            onRefresh={() => setRefreshKey((k) => k + 1)}
           />
-          <DebtCard 
-            onDataChange={() => setRefreshKey(k => k + 1)} 
+          <DebtCard
+            onDataChange={() => setRefreshKey((k) => k + 1)}
             wallets={data.wallets || []}
             planType={data.plan_type || "FREE"}
           />
@@ -805,7 +839,7 @@ export default function Dashboard() {
               for (const id of ids) {
                 await fetch(`/api/transactions/${id}`, { method: "DELETE" });
               }
-              setRefreshKey(k => k + 1);
+              setRefreshKey((k) => k + 1);
               toast.success(`${ids.length} transaksi berhasil dihapus.`);
             }}
           />
@@ -816,7 +850,9 @@ export default function Dashboard() {
       <Dialog open={isDialogOpen} onOpenChange={(v) => setIsDialogOpen(v)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingTx ? "Edit Transaksi" : "Tambah Transaksi Manual"}</DialogTitle>
+            <DialogTitle>
+              {editingTx ? "Edit Transaksi" : "Tambah Transaksi Manual"}
+            </DialogTitle>
           </DialogHeader>
 
           <div className="grid gap-2 py-2">
@@ -827,7 +863,8 @@ export default function Dashboard() {
                 <div className="flex-1">
                   <Select
                     value={form.categoryId}
-                    onValueChange={(v) => handleFormChange("categoryId", v)}>
+                    onValueChange={(v) => handleFormChange("categoryId", v)}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue
                         placeholder={
@@ -846,7 +883,8 @@ export default function Dashboard() {
                         categories.map((c) => (
                           <SelectItem
                             key={c.id ?? c.name}
-                            value={c.id ?? c.name}>
+                            value={c.id ?? c.name}
+                          >
                             {c.name}
                           </SelectItem>
                         ))
@@ -864,7 +902,8 @@ export default function Dashboard() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => setIsAddCategoryOpen(true)}>
+                    onClick={() => setIsAddCategoryOpen(true)}
+                  >
                     + Tambah kategori
                   </Button>
                 </div>
@@ -882,7 +921,8 @@ export default function Dashboard() {
                 value={form.type}
                 onValueChange={(v) =>
                   handleFormChange("type", v as "INCOME" | "EXPENSE")
-                }>
+                }
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Pilih type" />
                 </SelectTrigger>
@@ -894,28 +934,32 @@ export default function Dashboard() {
             </div>
 
             {/* Wallet Selection (Premium Only) */}
-            {data.plan_type === "PREMIUM" && data.wallets && data.wallets.length > 0 && (
-              <div>
-                <Label className="mb-1">Kantong (Opsional)</Label>
-                <Select
-                  value={form.wallet_id}
-                  onValueChange={(v) => handleFormChange("wallet_id", v)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Pilih Kantong" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Tanpa Kantong</SelectItem>
-                    {data.wallets.map((w) => (
-                      <SelectItem key={w.id} value={w.id}>
-                        {w.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1">Saldo kantong akan otomatis menyesuaikan.</p>
-              </div>
-            )}
+            {data.plan_type === "PREMIUM" &&
+              data.wallets &&
+              data.wallets.length > 0 && (
+                <div>
+                  <Label className="mb-1">Kantong (Opsional)</Label>
+                  <Select
+                    value={form.wallet_id}
+                    onValueChange={(v) => handleFormChange("wallet_id", v)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Pilih Kantong" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Tanpa Kantong</SelectItem>
+                      {data.wallets.map((w) => (
+                        <SelectItem key={w.id} value={w.id}>
+                          {w.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Saldo kantong akan otomatis menyesuaikan.
+                  </p>
+                </div>
+              )}
 
             {/* Amount */}
             <div>
@@ -947,9 +991,7 @@ export default function Dashboard() {
               <Input
                 type="date"
                 value={form.createdAt}
-                onChange={(e) =>
-                  handleFormChange("createdAt", e.target.value)
-                }
+                onChange={(e) => handleFormChange("createdAt", e.target.value)}
               />
             </div>
           </div>
@@ -970,7 +1012,8 @@ export default function Dashboard() {
       {/* Add Category Dialog (sub-dialog) */}
       <Dialog
         open={isAddCategoryOpen}
-        onOpenChange={(v) => setIsAddCategoryOpen(v)}>
+        onOpenChange={(v) => setIsAddCategoryOpen(v)}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Tambah Kategori Baru</DialogTitle>
@@ -990,7 +1033,8 @@ export default function Dashboard() {
           <DialogFooter className="flex justify-end gap-2">
             <Button
               variant="outline"
-              onClick={() => setIsAddCategoryOpen(false)}>
+              onClick={() => setIsAddCategoryOpen(false)}
+            >
               Batal
             </Button>
             <Button onClick={handleAddCategory} disabled={addingCategory}>
@@ -1002,16 +1046,14 @@ export default function Dashboard() {
 
       {/* Footer */}
       <footer className="mt-12 py-6 border-t text-center text-sm text-muted-foreground">
-        <p>
-          © {new Date().getFullYear()} GoTEK. All rights reserved.
-        </p>
+        <p>© {new Date().getFullYear()} GoTEK. All rights reserved.</p>
         <p className="mt-2">
           Jika ada kendala, hubungi{" "}
-          <a 
-            href="https://t.me/rafliramadhaniii" 
-            target="_blank" 
+          <a
+            href="https://t.me/rafliramadhaniii"
+            target="_blank"
             rel="noopener noreferrer"
-            className="text-neon-cyan hover:underline font-medium"
+            className="text-ai-cyan hover:underline font-medium"
           >
             Telegram Support
           </a>
