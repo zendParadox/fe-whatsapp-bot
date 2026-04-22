@@ -200,12 +200,13 @@ Aturan Ketat:
 1. Setiap item barang/layanan harus menjadi list transaksi yang terpisah.
 2. Tipe pastinya "EXPENSE" untuk struk belanja.
 3. Nominal "amount" berupa angka bersih tanpa teks, koma, atau titik desimal yang salah.
-4. JANGAN masukkan elemen TOTAL, SUB-TOTAL, PAJAK, KEMBALIAN, atau CASH sebagai transaksi terpisah! Hanya item aslinya.
-5. Jika struknya buram atau bukan struk belanja, kembalikan array kosong [].
-6. "category" gunakan Bahasa Indonesia umum yang elegan (contoh: "Minuman", "Kebutuhan Bulanan", "Makanan", "Elektronik").
-7. "description" rapihkan ke format Title Case, jangan tulis singkatan kaku mesin kasir.
-8. Jika struknya struk transfer (seperti mutasi bank masuk), buat menjadi "INCOME" jika warna hijau/masuk.
-9. "confidence" 0.0 sampai 1.0 seberapa pasti kamu membacanya.`;
+4. JANGAN masukkan elemen TOTAL, SUB-TOTAL, PAJAK, DISKON, KEMBALIAN, atau CASH sebagai transaksi terpisah!
+5. PENTING: Jika di dalam struk terdapat potongan diskon atau tambahan pajak, hitung estimasi harga akhir bersih (net price) dari masing-masing produk (harga setelah dikenakan diskon atau pajak). Nilai "amount" untuk item adalah harga riil aktual yang harus dibayar.
+6. Jika struknya buram atau bukan struk belanja, kembalikan array kosong [].
+7. "category" gunakan Bahasa Indonesia umum yang elegan (contoh: "Minuman", "Kebutuhan Bulanan", "Makanan", "Elektronik").
+8. "description" rapihkan ke format Title Case, jangan tulis singkatan kaku mesin kasir.
+9. Jika struknya struk transfer (seperti mutasi bank masuk), buat menjadi "INCOME" jika warna hijau/masuk.
+10. "confidence" 0.0 sampai 1.0 seberapa pasti kamu membacanya.`;
 
   let attempts = 0;
   const maxAttempts = apiKeys.length;
