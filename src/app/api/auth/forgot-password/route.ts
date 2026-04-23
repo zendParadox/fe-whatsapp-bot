@@ -3,15 +3,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import crypto from "crypto";
 import { normalizePhone, isAllowedPhone } from "@/lib/phone";
+import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
 
 import { prisma } from "@/lib/prisma";
 
 const forgotPasswordSchema = z.object({
   phoneNumber: z.string().min(10, "Nomor WhatsApp tidak valid"),
 });
-
-// Golang bot endpoint untuk mengirim pesan
-const GOLANG_BOT_URL = process.env.GOLANG_BOT_URL || "https://bot.rafliramadhani.site";
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,28 +71,9 @@ export async function POST(request: NextRequest) {
     // Kirim kode via WhatsApp Bot
     const whatsappMessage = `🔐 *Reset Password GoTEK*\n\nKode verifikasi Anda: *${token}*\n\nKode ini berlaku selama 15 menit.\n\n⚠️ Jangan bagikan kode ini kepada siapa pun.`;
 
-    try {
-      const response = await fetch(`${GOLANG_BOT_URL}/send-message`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: phoneNumber,
-          message: whatsappMessage,
-        }),
-      });
-
-      if (!response.ok) {
-        console.error("Failed to send WhatsApp message:", await response.text());
-        // Jangan gagalkan request, token sudah tersimpan
-        // User bisa coba resend atau hubungi support
-      }
-    } catch (botError) {
-      console.error("Error connecting to WhatsApp bot:", botError);
-      // Token sudah tersimpan, tapi pesan gagal dikirim
-      // Dalam development, log token untuk testing
-      if (process.env.NODE_ENV === "development") {
-        console.log(`[DEV] Reset token for ${phoneNumber}: ${token}`);
-      }
+    const sent = await sendWhatsAppMessage(phoneNumber, whatsappMessage);
+    if (!sent && process.env.NODE_ENV === "development") {
+      console.log(`[DEV] Reset token for ${phoneNumber}: ${token}`);
     }
 
     return NextResponse.json({

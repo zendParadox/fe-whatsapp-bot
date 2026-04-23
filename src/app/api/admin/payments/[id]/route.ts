@@ -2,8 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAdmin } from "@/lib/admin";
 import { addMonths } from "date-fns";
-
-const GOLANG_BOT_URL = process.env.GOLANG_BOT_URL || "https://bot.rafliramadhani.site";
+import { sendWhatsAppMessageAsync } from "@/lib/whatsapp/send";
 
 export async function PUT(
   request: NextRequest,
@@ -62,25 +61,11 @@ export async function PUT(
         })
       ]);
 
-      // Kirim Notifikasi via Bot Golang
+      // Kirim Notifikasi via Bot
       if (payment.user.whatsapp_jid) {
-        let phone = payment.user.whatsapp_jid;
-        if (!phone.endsWith("@s.whatsapp.net")) phone += "@s.whatsapp.net";
-
         const addedMonths = payment.months || 1;
         const msg = `🎉 *Luar Biasa! Pembayaran Berhasil!*\n\nStatus akun GoTEK Anda sekarang telah diupgrade menjadi *PREMIUM* selama *${addedMonths} Bulan* (hingga *${validUntil.toLocaleDateString("id-ID")}*).\n\nTerima kasih atas dukungan Anda! Fitur AI Parser & Unlimited Struk sekarang terbuka penuh untuk Anda.`;
-        
-        // Bypass TLS
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-        const botBaseUrl = GOLANG_BOT_URL.endsWith("/") ? GOLANG_BOT_URL.slice(0, -1) : GOLANG_BOT_URL;
-        
-        fetch(`${botBaseUrl}/send-message`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: phone, message: msg }),
-        }).catch((err) => console.error("Gagal kirim notif WA approval:", err));
-        
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = "1";
+        sendWhatsAppMessageAsync(payment.user.whatsapp_jid, msg);
       }
 
     } else if (action === "REJECT") {
@@ -91,20 +76,8 @@ export async function PUT(
 
       // Kirim Notifikasi Tolak
       if (payment.user.whatsapp_jid) {
-        let phone = payment.user.whatsapp_jid;
-        if (!phone.endsWith("@s.whatsapp.net")) phone += "@s.whatsapp.net";
-
         const msg = `⚠️ *Pemberitahuan Pembayaran GoTEK*\n\nMohon maaf, bukti pembayaran manual Anda *sebesar Rp ${payment.amount.toLocaleString()}* kami tolak.\n\n*Alasan:* ${notes || "Bukti transfer tidak valid atau dana belum divalidasi mutasi."}\n\nSilakan coba lagi dari Dashboard atau hubungi admin jika ini adalah kesalahan.`;
-        
-        // Bypass TLS
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-        const botBaseUrl = GOLANG_BOT_URL.endsWith("/") ? GOLANG_BOT_URL.slice(0, -1) : GOLANG_BOT_URL;
-        fetch(`${botBaseUrl}/send-message`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: phone, message: msg }),
-        }).catch((err) => console.error("Gagal kirim notif WA reject:", err));
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = "1";
+        sendWhatsAppMessageAsync(payment.user.whatsapp_jid, msg);
       }
     }
 

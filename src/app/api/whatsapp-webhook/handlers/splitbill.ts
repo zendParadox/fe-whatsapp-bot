@@ -34,49 +34,68 @@ export async function handleSplitBill(ctx: CommandContext): Promise<NextResponse
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prismaOperations: any[] = [];
+
   // ── Create expense for user's own portion ──
   if (parsed.userPortion > 0) {
-    await prisma.transaction.create({
-      data: {
-        user_id: ctx.user.id,
-        type: TransactionType.EXPENSE,
-        amount: new Decimal(parsed.userPortion),
-        description: `[Patungan] ${parsed.description}`,
-        ...(walletId ? { wallet_id: walletId } : {}),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any,
-    });
+    prismaOperations.push(
+      prisma.transaction.create({
+        data: {
+          user_id: ctx.user.id,
+          type: TransactionType.EXPENSE,
+          amount: new Decimal(parsed.userPortion),
+          description: `[Patungan] ${parsed.description}`,
+          ...(walletId ? { wallet_id: walletId } : {}),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    );
   }
 
-  // ── Create piutang for each person ──
+  // ── Build piutang for each person ──
   const resolvedNames: Record<string, string> = {};
 
   for (const split of parsed.splits) {
     const resolved = await resolveContactName(split.name);
     resolvedNames[split.name] = resolved;
 
-    await prisma.debt.create({
-      data: {
-        user_id: ctx.user.id,
-        type: DebtType.PIUTANG,
-        amount: new Decimal(split.amount),
-        person_name: resolved,
-        description: `[Patungan] ${parsed.description}`,
-        status: DebtStatus.UNPAID,
-        ...(walletId ? { wallet_id: walletId } : {}),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } as any,
-    });
+    prismaOperations.push(
+      prisma.debt.create({
+        data: {
+          user_id: ctx.user.id,
+          type: DebtType.PIUTANG,
+          amount: new Decimal(split.amount),
+          person_name: resolved,
+          description: `[Patungan] ${parsed.description}`,
+          status: DebtStatus.UNPAID,
+          ...(walletId ? { wallet_id: walletId } : {}),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any,
+      })
+    );
   }
 
   // ── Deduct wallet by TOTAL (user's portion + all piutang) ──
   if (walletId && ctx.user.plan_type === "PREMIUM") {
-    await prisma.wallet.update({
-      where: { id: walletId },
-      data: {
-        balance: { decrement: parsed.totalAmount },
-      },
-    });
+    prismaOperations.push(
+      prisma.wallet.update({
+        where: { id: walletId },
+        data: {
+          balance: { decrement: parsed.totalAmount },
+        },
+      })
+    );
+  }
+
+  // ── Execute everything atomically ──
+  try {
+    if (prismaOperations.length > 0) {
+      await prisma.$transaction(prismaOperations);
+    }
+  } catch (error) {
+    console.error("Failed atomic splitbill transaction:", error);
+    return NextResponse.json({ message: "❌ Gagal memproses split bill karena kendala server." });
   }
 
   // ── Build response ──

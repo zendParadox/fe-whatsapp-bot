@@ -2,18 +2,32 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withPerformanceTracking } from "@/lib/performance";
+import { verifyToken } from "@/lib/auth";
+import { cookies } from "next/headers";
 
 async function handleTransactionsGET(request: Request) {
+  // Authenticate user
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const payload = verifyToken(token);
+  if (!payload?.userId) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+  const userId = payload.userId as string;
+
   const { searchParams } = new URL(request.url);
   const month = searchParams.get("month");
 
   // Pagination params (defaults: page=1, limit=50)
   const page = Math.max(1, Number(searchParams.get("page")) || 1);
-  const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 50));
+  const limit = Math.min(
+    100,
+    Math.max(1, Number(searchParams.get("limit")) || 50),
+  );
   const skip = (page - 1) * limit;
 
-  // Build where clause
-  let whereClause: any = {};
+  // Build where clause — ALWAYS scoped to authenticated user
+  let whereClause: any = { user_id: userId };
 
   if (month === "current" || month === "last") {
     const now = new Date();
@@ -28,11 +42,9 @@ async function handleTransactionsGET(request: Request) {
       endDate = new Date(now.getFullYear(), now.getMonth(), 1);
     }
 
-    whereClause = {
-      created_at: {
-        gte: startDate,
-        lt: endDate,
-      },
+    whereClause.created_at = {
+      gte: startDate,
+      lt: endDate,
     };
   }
 
@@ -82,19 +94,16 @@ async function handleTransactionsGET(request: Request) {
     console.error("Failed to fetch transactions:", error);
     return NextResponse.json(
       { message: "Internal server error while fetching transactions." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 async function handleTransactionsPOST(request: Request) {
   try {
-    const { cookies } = await import("next/headers");
-    const { verifyToken } = await import("@/lib/auth");
-    
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
-    
+
     if (!token) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -112,60 +121,74 @@ async function handleTransactionsPOST(request: Request) {
     if (!amount || !type) {
       return NextResponse.json(
         { error: "Amount and Type are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
-    
+
     // Check user plan for premium features (wallet)
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { plan_type: true }
+      select: { plan_type: true },
     });
-    
+
     let finalWalletId = null;
+    const prismaOperations: any[] = [];
+
     if (wallet_id && user?.plan_type === "PREMIUM") {
-       const wallet = await prisma.wallet.findFirst({
-         where: { id: wallet_id, user_id: userId }
-       });
-       
-       if (wallet) {
-         finalWalletId = wallet.id;
-         // Update wallet balance
-         const amountNum = Number(amount);
-         await prisma.wallet.update({
-           where: { id: wallet.id },
-           data: {
-             balance: {
-               [type === "EXPENSE" ? "decrement" : "increment"]: amountNum
-             }
-           }
-         });
-       }
+      const wallet = await prisma.wallet.findFirst({
+        where: { id: wallet_id, user_id: userId },
+      });
+
+      if (wallet) {
+        finalWalletId = wallet.id;
+        const amountNum = Number(amount);
+        prismaOperations.push(
+          prisma.wallet.update({
+            where: { id: wallet.id },
+            data: {
+              balance: {
+                [type === "EXPENSE" ? "decrement" : "increment"]: amountNum,
+              },
+            },
+          }),
+        );
+      }
     }
 
-    // Create transaction
-    const newTx = await prisma.transaction.create({
-      data: {
-        user_id: userId,
-        amount: Number(amount),
-        type: type, // INCOME or EXPENSE
-        description: description || "",
-        category_id: category_id || null, // Optional
-        wallet_id: finalWalletId, // Premium only
-        // If date provided, use it, otherwise default (now)
-        created_at: date ? new Date(date) : undefined
-      }
-    });
+    // Queue transaction creation
+    prismaOperations.push(
+      prisma.transaction.create({
+        data: {
+          user_id: userId,
+          amount: Number(amount),
+          type: type,
+          description: description || "",
+          category_id: category_id || null,
+          wallet_id: finalWalletId,
+          created_at: date ? new Date(date) : undefined,
+        },
+      }),
+    );
+
+    // Execute atomically
+    const results = await prisma.$transaction(prismaOperations);
+    const newTx = results[results.length - 1]; // transaction.create is always last
 
     return NextResponse.json({ data: newTx }, { status: 201 });
   } catch (error) {
     console.error("POST /api/transactions error:", error);
     return NextResponse.json(
       { error: "Failed to create transaction" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
-export const GET = withPerformanceTracking(handleTransactionsGET, "/api/transactions");
-export const POST = withPerformanceTracking(handleTransactionsPOST, "/api/transactions");
+export const GET = withPerformanceTracking(
+  handleTransactionsGET,
+  "/api/transactions",
+);
+export const POST = withPerformanceTracking(
+  handleTransactionsPOST,
+  "/api/transactions",
+);

@@ -148,8 +148,17 @@ async function handleTransfer(ctx: CommandContext, match: RegExpMatchArray): Pro
   if (!fromWallet) return NextResponse.json({ message: `⚠️ Kantong "${fromName}" tidak ditemukan.` });
   if (!toWallet) return NextResponse.json({ message: `⚠️ Kantong "${toName}" tidak ditemukan.` });
 
-  await prisma.wallet.update({ where: { id: fromWallet.id }, data: { balance: { decrement: amount } } });
-  await prisma.wallet.update({ where: { id: toWallet.id }, data: { balance: { increment: amount } } });
+  try {
+    await prisma.$transaction([
+      prisma.wallet.update({ where: { id: fromWallet.id }, data: { balance: { decrement: amount } } }),
+      prisma.wallet.update({ where: { id: toWallet.id }, data: { balance: { increment: amount } } }),
+    ]);
+  } catch (error) {
+    console.error("❌ Atomic wallet transfer failed:", error);
+    return NextResponse.json({
+      message: "❌ Transfer gagal karena kesalahan server. Saldo tidak berubah."
+    });
+  }
 
   return NextResponse.json({
     message: `🔄 *Transfer Berhasil!*\n━━━━━━━━━━━━━━━━━\n📤 Dari: *${fromWallet.name}*\n📥 Ke: *${toWallet.name}*\n💰 Jumlah: Rp ${amount.toLocaleString("id-ID")}\n━━━━━━━━━━━━━━━━━\n\nSaldo ${fromWallet.name}: Rp ${(Number(fromWallet.balance) - amount).toLocaleString("id-ID")}\nSaldo ${toWallet.name}: Rp ${(Number(toWallet.balance) + amount).toLocaleString("id-ID")}`

@@ -69,13 +69,14 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
       return NextResponse.json({ error: "Kantong tidak ditemukan." }, { status: 404 });
     }
 
-    // Lepaskan semua transaksi dari wallet ini (set wallet_id = null)
-    await prisma.transaction.updateMany({
-      where: { wallet_id: id },
-      data: { wallet_id: null },
-    });
-
-    await prisma.wallet.delete({ where: { id } });
+    // Atomically detach transactions and delete wallet
+    await prisma.$transaction([
+      prisma.transaction.updateMany({
+        where: { wallet_id: id },
+        data: { wallet_id: null },
+      }),
+      prisma.wallet.delete({ where: { id } }),
+    ]);
 
     return NextResponse.json({ message: "Kantong berhasil dihapus." });
   } catch (error) {

@@ -90,18 +90,30 @@ async function handleCheckBudget(ctx: CommandContext): Promise<NextResponse> {
 
   let reply = `🎯 *Status Budget ${monthNames[currentMonth - 1]}*\n━━━━━━━━━━━━━━━━━\n`;
 
-  for (const b of budgets) {
-    const aggregations = await prisma.transaction.aggregate({
-      where: {
-        user_id: ctx.user.id,
-        category_id: b.category_id,
-        type: "EXPENSE",
-        created_at: { gte: startOfMonth(nowWIB), lte: endOfMonth(nowWIB) }
-      },
-      _sum: { amount: true }
-    });
+  // Fetch all category expense totals in a single query (eliminates N+1)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const categoryIds = budgets.map((b: any) => b.category_id);
+  const expenseAggregations = await prisma.transaction.groupBy({
+    by: ["category_id"],
+    where: {
+      user_id: ctx.user.id,
+      category_id: { in: categoryIds },
+      type: "EXPENSE",
+      created_at: { gte: startOfMonth(nowWIB), lte: endOfMonth(nowWIB) },
+    },
+    _sum: { amount: true },
+  });
 
-    const used = aggregations._sum.amount?.toNumber() || 0;
+  // Build a lookup map: category_id -> total expense
+  const expenseMap = new Map<string, number>();
+  for (const agg of expenseAggregations) {
+    if (agg.category_id) {
+      expenseMap.set(agg.category_id, agg._sum.amount?.toNumber() || 0);
+    }
+  }
+
+  for (const b of budgets) {
+    const used = expenseMap.get(b.category_id) || 0;
     const total = b.amount.toNumber();
     const remaining = total - used;
     const percent = Math.round((used / total) * 100);

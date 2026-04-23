@@ -39,6 +39,8 @@ async function handleCreateDebt(ctx: CommandContext): Promise<NextResponse> {
 
   let finalWalletId = null;
   let walletNameDisplay = "";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prismaOperations: any[] = [];
   
   if (parsedData.paymentMethod && ctx.user.plan_type === "PREMIUM") {
      const wallet = await findAccessibleWalletByName(ctx.user.id, parsedData.paymentMethod);
@@ -48,20 +50,20 @@ async function handleCreateDebt(ctx: CommandContext): Promise<NextResponse> {
        walletNameDisplay = `\n🏦 *Kantong:* ${wallet.name}`;
        
        const amountNum = parsedData.amount;
-       await prisma.wallet.update({
+       prismaOperations.push(prisma.wallet.update({
          where: { id: wallet.id },
          data: {
            balance: {
              [parsedData.type === "HUTANG" ? "increment" : "decrement"]: amountNum
            }
          }
-       });
+       }));
      }
   }
 
   const resolvedName = await resolveContactName(parsedData.personName);
 
-  await prisma.debt.create({
+  prismaOperations.push(prisma.debt.create({
     data: {
       user_id: ctx.user.id,
       type: parsedData.type,
@@ -72,7 +74,16 @@ async function handleCreateDebt(ctx: CommandContext): Promise<NextResponse> {
       status: DebtStatus.UNPAID
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any
-  });
+  }));
+
+  try {
+    if (prismaOperations.length > 0) {
+      await prisma.$transaction(prismaOperations);
+    }
+  } catch (error) {
+    console.error("Atomic transaction failed in create debt:", error);
+    return NextResponse.json({ message: "❌ Gagal memproses data pinjaman karena kesalahan server." });
+  }
 
   const isHutang = parsedData.type === DebtType.HUTANG;
   const emoji = isHutang ? "🔴" : "🟢";
@@ -189,35 +200,53 @@ async function handlePayDebt(ctx: CommandContext): Promise<NextResponse> {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prismaOperations: any[] = [];
+  const walletCache = new Map<string, boolean>();
+
   for (const debt of unpaidDebts) {
     // Determine which wallet gets updated: target repayment wallet OR the original debt wallet
     const targetWalletId = finalWalletId || (debt as Record<string, unknown>).wallet_id as string | null;
     
     if (targetWalletId && ctx.user.plan_type === "PREMIUM") {
-      const wallet = await prisma.wallet.findFirst({
-        where: { id: targetWalletId, user_id: ctx.user.id }
-      });
+      let walletExists = walletCache.has(targetWalletId);
+      if (!walletExists) {
+        const wallet = await prisma.wallet.findFirst({
+          where: { id: targetWalletId, user_id: ctx.user.id }
+        });
+        if (wallet) walletCache.set(targetWalletId, true);
+        walletExists = !!wallet;
+      }
       
-      if (wallet) {
+      if (walletExists) {
         // REPAYMENT LOGIC:
         // HUTANG (we borrowed before, now we repay) -> balance decreases
         // PIUTANG (we lent before, now we get paid back) -> balance increases
-        await prisma.wallet.update({
-          where: { id: wallet.id },
+        prismaOperations.push(prisma.wallet.update({
+          where: { id: targetWalletId },
           data: {
             balance: {
               [debt.type === "HUTANG" ? "decrement" : "increment"]: Number(debt.amount)
             }
           }
-        });
+        }));
       }
     }
     
     // Mark as paid
-    await prisma.debt.update({
+    prismaOperations.push(prisma.debt.update({
       where: { id: debt.id },
       data: { status: DebtStatus.PAID }
-    });
+    }));
+  }
+
+  try {
+    if (prismaOperations.length > 0) {
+      await prisma.$transaction(prismaOperations);
+    }
+  } catch (error) {
+    console.error("Atomic transaction failed in pay debt:", error);
+    return NextResponse.json({ message: "❌ Gagal memproses pelunasan karena kesalahan server." });
   }
 
   const totalAmount = unpaidDebts.reduce((acc, d) => acc + d.amount.toNumber(), 0);

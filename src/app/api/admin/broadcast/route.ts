@@ -2,8 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAdmin } from "@/lib/admin";
 import { subDays } from "date-fns";
-
-const GOLANG_BOT_URL = process.env.GOLANG_BOT_URL || "https://bot.rafliramadhani.site";
+import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
 
 type FilterType = "1d" | "7d" | "30d" | "all" | "premium" | "free";
 
@@ -71,37 +70,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Tidak ada user untuk filter ini" }, { status: 400 });
     }
 
-    // Bypass TLS leaf signature verification temp
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
-    // Process broadcast in the background to avoid Vercel/Next.js timeout
-    const baseUrl = GOLANG_BOT_URL.endsWith("/") ? GOLANG_BOT_URL.slice(0, -1) : GOLANG_BOT_URL;
     const delaySeconds = 75;
 
-    // Simulate fire and forget in Next.js Serverless (Note: requires Vercel waitUntil or similar for strict serverless context, but for local/VPS it will run as non-blocking async)
+    // Fire-and-forget broadcast in background
     (async () => {
       let successCount = 0;
       let failCount = 0;
 
       for (const phone of phones) {
-        try {
-          process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-          const res = await fetch(`${baseUrl}/send-message`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ phone, message: message.trim() }),
-          });
-          process.env.NODE_TLS_REJECT_UNAUTHORIZED = "1";
-
-          if (res.ok) {
-            successCount++;
-          } else {
-            failCount++;
-            console.error(`Gagal kirim broadcast ke ${phone}: ${await res.text()}`);
-          }
-        } catch (err) {
+        const ok = await sendWhatsAppMessage(phone, message.trim());
+        if (ok) {
+          successCount++;
+        } else {
           failCount++;
-          console.error(`Error kirim broadcast ke ${phone}:`, err);
         }
 
         // Delay between each message to avoid WhatsApp rate limits

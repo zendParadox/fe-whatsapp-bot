@@ -15,11 +15,12 @@ export async function handleAITransaction(ctx: CommandContext): Promise<NextResp
   // Only for premium users — free users get the fallback help
   if ((ctx.user as Record<string, unknown>).plan_type === "FREE") return null;
 
-  // Fetch existing categories to pass to AI
+  // Pre-fetch all user categories
   const userCategories = await prisma.category.findMany({
-    where: { user_id: ctx.user.id },
-    select: { name: true }
+    where: { user_id: ctx.user.id }
   });
+  const categoryMap = new Map<string, string>(); // name (lowercase) -> id
+  userCategories.forEach(c => categoryMap.set(c.name.toLowerCase(), c.id));
   const categoryNames = userCategories.map(c => c.name);
 
   let aiTransactions;
@@ -45,22 +46,44 @@ export async function handleAITransaction(ctx: CommandContext): Promise<NextResp
   // Pre-fetch all user wallets (owned + shared) once
   const userWallets = await findAccessibleWallets(ctx.user.id);
 
+  // Array to hold the Prisma operations for the atomic transaction
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prismaOperations: any[] = [];
+  
+  // Track accumulated expenses per category locally to avoid repeatedly checking budget incorrectly
+  const accumulatedExpenses = new Map<string, number>();
+
   for (const tx of aiTransactions) {
     try {
-      console.log(`📝 Processing transaction: ${tx.description} (${tx.amount})`);
+      console.log(`📝 Preparing transaction: ${tx.description} (${tx.amount})`);
 
-      let category = await prisma.category.findFirst({
-        where: { user_id: ctx.user.id, name: { equals: tx.category, mode: "insensitive" } },
-      });
+      const catNameLower = tx.category.toLowerCase();
+      let categoryId = categoryMap.get(catNameLower);
 
-      if (!category) {
-        category = await prisma.category.create({ data: { name: tx.category, user_id: ctx.user.id } });
+      // Create category if it doesn't exist
+      if (!categoryId) {
+        const newCategory = await prisma.category.create({ data: { name: tx.category, user_id: ctx.user.id } });
+        categoryId = newCategory.id;
+        categoryMap.set(catNameLower, categoryId);
         console.log(`✅ Created category: ${tx.category}`);
       }
 
       if (tx.type === "EXPENSE") {
-        const alert = await checkBudgetStatus(ctx.user.id, category.id, tx.amount, ctx.user.currency);
-        if (alert) budgetAlertsList.push(`${category.name}: ${alert}`);
+        const pastExpenses = accumulatedExpenses.get(categoryId) || 0;
+        accumulatedExpenses.set(categoryId, pastExpenses + tx.amount);
+        
+        // We only check budget for the first time we see this category in the loop to avoid N+1 budget alerts
+        // Pass the accumulated expenses to budget check
+        if (pastExpenses === 0) {
+          // Wait, passing tx.amount is safe, but we'll recalculate later if multiple expenses in same category? 
+          // Check budget once with total accumulated for the category in this batch
+          const totalCategoryExpenseInThisBatch = aiTransactions
+            .filter(t => t.type === "EXPENSE" && t.category.toLowerCase() === catNameLower)
+            .reduce((sum, t) => sum + t.amount, 0);
+
+          const alert = await checkBudgetStatus(ctx.user.id, categoryId, totalCategoryExpenseInThisBatch, ctx.user.currency);
+          if (alert) budgetAlertsList.push(`${tx.category}: ${alert}`);
+        }
       }
 
       const typeEnum = tx.type === "INCOME" ? TransactionType.INCOME : TransactionType.EXPENSE;
@@ -72,7 +95,7 @@ export async function handleAITransaction(ctx: CommandContext): Promise<NextResp
       const txDescLower = (tx.description || "").toLowerCase();
       const txCategoryLower = (tx.category || "").toLowerCase();
 
-      // Pass 0: Use AI-extracted wallet name (highest priority, per-transaction)
+      // Pass 0: Use AI-extracted wallet name
       if (tx.wallet) {
         const aiWalletName = tx.wallet.toLowerCase();
         for (const w of userWallets) {
@@ -84,7 +107,7 @@ export async function handleAITransaction(ctx: CommandContext): Promise<NextResp
         }
       }
 
-      // Pass 1: Check AI description and category (fallback)
+      // Pass 1: Check AI description and category
       if (!walletId) {
         for (const w of userWallets) {
           const wName = w.name.toLowerCase();
@@ -96,7 +119,7 @@ export async function handleAITransaction(ctx: CommandContext): Promise<NextResp
         }
       }
 
-      // Pass 2: Check raw message (last resort — only if single transaction)
+      // Pass 2: Check raw message
       if (!walletId && aiTransactions.length === 1) {
         for (const w of userWallets) {
           const wName = w.name.toLowerCase();
@@ -108,25 +131,32 @@ export async function handleAITransaction(ctx: CommandContext): Promise<NextResp
         }
       }
 
-      // Update wallet balance if matched
+      // Queue Wallet Balance Update
       if (walletId) {
         if (tx.type === "EXPENSE") {
-          await prisma.wallet.update({ where: { id: walletId }, data: { balance: { decrement: tx.amount } } });
+          prismaOperations.push(
+            prisma.wallet.update({ where: { id: walletId }, data: { balance: { decrement: tx.amount } } })
+          );
         } else {
-          await prisma.wallet.update({ where: { id: walletId }, data: { balance: { increment: tx.amount } } });
+          prismaOperations.push(
+            prisma.wallet.update({ where: { id: walletId }, data: { balance: { increment: tx.amount } } })
+          );
         }
       }
 
-      await prisma.transaction.create({
-        data: {
-          type: typeEnum,
-          amount: new Decimal(tx.amount),
-          description: tx.description,
-          user_id: ctx.user.id,
-          category_id: category.id,
-          wallet_id: walletId,
-        },
-      });
+      // Queue Transaction Creation
+      prismaOperations.push(
+        prisma.transaction.create({
+          data: {
+            type: typeEnum,
+            amount: new Decimal(tx.amount),
+            description: tx.description,
+            user_id: ctx.user.id,
+            category_id: categoryId,
+            wallet_id: walletId,
+          },
+        })
+      );
 
       const icon = tx.type === "INCOME" ? "📈" : "📉";
       reply += `\n${icon} *${tx.category}*\n`;
@@ -135,11 +165,22 @@ export async function handleAITransaction(ctx: CommandContext): Promise<NextResp
       if (walletLabel) reply += `   💳 Kantong: ${walletLabel}\n`;
 
       count++;
-      console.log(`✅ Transaction saved: ${tx.description}`);
     } catch (txError) {
-      console.error(`❌ Error processing transaction:`, tx, txError);
-      const errorMessage = txError instanceof Error ? txError.message : String(txError);
-      errors.push(`${tx.description}: ${errorMessage}`);
+      console.error(`❌ Error parsing instruction for transaction:`, tx, txError);
+      errors.push(`${tx.description}: Invalid data format locally`);
+    }
+  }
+
+  // Execute all operations atomically in a single transaction
+  if (prismaOperations.length > 0) {
+    try {
+      await prisma.$transaction(prismaOperations);
+      console.log(`✅ ${prismaOperations.length} operations committed atomically.`);
+    } catch (atomicError) {
+      console.error("❌ Atomic transaction failed:", atomicError);
+      return NextResponse.json({
+        message: `❌ Terjadi kesalahan saat menyimpan transaksi:\n${atomicError instanceof Error ? atomicError.message : String(atomicError)}`
+      });
     }
   }
 

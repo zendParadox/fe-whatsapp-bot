@@ -94,8 +94,7 @@ export async function POST(request: NextRequest) {
 
     // Fetch existing categories to pass to AI
     const userCategories = await prisma.category.findMany({
-      where: { user_id: user.id },
-      select: { name: true }
+      where: { user_id: user.id }
     });
     const categoryNames = userCategories.map(c => c.name);
 
@@ -130,63 +129,84 @@ export async function POST(request: NextRequest) {
     let successCount = 0;
     const budgetAlerts: string[] = [];
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const prismaOperations: any[] = [];
+    const accumulatedExpenses = new Map<string, number>();
+
+    const categoryMap = new Map<string, string>(); // name (lowercase) -> id
+    userCategories.forEach(c => categoryMap.set(c.name.toLowerCase(), c.id));
+
     for (const tx of parsedTransactions) {
       try {
-        let category = await prisma.category.findFirst({
-          where: {
-            user_id: user.id,
-            name: { equals: tx.category, mode: "insensitive" },
-          },
-        });
+        const catNameLower = tx.category.toLowerCase();
+        let categoryId = categoryMap.get(catNameLower);
 
-        if (!category) {
-          category = await prisma.category.create({
+        if (!categoryId) {
+          const newCategory = await prisma.category.create({
             data: { name: tx.category, user_id: user.id },
           });
+          categoryId = newCategory.id;
+          categoryMap.set(catNameLower, categoryId);
         }
 
         if (tx.type === "EXPENSE") {
-          const alert = await checkBudgetStatus(
-            user.id,
-            category.id,
-            tx.amount,
-            user.currency
-          );
-          if (alert) budgetAlerts.push(`${category.name}: ${alert}`);
           totalExpense += tx.amount;
+          
+          const pastExpenses = accumulatedExpenses.get(categoryId) || 0;
+          accumulatedExpenses.set(categoryId, pastExpenses + tx.amount);
+
+          if (pastExpenses === 0) {
+            const totalCategoryExpenseInThisBatch = parsedTransactions
+              .filter(t => t.type === "EXPENSE" && t.category.toLowerCase() === catNameLower)
+              .reduce((sum, t) => sum + t.amount, 0);
+
+            const alert = await checkBudgetStatus(user.id, categoryId, totalCategoryExpenseInThisBatch, user.currency);
+            if (alert) budgetAlerts.push(`${tx.category}: ${alert}`);
+          }
         } else {
           totalIncome += tx.amount;
         }
 
-        const typeEnum =
-          tx.type === "INCOME"
-            ? TransactionType.INCOME
-            : TransactionType.EXPENSE;
+        const typeEnum = tx.type === "INCOME" ? TransactionType.INCOME : TransactionType.EXPENSE;
 
-        await prisma.transaction.create({
-          data: {
-            type: typeEnum,
-            amount: new Decimal(tx.amount),
-            description: tx.description,
-            user_id: user.id,
-            category_id: category.id,
-          },
-        });
+        prismaOperations.push(
+          prisma.transaction.create({
+            data: {
+              type: typeEnum,
+              amount: new Decimal(tx.amount),
+              description: tx.description,
+              user_id: user.id,
+              category_id: categoryId,
+            },
+          })
+        );
 
         const icon = tx.type === "INCOME" ? "📈" : "📉";
         const formattedAmt = fmt(tx.amount);
         results.push({
           success: true,
           icon,
-          text: `${formattedAmt} - ${tx.description} (${category.name})`,
+          text: `${formattedAmt} - ${tx.description} (${tx.category})`,
         });
         successCount++;
       } catch (err) {
-        console.error("Transaction save error:", err);
+        console.error("Transaction instruction error:", err);
         results.push({
           success: false,
           icon: "❌",
-          text: `"${tx.description}" - Gagal disimpan`,
+          text: `"${tx.description}" - Gagal diproses`,
+        });
+      }
+    }
+
+    if (prismaOperations.length > 0) {
+      try {
+        await prisma.$transaction(prismaOperations);
+      } catch (atomicError) {
+        console.error("Atomic transaction failed (image):", atomicError);
+        return NextResponse.json({
+          message:
+            "❌ *Gagal Menyimpan Transaksi*\n\nTerjadi kesalahan fatal saat menyimpan data ke database. Seluruh histori dibatalkan untuk mencegah kerusakan data.",
         });
       }
     }

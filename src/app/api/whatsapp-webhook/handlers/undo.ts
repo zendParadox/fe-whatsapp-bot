@@ -27,26 +27,37 @@ export async function handleUndo(ctx: CommandContext): Promise<NextResponse | nu
     });
   }
 
-  // Revert wallet balance if transaction was linked to a wallet
+  // Prepare the operations for atomic undo
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const prismaOperations: any[] = [];
   let walletRevertInfo = "";
+  
   if (lastTx.wallet_id) {
     try {
       const txAmount = lastTx.amount.toNumber();
-      if (lastTx.type === "EXPENSE") {
-        await prisma.wallet.update({ where: { id: lastTx.wallet_id }, data: { balance: { increment: txAmount } } });
-      } else {
-        await prisma.wallet.update({ where: { id: lastTx.wallet_id }, data: { balance: { decrement: txAmount } } });
-      }
       const revertedWallet = await prisma.wallet.findUnique({ where: { id: lastTx.wallet_id } });
+      
       if (revertedWallet) {
+        if (lastTx.type === "EXPENSE") {
+          prismaOperations.push(prisma.wallet.update({ where: { id: lastTx.wallet_id }, data: { balance: { increment: txAmount } } }));
+        } else {
+          prismaOperations.push(prisma.wallet.update({ where: { id: lastTx.wallet_id }, data: { balance: { decrement: txAmount } } }));
+        }
         walletRevertInfo = `\n💳 *Kantong:* ${revertedWallet.name} (saldo dikembalikan)`;
       }
     } catch (walletErr) {
-      console.error("Failed to revert wallet balance:", walletErr);
+      console.error("Failed to prepare wallet revert:", walletErr);
     }
   }
 
-  await prisma.transaction.delete({ where: { id: lastTx.id } });
+  prismaOperations.push(prisma.transaction.delete({ where: { id: lastTx.id } }));
+
+  try {
+    await prisma.$transaction(prismaOperations);
+  } catch (error) {
+    console.error("Undo transaction failed:", error);
+    return NextResponse.json({ message: "❌ Gagal membatalkan transaksi karena kesalahan server." });
+  }
 
   const typeEmoji = lastTx.type === "INCOME" ? "📈" : "📉";
   const typeText = lastTx.type === "INCOME" ? "Pemasukan" : "Pengeluaran";

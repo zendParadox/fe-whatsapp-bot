@@ -68,7 +68,7 @@ async function handleDashboardGET(request: NextRequest) {
     const durationInDays = differenceInDays(endDate, startDate) + 1;
     const previousPeriodEndDate = endOfDay(subDays(startDate, 1));
     const previousPeriodStartDate = startOfDay(
-      subDays(previousPeriodEndDate, durationInDays - 1)
+      subDays(previousPeriodEndDate, durationInDays - 1),
     );
 
     // --- 2. QUERY DATABASE SECARA PARALEL ---
@@ -95,6 +95,7 @@ async function handleDashboardGET(request: NextRequest) {
         },
         include: { category: true },
         orderBy: { created_at: "desc" },
+        take: 50,
       }),
       // Previous period expense summary
       prisma.transaction.aggregate({
@@ -159,7 +160,7 @@ async function handleDashboardGET(request: NextRequest) {
         else acc.totalExpense += Number(tx.amount);
         return acc;
       },
-      { totalIncome: 0, totalExpense: 0, balance: 0 }
+      { totalIncome: 0, totalExpense: 0, balance: 0 },
     );
     summary.balance = summary.totalIncome - summary.totalExpense;
 
@@ -172,8 +173,8 @@ async function handleDashboardGET(request: NextRequest) {
           cat == null
             ? "Uncategorized"
             : typeof cat === "string"
-            ? cat
-            : cat.name ?? String(cat);
+              ? cat
+              : (cat.name ?? String(cat));
         acc[catName] = (acc[catName] || 0) + Number(tx.amount);
         return acc;
       }, {});
@@ -191,8 +192,8 @@ async function handleDashboardGET(request: NextRequest) {
         b?.category == null
           ? "Uncategorized"
           : typeof b.category === "string"
-          ? b.category
-          : b.category.name ?? String(b.category);
+            ? b.category
+            : (b.category.name ?? String(b.category));
       const actual = categoryExpenses[catName] || 0;
       return {
         category: catName,
@@ -201,20 +202,26 @@ async function handleDashboardGET(request: NextRequest) {
       };
     });
 
-    const trendMap = (trendDataRaw as TrendRecord[]).reduce((acc, record) => {
-      const monthYear = format(new Date(record.created_at), "MMM yyyy");
-      if (!acc[monthYear]) {
-        acc[monthYear] = {
-          name: format(new Date(record.created_at), "MMM"),
-          Pemasukan: 0,
-          Pengeluaran: 0,
-        };
-      }
-      const amount = Number(record._sum?.amount ?? 0);
-      if (record.type === "INCOME") acc[monthYear].Pemasukan += amount;
-      else acc[monthYear].Pengeluaran += amount;
-      return acc;
-    }, {} as Record<string, { name: string; Pemasukan: number; Pengeluaran: number }>);
+    const trendMap = (trendDataRaw as TrendRecord[]).reduce(
+      (acc, record) => {
+        const monthYear = format(new Date(record.created_at), "MMM yyyy");
+        if (!acc[monthYear]) {
+          acc[monthYear] = {
+            name: format(new Date(record.created_at), "MMM"),
+            Pemasukan: 0,
+            Pengeluaran: 0,
+          };
+        }
+        const amount = Number(record._sum?.amount ?? 0);
+        if (record.type === "INCOME") acc[monthYear].Pemasukan += amount;
+        else acc[monthYear].Pengeluaran += amount;
+        return acc;
+      },
+      {} as Record<
+        string,
+        { name: string; Pemasukan: number; Pengeluaran: number }
+      >,
+    );
     const trendData = Object.values(trendMap);
 
     // --- 4. STRUKTURKAN DATA RESPON FINAL ---
@@ -285,4 +292,7 @@ async function handleDashboardGET(request: NextRequest) {
   }
 }
 
-export const GET = withPerformanceTracking(handleDashboardGET, "/api/dashboard");
+export const GET = withPerformanceTracking(
+  handleDashboardGET,
+  "/api/dashboard",
+);
