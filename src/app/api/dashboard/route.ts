@@ -108,7 +108,6 @@ async function handleDashboardGET(request: NextRequest) {
           user_id: userId,
           created_at: { gte: startDate, lte: endDate },
         },
-        take: 50,
         include: { category: true },
         orderBy: { created_at: "desc" },
       }),
