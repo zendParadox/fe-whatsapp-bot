@@ -72,7 +72,21 @@ async function handleDashboardGET(request: NextRequest) {
     );
 
     // --- 2. QUERY DATABASE SECARA PARALEL ---
-    // All queries run in parallel for maximum performance
+    // Optimasi: Raw query untuk grouping di level database (PostgreSQL)
+    const trendQuery = prisma.$queryRaw`
+      SELECT 
+        type, 
+        DATE_TRUNC('month', created_at) as month, 
+        SUM(amount) as total
+      FROM "Transaction"
+      WHERE user_id = ${userId}
+        AND created_at >= ${startOfMonth(subMonths(now, 5))}
+        AND created_at <= ${endOfMonth(now)}
+      GROUP BY type, DATE_TRUNC('month', created_at)
+      ORDER BY month ASC
+    `;
+
+    // Semua query berjalan paralel untuk performa maksimal
     const [
       currentUser,
       currentTransactionsRaw,
@@ -81,21 +95,22 @@ async function handleDashboardGET(request: NextRequest) {
       trendDataRaw,
       totalAllTimeRaw,
       walletsRaw,
+      membershipsRaw, // Menghindari waterfall latency
     ] = await Promise.all([
       // User info (currency, plan_type)
       prisma.user.findUnique({
         where: { id: userId },
         select: { currency: true, plan_type: true },
       }),
-      // Current period transactions (limited to 50 most recent)
+      // Current period transactions (Dibatasi 50 agar tidak memory leak)
       prisma.transaction.findMany({
         where: {
           user_id: userId,
           created_at: { gte: startDate, lte: endDate },
         },
+        take: 50,
         include: { category: true },
         orderBy: { created_at: "desc" },
-        take: 50,
       }),
       // Previous period expense summary
       prisma.transaction.aggregate({
@@ -118,35 +133,28 @@ async function handleDashboardGET(request: NextRequest) {
         },
         include: { category: true },
       }),
-      // 6-month trend data
-      prisma.transaction.groupBy({
-        by: ["type", "created_at"],
-        where: {
-          user_id: userId,
-          created_at: {
-            gte: startOfMonth(subMonths(now, 5)),
-            lte: endOfMonth(now),
-          },
-        },
-        _sum: { amount: true },
-        orderBy: { created_at: "asc" },
-      }),
+      // 6-month trend data (Menggunakan raw query yang optimal)
+      trendQuery,
       // All-time totals for overall saldo
       prisma.transaction.groupBy({
         by: ["type"],
         where: { user_id: userId },
         _sum: { amount: true },
       }),
-      // Wallets (all users — filter later, avoids conditional parallel issue)
+      // Wallets (all users)
       prisma.wallet.findMany({
         where: { user_id: userId },
         orderBy: { created_at: "asc" },
+      }),
+      // Shared Wallets via memberships (Dijalankan paralel)
+      prisma.walletMember.findMany({
+        where: { user_id: userId },
+        include: { wallet: true },
       }),
     ]);
 
     const userCurrency = currentUser?.currency || "IDR";
 
-    // treat results as any for now (safe runtime handling below)
     const currentTransactions: any[] = Array.isArray(currentTransactionsRaw)
       ? currentTransactionsRaw
       : [];
@@ -164,7 +172,6 @@ async function handleDashboardGET(request: NextRequest) {
     );
     summary.balance = summary.totalIncome - summary.totalExpense;
 
-    // category might be string or object or null — handle safely
     const categoryExpenses = currentTransactions
       .filter((tx) => tx.type === "EXPENSE")
       .reduce((acc: Record<string, number>, tx: any) => {
@@ -202,19 +209,24 @@ async function handleDashboardGET(request: NextRequest) {
       };
     });
 
-    const trendMap = (trendDataRaw as TrendRecord[]).reduce(
+    // Mapping ulang hasil Raw Query untuk tren bulanan
+    const trendMap = (trendDataRaw as any[]).reduce(
       (acc, record) => {
-        const monthYear = format(new Date(record.created_at), "MMM yyyy");
+        const dateObj = new Date(record.month);
+        const monthYear = format(dateObj, "MMM yyyy");
+
         if (!acc[monthYear]) {
           acc[monthYear] = {
-            name: format(new Date(record.created_at), "MMM"),
+            name: format(dateObj, "MMM"),
             Pemasukan: 0,
             Pengeluaran: 0,
           };
         }
-        const amount = Number(record._sum?.amount ?? 0);
+
+        const amount = Number(record.total ?? 0);
         if (record.type === "INCOME") acc[monthYear].Pemasukan += amount;
         else acc[monthYear].Pengeluaran += amount;
+
         return acc;
       },
       {} as Record<
@@ -264,12 +276,8 @@ async function handleDashboardGET(request: NextRequest) {
         role: "OWNER",
       }));
 
-      // Fetch shared wallets via WalletMember
-      const memberships = await prisma.walletMember.findMany({
-        where: { user_id: userId },
-        include: { wallet: true },
-      });
-      const sharedWallets = memberships
+      // Mengambil hasil memberships dari Promise.all di atas
+      const sharedWallets = (membershipsRaw || [])
         .filter((m: any) => m.wallet.user_id !== userId)
         .map((m: any) => ({
           ...m.wallet,
