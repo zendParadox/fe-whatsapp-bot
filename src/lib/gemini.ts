@@ -62,7 +62,8 @@ function resetFailedKeys(): void {
 }
 
 export async function parseTransactionFromText(
-  text: string
+  text: string,
+  categories?: string[]
 ): Promise<ParsedTransaction[] | null> {
   if (apiKeys.length === 0) {
     console.error("❌ GEMINI_API_KEYS is missing in environment variables!");
@@ -93,6 +94,7 @@ export async function parseTransactionFromText(
     2. Jika tentang menerima uang (gaji, dapat arisan, dikasih, menang), maka "INCOME".
     3. Hapus "Rp", ".", dan "," dari nominal. Jadikan integer.
     4. "category" harus dalam Bahasa Indonesia singkat dan relevan (contoh: "Makanan & Minuman", "Transportasi", "Gaji", "Belanja", "Tagihan").
+    ${categories && categories.length > 0 ? `PRIORITAS KATEGORI: Kamu SANGAT DISARANKAN untuk menggunakan salah satu kategori dari list berikut jika cocok dengan transaksinya: [${categories.join(", ")}]. Hanya buat kategori baru jika benar-benar tidak ada yang cocok.` : `Jika tidak ada di database, buat kategori baru yang relevan.`}
     5. "description" harus dirapikan, sopan, dengan huruf kapital di awal kata (Title Case). Jangan gunakan singkatan alay. Jangan masukkan nama kantong/dompet ke description.
     6. Jika ada banyak transaksi sekaligus ("beli A 50k lalu bensin 20k"), pecah jadi array beberapa objek!
     7. "wallet" adalah nama kantong/dompet/metode pembayaran yang disebutkan user untuk MASING-MASING transaksi. Contoh: "Cash", "Gopay", "BCA", "Dana", "OVO", "ShopeePay". Jika user menulis "kantong cash" atau "dari gopay" atau "via bca" untuk suatu transaksi, masukkan nama kantongnya. Jika tidak disebutkan, isi null.
@@ -172,7 +174,8 @@ export async function parseTransactionFromText(
 export async function parseTransactionFromImage(
   base64Image: string,
   mimeType: string,
-  caption?: string
+  caption?: string,
+  categories?: string[]
 ): Promise<ParsedTransaction[] | null> {
   if (apiKeys.length === 0) {
     console.error("❌ GEMINI_API_KEYS is missing in environment variables!");
@@ -204,6 +207,7 @@ Aturan Ketat:
 5. PENTING: Jika di dalam struk terdapat potongan diskon atau tambahan pajak, hitung estimasi harga akhir bersih (net price) dari masing-masing produk (harga setelah dikenakan diskon atau pajak). Nilai "amount" untuk item adalah harga riil aktual yang harus dibayar.
 6. Jika struknya buram atau bukan struk belanja, kembalikan array kosong [].
 7. "category" gunakan Bahasa Indonesia umum yang elegan (contoh: "Minuman", "Kebutuhan Bulanan", "Makanan", "Elektronik").
+${categories && categories.length > 0 ? `PRIORITAS KATEGORI: Kamu SANGAT DISARANKAN untuk memilih kategori dari list ini jika ada yang cocok dengan itemnya: [${categories.join(", ")}]. Hanya buat kategori baru jika terpaksa.` : ``}
 8. "description" rapihkan ke format Title Case, jangan tulis singkatan kaku mesin kasir.
 9. Jika struknya struk transfer (seperti mutasi bank masuk), buat menjadi "INCOME" jika warna hijau/masuk.
 10. "confidence" 0.0 sampai 1.0 seberapa pasti kamu membacanya.`;

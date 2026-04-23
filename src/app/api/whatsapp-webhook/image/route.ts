@@ -92,9 +92,16 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Fetch existing categories to pass to AI
+    const userCategories = await prisma.category.findMany({
+      where: { user_id: user.id },
+      select: { name: true }
+    });
+    const categoryNames = userCategories.map(c => c.name);
+
     let parsedTransactions;
     try {
-      parsedTransactions = await parseReceiptImage(image, mimetype, caption);
+      parsedTransactions = await parseReceiptImage(image, mimetype, caption, categoryNames);
     } catch (error: unknown) {
       if (error instanceof Error && error.message === "GEMINI_RATE_LIMIT") {
         return NextResponse.json({

@@ -3,6 +3,8 @@ import { parseTransactionFromText } from "@/lib/gemini";
 import { verifyToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 
+import { prisma } from "@/lib/prisma";
+
 export async function POST(req: NextRequest) {
   try {
     const cookieStore = await cookies();
@@ -27,8 +29,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Fetch existing categories to pass to AI
+    const userCategories = await prisma.category.findMany({
+      where: { user_id: payload.userId },
+      select: { name: true }
+    });
+    const categoryNames = userCategories.map(c => c.name);
+
     // 2. Call Gemini
-    const result = await parseTransactionFromText(message);
+    const result = await parseTransactionFromText(message, categoryNames);
 
     if (!result || result.length === 0) {
       return NextResponse.json(

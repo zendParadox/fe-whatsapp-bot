@@ -12,10 +12,11 @@ import { parseTransactionFromText as parseWithGemini, parseTransactionFromImage 
  * @returns Array of parsed transactions or null if parsing failed
  */
 export async function parseTransactionWithAI(
-  text: string
+  text: string,
+  categories?: string[]
 ): Promise<ParsedTransaction[] | null> {
   console.log(`🤖 Using AI Provider: gemini`);
-  return parseWithGemini(text);
+  return parseWithGemini(text, categories);
 }
 
 // Re-export types for convenience
@@ -27,8 +28,9 @@ export type { ParsedTransaction };
 export async function parseReceiptImage(
   base64Image: string,
   mimeType: string,
-  caption?: string
+  caption?: string,
+  categories?: string[]
 ): Promise<ParsedTransaction[] | null> {
   console.log(`📸 Parsing receipt image with AI Provider: gemini`);
-  return parseImageWithGemini(base64Image, mimeType, caption);
+  return parseImageWithGemini(base64Image, mimeType, caption, categories);
 }

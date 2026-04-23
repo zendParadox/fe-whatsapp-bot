@@ -15,9 +15,16 @@ export async function handleAITransaction(ctx: CommandContext): Promise<NextResp
   // Only for premium users — free users get the fallback help
   if ((ctx.user as Record<string, unknown>).plan_type === "FREE") return null;
 
+  // Fetch existing categories to pass to AI
+  const userCategories = await prisma.category.findMany({
+    where: { user_id: ctx.user.id },
+    select: { name: true }
+  });
+  const categoryNames = userCategories.map(c => c.name);
+
   let aiTransactions;
   try {
-    aiTransactions = await parseTransactionWithAI(ctx.message);
+    aiTransactions = await parseTransactionWithAI(ctx.message, categoryNames);
   } catch (error: unknown) {
     if (error instanceof Error && error.message === "GEMINI_RATE_LIMIT") {
       return NextResponse.json({
