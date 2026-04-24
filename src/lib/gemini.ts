@@ -2,8 +2,12 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Support multiple API keys for rotation (comma-separated)
-const apiKeysString = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "";
-const apiKeys = apiKeysString.split(",").map(k => k.trim()).filter(k => k.length > 0);
+const apiKeysString =
+  process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "";
+const apiKeys = apiKeysString
+  .split(",")
+  .map((k) => k.trim())
+  .filter((k) => k.length > 0);
 
 // Track which key index to use (in-memory, resets on server restart)
 let currentKeyIndex = 0;
@@ -28,7 +32,7 @@ function getGeminiClient(): GoogleGenerativeAI | null {
     console.error("❌ No Gemini API keys configured!");
     return null;
   }
-  
+
   const key = apiKeys[currentKeyIndex];
   return new GoogleGenerativeAI(key);
 }
@@ -39,17 +43,19 @@ function getGeminiClient(): GoogleGenerativeAI | null {
  */
 function rotateApiKey(): boolean {
   failedKeysInCycle.add(currentKeyIndex);
-  
+
   // Find next available key that hasn't failed in this cycle
   for (let i = 0; i < apiKeys.length; i++) {
     const nextIndex = (currentKeyIndex + 1 + i) % apiKeys.length;
     if (!failedKeysInCycle.has(nextIndex)) {
       currentKeyIndex = nextIndex;
-      console.log(`🔄 Rotated to Gemini API key #${currentKeyIndex + 1} of ${apiKeys.length}`);
+      console.log(
+        `🔄 Rotated to Gemini API key #${currentKeyIndex + 1} of ${apiKeys.length}`,
+      );
       return true;
     }
   }
-  
+
   console.error("❌ All Gemini API keys exhausted in this cycle!");
   return false;
 }
@@ -63,7 +69,7 @@ function resetFailedKeys(): void {
 
 export async function parseTransactionFromText(
   text: string,
-  categories?: string[]
+  categories?: string[],
 ): Promise<ParsedTransaction[] | null> {
   if (apiKeys.length === 0) {
     console.error("❌ GEMINI_API_KEYS is missing in environment variables!");
@@ -106,13 +112,16 @@ export async function parseTransactionFromText(
 
   while (attempts < maxAttempts) {
     attempts++;
-    
+
     const genAI = getGeminiClient();
     if (!genAI) return null;
 
     try {
-      console.log(`SENDING PROMPT TO GEMINI (key #${currentKeyIndex + 1})...`, text);
-      
+      console.log(
+        `SENDING PROMPT TO GEMINI (key #${currentKeyIndex + 1})...`,
+        text,
+      );
+
       const model = genAI.getGenerativeModel({
         model: "gemini-2.5-flash",
         generationConfig: { responseMimeType: "application/json" },
@@ -122,28 +131,30 @@ export async function parseTransactionFromText(
       const response = await result.response;
       const textResponse = response.text();
       console.log("GEMINI RAW RESPONSE:", textResponse);
-      
+
       const jsonStr = textResponse.replace(/```json|```/g, "").trim();
       let data = JSON.parse(jsonStr);
       if (!Array.isArray(data)) {
         data = [data];
       }
-      
+
       return data as ParsedTransaction[];
-      
     } catch (error: any) {
       const statusCode = error?.status || error?.response?.status;
-      const isRateLimited = statusCode === 429 || 
-        error?.message?.includes("429") || 
+      const isRateLimited =
+        statusCode === 429 ||
+        error?.message?.includes("429") ||
         error?.message?.includes("Too Many Requests") ||
         error?.message?.includes("quota");
 
       if (isRateLimited) {
-        console.warn(`⚠️ Rate limit hit on key #${currentKeyIndex + 1}. Attempting rotation...`);
-        
+        console.warn(
+          `⚠️ Rate limit hit on key #${currentKeyIndex + 1}. Attempting rotation...`,
+        );
+
         if (rotateApiKey()) {
           // Wait a bit before retry with new key
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise((resolve) => setTimeout(resolve, 500));
           continue; // Retry with next key
         } else {
           // All keys exhausted
@@ -175,7 +186,7 @@ export async function parseTransactionFromImage(
   base64Image: string,
   mimeType: string,
   caption?: string,
-  categories?: string[]
+  categories?: string[],
 ): Promise<ParsedTransaction[] | null> {
   if (apiKeys.length === 0) {
     console.error("❌ GEMINI_API_KEYS is missing in environment variables!");
@@ -195,7 +206,8 @@ Output Schema (JSON array):
     "type": "INCOME" | "EXPENSE",
     "category": string,
     "description": string,
-    "confidence": number
+    "confidence": number,
+    "wallet": string | null,
   }
 ]
 
@@ -210,7 +222,9 @@ Aturan Ketat:
 ${categories && categories.length > 0 ? `PRIORITAS KATEGORI: Kamu SANGAT DISARANKAN untuk memilih kategori dari list ini jika ada yang cocok dengan itemnya: [${categories.join(", ")}]. Hanya buat kategori baru jika terpaksa.` : ``}
 8. "description" rapihkan ke format Title Case, jangan tulis singkatan kaku mesin kasir.
 9. Jika struknya struk transfer (seperti mutasi bank masuk), buat menjadi "INCOME" jika warna hijau/masuk.
-10. "confidence" 0.0 sampai 1.0 seberapa pasti kamu membacanya.`;
+10. "confidence" 0.0 sampai 1.0 seberapa pasti kamu membacanya.
+11. "wallet" adalah nama kantong/dompet/metode pembayaran yang disebutkan user untuk MASING-MASING transaksi. Contoh: "Cash", "Gopay", "BCA", "Dana", "OVO", "ShopeePay". Jika user menulis "kantong cash" atau "dari gopay" atau "via bca" untuk suatu transaksi, masukkan nama kantongnya. Jika tidak disebutkan, isi null.
+`;
 
   let attempts = 0;
   const maxAttempts = apiKeys.length;
@@ -222,7 +236,9 @@ ${categories && categories.length > 0 ? `PRIORITAS KATEGORI: Kamu SANGAT DISARAN
     if (!genAI) return null;
 
     try {
-      console.log(`📸 SENDING IMAGE TO GEMINI (key #${currentKeyIndex + 1})...`);
+      console.log(
+        `📸 SENDING IMAGE TO GEMINI (key #${currentKeyIndex + 1})...`,
+      );
 
       const model = genAI.getGenerativeModel({
         model: "gemini-2.5-flash",
@@ -249,7 +265,7 @@ ${categories && categories.length > 0 ? `PRIORITAS KATEGORI: Kamu SANGAT DISARAN
 
       // Filter out zero-amount or invalid entries
       data = data.filter(
-        (tx: ParsedTransaction) => tx.amount > 0 && tx.description
+        (tx: ParsedTransaction) => tx.amount > 0 && tx.description,
       );
 
       return data as ParsedTransaction[];
@@ -263,7 +279,7 @@ ${categories && categories.length > 0 ? `PRIORITAS KATEGORI: Kamu SANGAT DISARAN
 
       if (isRateLimited) {
         console.warn(
-          `⚠️ Rate limit hit on key #${currentKeyIndex + 1}. Attempting rotation...`
+          `⚠️ Rate limit hit on key #${currentKeyIndex + 1}. Attempting rotation...`,
         );
 
         if (rotateApiKey()) {

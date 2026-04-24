@@ -124,7 +124,10 @@ function ResetPasswordForm() {
               {phoneNumber && (
                 <div className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground">
-                    Kode dikirim ke: <span className="font-medium text-foreground">{phoneNumber}</span>
+                    Kode dikirim ke:{" "}
+                    <span className="font-medium text-foreground">
+                      {phoneNumber}
+                    </span>
                   </p>
                 </div>
               )}
@@ -140,7 +143,7 @@ function ResetPasswordForm() {
                   placeholder="Masukkan 6 digit kode"
                   required
                   disabled={loading}
-                  className="text-center text-2xl tracking-[0.1em] font-mono transition-all focus:ring-2 focus:ring-primary/20"
+                  className="text-center md:text-xl sm:text-lg tracking-[0.1em] font-mono transition-all focus:ring-2 focus:ring-primary/20"
                   maxLength={6}
                 />
               </div>
@@ -225,11 +228,13 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
       <ResetPasswordForm />
     </Suspense>
   );
