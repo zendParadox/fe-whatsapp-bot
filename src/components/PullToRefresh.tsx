@@ -17,7 +17,6 @@ export default function PullToRefresh({
   const pullThreshold = 100; // Jarak tarik dalam pixel untuk memicu reload
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    // Hanya aktifkan jika user berada di paling atas halaman
     if (window.scrollY === 0) {
       setStartY(e.touches[0].pageY);
     }
@@ -30,7 +29,6 @@ export default function PullToRefresh({
     const diff = currentY - startY;
 
     if (diff > 0) {
-      // Damping effect agar tarikan terasa berat/natural
       const damping = 0.5;
       const move = Math.min(diff * damping, pullThreshold + 20);
       setPullDist(move);
@@ -47,10 +45,8 @@ export default function PullToRefresh({
 
   const triggerRefresh = () => {
     setIsRefreshing(true);
-    setPullDist(60); // Tahan di posisi loading
+    setPullDist(60);
 
-    // Karena user meminta "reload page", kita gunakan window.location.reload()
-    // Namun untuk SPA yang halus, biasanya cukup router.refresh()
     setTimeout(() => {
       window.location.reload();
     }, 800);
@@ -59,6 +55,7 @@ export default function PullToRefresh({
   return (
     <div
       ref={containerRef}
+      className="w-full relative overflow-y-hidden"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
