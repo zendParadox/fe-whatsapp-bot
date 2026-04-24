@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 // Landing Components
@@ -8,19 +9,30 @@ import { HowItWorksSection } from "@/components/landing/HowItWorksSection";
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import { PricingSection } from "@/components/landing/PricingSection";
 import { FaqSection } from "@/components/landing/FaqSection";
+// import { useState } from "react";
+import { Menu, X } from "lucide-react";
+import { useState } from "react";
 
 function AppHeader() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const closeMenu = () => setIsMobileMenuOpen(false);
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-background/50 backdrop-blur-md transition-all">
+    <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-background/80 backdrop-blur-md transition-all">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 md:px-8">
+        {/* Logo */}
         <Link
           href="/"
+          onClick={closeMenu}
           className="flex items-center gap-2 text-xl font-bold tracking-tighter"
         >
           <span className="bg-gradient-to-r from-ai-cyan to-ai-purple bg-clip-text text-transparent text-glow">
             GoTEK
           </span>
         </Link>
+
+        {/* Navigation Desktop */}
         <div className="hidden md:flex items-center gap-6">
           <Link
             href="#features"
@@ -47,8 +59,10 @@ function AppHeader() {
             Panduan
           </Link>
         </div>
+
+        {/* Actions Button */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* <ModeToggle /> */}
+          {/* Tombol Masuk hanya tampil di Desktop/Tablet besar */}
           <Button
             asChild
             variant="ghost"
@@ -56,6 +70,7 @@ function AppHeader() {
           >
             <Link href="/login">Masuk</Link>
           </Button>
+
           <Button
             asChild
             size="sm"
@@ -63,8 +78,63 @@ function AppHeader() {
           >
             <Link href="/register">Daftar</Link>
           </Button>
+
+          {/* Tombol Hamburger untuk Mobile & Tablet */}
+          <button
+            className="md:hidden ml-2 p-2 text-muted-foreground hover:text-foreground transition-colors"
+            onClick={toggleMenu}
+            aria-label="Toggle Menu"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
         </div>
       </div>
+
+      {/* Dropdown Mobile Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden absolute top-16 left-0 right-0 bg-background/95 backdrop-blur-xl border-b border-white/10 shadow-xl px-4 py-6 flex flex-col gap-4 animate-in slide-in-from-top-2">
+          <Link
+            href="#features"
+            onClick={closeMenu}
+            className="text-base font-medium text-muted-foreground hover:text-foreground p-2 rounded-md hover:bg-white/5 transition-colors"
+          >
+            Fitur
+          </Link>
+          <Link
+            href="#how-it-works"
+            onClick={closeMenu}
+            className="text-base font-medium text-muted-foreground hover:text-foreground p-2 rounded-md hover:bg-white/5 transition-colors"
+          >
+            Cara Kerja
+          </Link>
+          <Link
+            href="#pricing"
+            onClick={closeMenu}
+            className="text-base font-medium text-muted-foreground hover:text-foreground p-2 rounded-md hover:bg-white/5 transition-colors"
+          >
+            Harga
+          </Link>
+          <Link
+            href="/guide"
+            onClick={closeMenu}
+            className="text-base font-medium text-muted-foreground hover:text-foreground p-2 rounded-md hover:bg-white/5 transition-colors"
+          >
+            Panduan
+          </Link>
+
+          {/* Garis Pemisah */}
+          <div className="h-[1px] w-full bg-white/10 my-2" />
+
+          {/* Tambahkan tombol Masuk di Mobile karena di-hide (hidden sm:inline-flex) pada baris atas */}
+          <div className="flex flex-col sm:hidden">
+            <Button asChild variant="outline" className="w-full justify-center">
+              <Link href="/login" onClick={closeMenu}>
+                Masuk ke Akun
+              </Link>
+            </Button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
