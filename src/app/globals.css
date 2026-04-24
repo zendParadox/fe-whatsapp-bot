@@ -79,6 +79,11 @@
   --ai-pink: oklch(0.65 0.2 340);
 }
 
+html,
+body {
+  overscroll-behavior-y: contain;
+}
+
 .dark {
   /* Deep Premium AI Dark Background */
   --background: oklch(0.13 0.01 250); /* #050505 - slightly cool pure dark */

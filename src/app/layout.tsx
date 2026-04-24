@@ -6,6 +6,7 @@ import NextTopLoader from "nextjs-toploader";
 import { ThemeProvider } from "@/components/theme-provider";
 import Script from "next/script";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import PullToRefresh from "@/components/PullToRefresh";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -127,7 +128,7 @@ export default function RootLayout({
             showSpinner={false}
             shadow="0 0 10px #22d3ee, 0 0 5px #22d3ee"
           />
-          {children}
+          <PullToRefresh>{children}</PullToRefresh>
           <Toaster richColors />
         </ThemeProvider>
         <SpeedInsights />

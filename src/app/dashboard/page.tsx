@@ -4,14 +4,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -44,20 +36,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Edit, Trash, TrendingDown, ChevronRight, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import RecentTransactionsCard from "@/components/dashboard/RecentTransactionsCard";
-import SmartAiInput from "@/components/dashboard/SmartAiInput";
 import WhatsAppBotBanner from "@/components/dashboard/WhatsAppBotBanner";
 import AiAnalysisButton from "@/components/dashboard/AiAnalysisButton";
 import AiAnalysisModal from "@/components/dashboard/AiAnalysisModal";
