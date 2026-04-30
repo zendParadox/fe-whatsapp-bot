@@ -67,6 +67,54 @@ function resetFailedKeys(): void {
   failedKeysInCycle.clear();
 }
 
+/**
+ * Fallback to Cloudflare AI when Gemini is unavailable or rate limited
+ */
+async function fallbackToCloudflareAI(
+  prompt: string,
+): Promise<ParsedTransaction[] | null> {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/meta/llama-3-8b-instruct`;
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ prompt }),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Cloudflare AI Error: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const data = await response.json();
+    const textResponse = data.result.response;
+    console.log("CLOUDFLARE AI RAW RESPONSE:", textResponse);
+
+    // Extract JSON array from text response, as Llama-3 might add surrounding text
+    const jsonMatch = textResponse.match(/\[[\s\S]*\]/);
+    const jsonStr = jsonMatch
+      ? jsonMatch[0]
+      : textResponse.replace(/```json|```/g, "").trim();
+
+    let parsedData = JSON.parse(jsonStr);
+    if (!Array.isArray(parsedData)) {
+      parsedData = [parsedData];
+    }
+
+    return parsedData as ParsedTransaction[];
+  } catch (error) {
+    console.error("❌ Cloudflare AI Fallback Error:", error);
+    return null;
+  }
+}
+
 export async function parseTransactionFromText(
   text: string,
   categories?: string[],
@@ -147,9 +195,15 @@ export async function parseTransactionFromText(
         error?.message?.includes("Too Many Requests") ||
         error?.message?.includes("quota");
 
-      if (isRateLimited) {
+      const isUnavailable =
+        statusCode === 503 ||
+        error?.message?.includes("503") ||
+        error?.message?.includes("Service Unavailable") ||
+        error?.message?.includes("overloaded");
+
+      if (isRateLimited || isUnavailable) {
         console.warn(
-          `⚠️ Rate limit hit on key #${currentKeyIndex + 1}. Attempting rotation...`,
+          `⚠️ Gemini Error (${statusCode || "limit/unavailable"}) hit on key #${currentKeyIndex + 1}. Attempting rotation...`,
         );
 
         if (rotateApiKey()) {
@@ -158,20 +212,22 @@ export async function parseTransactionFromText(
           continue; // Retry with next key
         } else {
           // All keys exhausted
-          console.error("❌ All API keys rate limited!");
-          throw new Error("GEMINI_RATE_LIMIT");
+          console.error("❌ All API keys exhausted or rate limited!");
+          break; // Exit loop to trigger fallback
         }
       }
 
       // Non-rate-limit error, don't retry
       console.error("❌ Gemini Parse Error Details:", error);
       if (error?.message) console.error("Error Message:", error.message);
-      return null;
+      break; // Exit loop to trigger fallback
     }
   }
 
-  console.error("❌ Max retry attempts reached");
-  return null;
+  console.log(
+    "🔄 Gemini failed. Falling back to Cloudflare AI (Llama-3-8b-instruct)...",
+  );
+  return fallbackToCloudflareAI(prompt);
 }
 
 /**
