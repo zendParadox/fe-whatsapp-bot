@@ -227,7 +227,12 @@ export async function parseTransactionFromText(
   console.log(
     "🔄 Gemini failed. Falling back to Cloudflare AI (Llama-3-8b-instruct)...",
   );
-  return fallbackToCloudflareAI(prompt);
+  const fallbackResult = await fallbackToCloudflareAI(prompt);
+  if (fallbackResult) return fallbackResult;
+
+  // Both Gemini and Cloudflare AI failed
+  console.error("❌ All AI providers (Gemini + Cloudflare) are down!");
+  throw new Error("AI_ALL_PROVIDERS_DOWN");
 }
 
 /**

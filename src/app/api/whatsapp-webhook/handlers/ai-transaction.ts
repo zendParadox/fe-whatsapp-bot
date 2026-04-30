@@ -35,6 +35,12 @@ export async function handleAITransaction(
           "⚠️ *Limit AI Habis*\n\nMaaf, kuota penggunaan AI (Gemini) telah mencapai batas harian.\n\nSilakan gunakan format manual:\n`keluar [jumlah] [keterangan] [kategori]`\n\nContoh:\n`keluar 50k makan siang @makan`",
       });
     }
+    if (error instanceof Error && error.message === "AI_ALL_PROVIDERS_DOWN") {
+      return NextResponse.json({
+        message:
+          "🔧 *Server AI Sedang Sibuk*\n\nMaaf, semua layanan AI kami sedang mengalami lonjakan pengguna dan tidak dapat memproses permintaan saat ini.\n\n⏳ Silakan coba lagi dalam beberapa menit.\n\nAtau gunakan format manual:\n`keluar [jumlah] [keterangan] [kategori]`\n\nContoh:\n`keluar 50k makan siang @makan`\n`masuk 5jt gaji @kerja`",
+      });
+    }
     console.error("[AI Parse Error]:", error);
     return NextResponse.json({
       message:
