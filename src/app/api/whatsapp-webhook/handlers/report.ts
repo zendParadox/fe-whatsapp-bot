@@ -1,190 +1,253 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { startOfDay, endOfDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
-import { formatInTimeZone, toZonedTime } from "date-fns-tz";
+import {
+  startOfDay,
+  endOfDay,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+} from "date-fns";
+import { formatInTimeZone, toZonedTime, fromZonedTime } from "date-fns-tz";
 import { id } from "date-fns/locale";
 import type { CommandContext } from "../lib/context";
 
 const TIMEZONE = "Asia/Jakarta";
 
-export async function handleReport(ctx: CommandContext): Promise<NextResponse | null> {
-  // Laporan command
-  if (ctx.command === "laporan" || ctx.command === "report") {
-    const type = ctx.args[1]?.toLowerCase();
+type TransactionWithCategory = Prisma.TransactionGetPayload<{
+  include: { category: true };
+}>;
 
-    if (type === "hari" || type === "today" || type === "harian") {
+export async function handleReport(
+  ctx: CommandContext,
+): Promise<NextResponse | null> {
+  const cmd = ctx.command.toLowerCase();
+  const arg1 = ctx.args[1]?.toLowerCase();
+
+  // 1. Perutean (Routing) yang lebih bersih
+  if (["laporan", "report"].includes(cmd)) {
+    if (["hari", "today", "harian"].includes(arg1))
       return handleDailyReport(ctx);
-    } else if (type === "bulan" || type === "month" || type === "bulanan") {
+    if (["bulan", "month", "bulanan"].includes(arg1))
       return handleMonthlyReport(ctx);
-    } else if (type === "minggu" || type === "week" || type === "mingguan") {
+    if (["minggu", "week", "mingguan"].includes(arg1))
       return handleWeeklyReport(ctx);
-    }
   }
 
-  // Cek saldo
-  if (ctx.command === "saldo" || ctx.command === "ceksaldo" || (ctx.command === "cek" && ctx.args[1] === "saldo")) {
+  if (
+    ["saldo", "ceksaldo"].includes(cmd) ||
+    (cmd === "cek" && arg1 === "saldo")
+  ) {
     return handleSaldo(ctx);
   }
 
   return null;
 }
 
-async function handleDailyReport(ctx: CommandContext): Promise<NextResponse> {
-  const now = new Date();
-  const nowWIB = toZonedTime(now, TIMEZONE);
-  const startDayWIB = startOfDay(nowWIB);
-  const endDayWIB = endOfDay(nowWIB);
+function getDbBoundaries(startZoned: Date, endZoned: Date) {
+  return {
+    startUTC: fromZonedTime(startZoned, TIMEZONE),
+    endUTC: fromZonedTime(endZoned, TIMEZONE),
+  };
+}
 
-  // Convert WIB boundaries back to UTC for DB query
-  const startUTC = new Date(startDayWIB.getTime() - 7 * 60 * 60 * 1000);
-  const endUTC = new Date(endDayWIB.getTime() - 7 * 60 * 60 * 1000);
-
-  const transactions = await prisma.transaction.findMany({
-    where: { user_id: ctx.user.id, created_at: { gte: startUTC, lte: endUTC } },
-    include: { category: true }
-  });
-
-  const income = transactions.filter(t => t.type === "INCOME").reduce((acc, t) => acc + t.amount.toNumber(), 0);
-  const expense = transactions.filter(t => t.type === "EXPENSE").reduce((acc, t) => acc + t.amount.toNumber(), 0);
-  const balance = income - expense;
-  const balanceEmoji = balance >= 0 ? "💚" : "💔";
-  const txCount = transactions.length;
-  const dateStr = formatInTimeZone(now, TIMEZONE, "eeee, d MMMM yyyy", { locale: id });
-
-  let reply = `📊 *Laporan Hari Ini*\n📅 ${dateStr}\n━━━━━━━━━━━━━━━━━\n`;
-  reply += `📈 *Pemasukan:* ${ctx.fmt(income)}\n`;
-  reply += `📉 *Pengeluaran:* ${ctx.fmt(expense)}\n`;
-  reply += `━━━━━━━━━━━━━━━━━\n`;
-  reply += `${balanceEmoji} *Balance:* ${ctx.fmt(balance)}\n`;
-  reply += `📝 *Total Transaksi:* ${txCount} transaksi\n`;
-
-  if (txCount > 0) {
-    reply += `\n📋 *Detail Terakhir:*\n`;
-    const lastTx = transactions.slice(-3).reverse();
-    lastTx.forEach(t => {
-      const icon = t.type === "INCOME" ? "➕" : "➖";
-      reply += `${icon} ${ctx.fmt(t.amount.toNumber())} - ${t.description}\n`;
-    });
+function calculateStats(
+  transactions: { type: string; amount: Prisma.Decimal }[],
+) {
+  let income = 0;
+  let expense = 0;
+  for (const t of transactions) {
+    const amt = t.amount.toNumber();
+    if (t.type === "INCOME") income += amt;
+    else if (t.type === "EXPENSE") expense += amt;
   }
+  return { income, expense, balance: income - expense };
+}
 
-  return NextResponse.json({ message: reply });
+async function handleDailyReport(ctx: CommandContext): Promise<NextResponse> {
+  try {
+    const nowWIB = toZonedTime(new Date(), TIMEZONE);
+    const { startUTC, endUTC } = getDbBoundaries(
+      startOfDay(nowWIB),
+      endOfDay(nowWIB),
+    );
+
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        user_id: ctx.user.id,
+        created_at: { gte: startUTC, lte: endUTC },
+      },
+      include: { category: true },
+    });
+
+    const { income, expense, balance } = calculateStats(transactions);
+    const balanceEmoji = balance >= 0 ? "💚" : "💔";
+    const dateStr = formatInTimeZone(
+      new Date(),
+      TIMEZONE,
+      "eeee, d MMMM yyyy",
+      { locale: id },
+    );
+
+    let reply = `📊 *Laporan Hari Ini*\n📅 ${dateStr}\n━━━━━━━━━━━━━━━━━\n`;
+    reply += `📈 *Pemasukan:* ${ctx.fmt(income)}\n`;
+    reply += `📉 *Pengeluaran:* ${ctx.fmt(expense)}\n━━━━━━━━━━━━━━━━━\n`;
+    reply += `${balanceEmoji} *Balance:* ${ctx.fmt(balance)}\n`;
+    reply += `📝 *Total Transaksi:* ${transactions.length} transaksi\n`;
+
+    if (transactions.length > 0) {
+      reply += `\n📋 *Detail Terakhir:*\n`;
+      const lastTx = transactions.slice(-3).reverse();
+      lastTx.forEach((t) => {
+        const icon = t.type === "INCOME" ? "➕" : "➖";
+        reply += `${icon} ${ctx.fmt(t.amount.toNumber())} - ${t.description}\n`;
+      });
+    }
+
+    return NextResponse.json({ message: reply });
+  } catch (error) {
+    console.error("[Daily Report Error]:", error);
+    return NextResponse.json({ message: "❌ Gagal mengambil laporan harian." });
+  }
 }
 
 async function handleMonthlyReport(ctx: CommandContext): Promise<NextResponse> {
-  const now = new Date();
-  const nowWIB = toZonedTime(now, TIMEZONE);
-  const startMonthWIB = startOfMonth(nowWIB);
-  const endMonthWIB = endOfMonth(nowWIB);
-  const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-  const monthName = monthNames[nowWIB.getMonth()];
+  try {
+    const nowWIB = toZonedTime(new Date(), TIMEZONE);
+    const { startUTC, endUTC } = getDbBoundaries(
+      startOfMonth(nowWIB),
+      endOfMonth(nowWIB),
+    );
+    const monthName = formatInTimeZone(new Date(), TIMEZONE, "MMMM", {
+      locale: id,
+    });
 
-  // Convert WIB boundaries back to UTC for DB query
-  const startUTC = new Date(startMonthWIB.getTime() - 7 * 60 * 60 * 1000);
-  const endUTC = new Date(endMonthWIB.getTime() - 7 * 60 * 60 * 1000);
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        user_id: ctx.user.id,
+        created_at: { gte: startUTC, lte: endUTC },
+      },
+      include: { category: true },
+    });
 
-  const transactions = await prisma.transaction.findMany({
-    where: { user_id: ctx.user.id, created_at: { gte: startUTC, lte: endUTC } },
-    include: { category: true }
-  });
+    const { income, expense, balance } = calculateStats(transactions);
+    const balanceEmoji = balance >= 0 ? "💚" : "💔";
+    const savingRate =
+      income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
 
-  const income = transactions.filter(t => t.type === "INCOME").reduce((acc, t) => acc + t.amount.toNumber(), 0);
-  const expense = transactions.filter(t => t.type === "EXPENSE").reduce((acc, t) => acc + t.amount.toNumber(), 0);
-  const balance = income - expense;
-  const balanceEmoji = balance >= 0 ? "💚" : "💔";
-  const savingRate = income > 0 ? Math.round(((income - expense) / income) * 100) : 0;
+    let reply = `📊 *Laporan Bulan ${monthName}*\n━━━━━━━━━━━━━━━━━\n`;
+    reply += `📈 *Total Pemasukan:*\n${ctx.fmt(income)}\n\n`;
+    reply += `📉 *Total Pengeluaran:*\n${ctx.fmt(expense)}\n━━━━━━━━━━━━━━━━━\n`;
+    reply += `${balanceEmoji} *Balance:* ${ctx.fmt(balance)}\n`;
+    reply += `📊 *Saving Rate:* ${savingRate}%\n\n`;
+    reply += buildTopExpenses(transactions);
 
-  let reply = `📊 *Laporan Bulan ${monthName}*\n━━━━━━━━━━━━━━━━━\n`;
-  reply += `📈 *Total Pemasukan:*\nRp ${income.toLocaleString("id-ID")}\n\n`;
-  reply += `📉 *Total Pengeluaran:*\nRp ${expense.toLocaleString("id-ID")}\n━━━━━━━━━━━━━━━━━\n`;
-  reply += `${balanceEmoji} *Balance:* Rp ${balance.toLocaleString("id-ID")}\n`;
-  reply += `📊 *Saving Rate:* ${savingRate}%\n\n`;
-
-  reply += buildTopExpenses(transactions);
-  return NextResponse.json({ message: reply });
+    return NextResponse.json({ message: reply });
+  } catch (error) {
+    console.error("[Monthly Report Error]:", error);
+    return NextResponse.json({
+      message: "❌ Gagal mengambil laporan bulanan.",
+    });
+  }
 }
 
 async function handleWeeklyReport(ctx: CommandContext): Promise<NextResponse> {
-  const now = new Date();
-  const nowWIB = toZonedTime(now, TIMEZONE);
-  const startWeekWIB = startOfWeek(nowWIB, { weekStartsOn: 1 });
-  const endWeekWIB = endOfWeek(nowWIB, { weekStartsOn: 1 });
+  try {
+    const nowWIB = toZonedTime(new Date(), TIMEZONE);
+    const { startUTC, endUTC } = getDbBoundaries(
+      startOfWeek(nowWIB, { weekStartsOn: 1 }),
+      endOfWeek(nowWIB, { weekStartsOn: 1 }),
+    );
 
-  const fmtDate = (d: Date) => formatInTimeZone(d, TIMEZONE, "d MMM", { locale: id });
+    const fmtDate = (d: Date) =>
+      formatInTimeZone(d, TIMEZONE, "d MMM", { locale: id });
+    const periodStr = `${fmtDate(startUTC)} - ${fmtDate(endUTC)}`;
 
-  // Convert WIB boundaries back to UTC for DB query
-  const startUTC = new Date(startWeekWIB.getTime() - 7 * 60 * 60 * 1000);
-  const endUTC = new Date(endWeekWIB.getTime() - 7 * 60 * 60 * 1000);
+    const transactions = await prisma.transaction.findMany({
+      where: {
+        user_id: ctx.user.id,
+        created_at: { gte: startUTC, lte: endUTC },
+      },
+      include: { category: true },
+    });
 
-  const periodStr = `${fmtDate(startUTC)} - ${fmtDate(endUTC)}`;
+    const { income, expense, balance } = calculateStats(transactions);
+    const balanceEmoji = balance >= 0 ? "💚" : "💔";
 
-  const transactions = await prisma.transaction.findMany({
-    where: { user_id: ctx.user.id, created_at: { gte: startUTC, lte: endUTC } },
-    include: { category: true }
-  });
+    let reply = `📊 *Laporan Minggu Ini*\n📅 ${periodStr}\n━━━━━━━━━━━━━━━━━\n`;
+    reply += `📈 *Total Pemasukan:*\n${ctx.fmt(income)}\n\n`;
+    reply += `📉 *Total Pengeluaran:*\n${ctx.fmt(expense)}\n━━━━━━━━━━━━━━━━━\n`;
+    reply += `${balanceEmoji} *Balance:* ${ctx.fmt(balance)}\n`;
+    reply += `📝 *Total Transaksi:* ${transactions.length}\n\n`;
+    reply += buildTopExpenses(transactions);
 
-  const income = transactions.filter(t => t.type === "INCOME").reduce((acc, t) => acc + t.amount.toNumber(), 0);
-  const expense = transactions.filter(t => t.type === "EXPENSE").reduce((acc, t) => acc + t.amount.toNumber(), 0);
-  const balance = income - expense;
-  const balanceEmoji = balance >= 0 ? "💚" : "💔";
-  const txCount = transactions.length;
-
-  let reply = `📊 *Laporan Minggu Ini*\n📅 ${periodStr}\n━━━━━━━━━━━━━━━━━\n`;
-  reply += `📈 *Total Pemasukan:*\nRp ${income.toLocaleString("id-ID")}\n\n`;
-  reply += `📉 *Total Pengeluaran:*\nRp ${expense.toLocaleString("id-ID")}\n━━━━━━━━━━━━━━━━━\n`;
-  reply += `${balanceEmoji} *Balance:* Rp ${balance.toLocaleString("id-ID")}\n`;
-  reply += `📝 *Total Transaksi:* ${txCount}\n\n`;
-
-  reply += buildTopExpenses(transactions);
-  return NextResponse.json({ message: reply });
+    return NextResponse.json({ message: reply });
+  } catch (error) {
+    console.error("[Weekly Report Error]:", error);
+    return NextResponse.json({
+      message: "❌ Gagal mengambil laporan mingguan.",
+    });
+  }
 }
 
 async function handleSaldo(ctx: CommandContext): Promise<NextResponse> {
-  const transactions = await prisma.transaction.groupBy({
-    by: ["type"],
-    where: { user_id: ctx.user.id },
-    _sum: { amount: true },
-  });
+  try {
+    const transactions = await prisma.transaction.groupBy({
+      by: ["type"],
+      where: { user_id: ctx.user.id },
+      _sum: { amount: true },
+    });
 
-  let totalIncome = 0;
-  let totalExpense = 0;
-  transactions.forEach((t) => {
-    const amt = t._sum.amount?.toNumber() || 0;
-    if (t.type === "INCOME") totalIncome += amt;
-    else if (t.type === "EXPENSE") totalExpense += amt;
-  });
+    let totalIncome = 0;
+    let totalExpense = 0;
+    transactions.forEach((t) => {
+      const amt = t._sum.amount?.toNumber() || 0;
+      if (t.type === "INCOME") totalIncome += amt;
+      else if (t.type === "EXPENSE") totalExpense += amt;
+    });
 
-  const totalSaldo = totalIncome - totalExpense;
-  const balanceEmoji = totalSaldo >= 0 ? "💚" : "💔";
+    const totalSaldo = totalIncome - totalExpense;
+    const balanceEmoji = totalSaldo >= 0 ? "💚" : "💔";
 
-  let reply = `💰 *Total Saldo Saat Ini*\n━━━━━━━━━━━━━━━━━\n`;
-  reply += `📈 *Total Pemasukan:*\n${ctx.fmt(totalIncome)}\n\n`;
-  reply += `📉 *Total Pengeluaran:*\n${ctx.fmt(totalExpense)}\n━━━━━━━━━━━━━━━━━\n`;
-  reply += `${balanceEmoji} *Saldo Akhir (All-time):*\n*${ctx.fmt(totalSaldo)}*\n\n`;
-  reply += `💡 _Ketik "laporan bulan" untuk detail bulan ini_`;
+    let reply = `💰 *Total Saldo Saat Ini*\n━━━━━━━━━━━━━━━━━\n`;
+    reply += `📈 *Total Pemasukan:*\n${ctx.fmt(totalIncome)}\n\n`;
+    reply += `📉 *Total Pengeluaran:*\n${ctx.fmt(totalExpense)}\n━━━━━━━━━━━━━━━━━\n`;
+    reply += `${balanceEmoji} *Saldo Akhir (All-time):*\n*${ctx.fmt(totalSaldo)}*\n\n`;
+    reply += `💡 _Ketik "laporan bulan" untuk detail bulan ini_`;
 
-  return NextResponse.json({ message: reply });
+    return NextResponse.json({ message: reply });
+  } catch (error) {
+    console.error("[Saldo Error]:", error);
+    return NextResponse.json({ message: "❌ Gagal menghitung total saldo." });
+  }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildTopExpenses(transactions: any[]): string {
-  const expensesByCategory = transactions
-    .filter(t => t.type === "EXPENSE")
-    .reduce((acc, t) => {
-      const catName = t.category?.name || "Lainnya";
-      acc[catName] = (acc[catName] || 0) + t.amount.toNumber();
-      return acc;
-    }, {} as Record<string, number>);
+function buildTopExpenses(transactions: TransactionWithCategory[]): string {
+  const expensesByCategory = new Map<string, number>();
 
-  const topExpenses = Object.entries(expensesByCategory)
-    .sort((a, b) => (b[1] as number) - (a[1] as number))
+  for (const t of transactions) {
+    if (t.type === "EXPENSE") {
+      const catName = t.category?.name || "Lainnya";
+      expensesByCategory.set(
+        catName,
+        (expensesByCategory.get(catName) || 0) + t.amount.toNumber(),
+      );
+    }
+  }
+
+  const topExpenses = Array.from(expensesByCategory.entries())
+    .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
 
   if (topExpenses.length === 0) return "";
 
   let result = `🔥 *Top Pengeluaran:*\n`;
+  const medals = ["🥇", "🥈", "🥉"];
+
   topExpenses.forEach(([cat, amt], i) => {
-    const medals = ['🥇', '🥈', '🥉'];
-    result += `${medals[i]} ${cat}: Rp ${(amt as number).toLocaleString("id-ID")}\n`;
+    result += `${medals[i]} ${cat}: Rp ${amt.toLocaleString("id-ID")}\n`;
   });
+
   return result;
 }

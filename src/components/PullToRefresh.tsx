@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useRef } from "react";
 
 export default function PullToRefresh({
   children,
@@ -12,7 +11,6 @@ export default function PullToRefresh({
   const [pullDist, setPullDist] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
   const pullThreshold = 100; // Jarak tarik dalam pixel untuk memicu reload
 

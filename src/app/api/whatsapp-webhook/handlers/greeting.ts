@@ -6,28 +6,73 @@ import type { CommandContext } from "../lib/context";
 
 const TIMEZONE = "Asia/Jakarta";
 
-const GREETING_TRIGGERS = [
-  "halo gotek bot!", "halo gotek bot", "hi", "halo", "hai", "p", "ping", "test"
-];
+const GREETING_TRIGGERS = new Set([
+  "halo gotek bot!",
+  "halo gotek bot",
+  "hi",
+  "halo",
+  "hai",
+  "p",
+  "ping",
+  "test",
+]);
 
-export async function handleGreeting(ctx: CommandContext): Promise<NextResponse | null> {
-  if (!GREETING_TRIGGERS.includes(ctx.trimmedMessage)) return null;
+export async function handleGreeting(
+  ctx: CommandContext,
+): Promise<NextResponse | null> {
+  if (!GREETING_TRIGGERS.has(ctx.trimmedMessage.toLowerCase())) return null;
 
-  const nowWIB = toZonedTime(new Date(), TIMEZONE);
-  const hour = nowWIB.getHours();
-  const greeting = hour < 11 ? "Selamat pagi" : hour < 15 ? "Selamat siang" : hour < 18 ? "Selamat sore" : "Selamat malam";
+  try {
+    const nowWIB = toZonedTime(new Date(), TIMEZONE);
+    const hour = nowWIB.getHours();
 
-  const startDayWIB = startOfDay(nowWIB);
-  const endDayWIB = endOfDay(nowWIB);
+    let greeting = "Selamat malam";
+    if (hour < 11) greeting = "Selamat pagi";
+    else if (hour < 15) greeting = "Selamat siang";
+    else if (hour < 18) greeting = "Selamat sore";
 
-  const todayTxs = await prisma.transaction.findMany({
-    where: { user_id: ctx.user.id, created_at: { gte: startDayWIB, lte: endDayWIB } }
-  });
+    const startDayWIB = startOfDay(nowWIB);
+    const endDayWIB = endOfDay(nowWIB);
 
-  const todayIncome = todayTxs.filter(t => t.type === "INCOME").reduce((acc, t) => acc + t.amount.toNumber(), 0);
-  const todayExpense = todayTxs.filter(t => t.type === "EXPENSE").reduce((acc, t) => acc + t.amount.toNumber(), 0);
+    const todayStats = await prisma.transaction.groupBy({
+      by: ["type"],
+      where: {
+        user_id: ctx.user.id,
+        created_at: { gte: startDayWIB, lte: endDayWIB },
+      },
+      _sum: { amount: true },
+    });
 
-  return NextResponse.json({
-    message: `👋 *${greeting}, ${ctx.user.name || "Sobat GoTEK"}!*\n\n🤖 Saya *GoTEK Bot* - asisten pencatat keuangan Anda!\n\n📊 *Quick Stats Hari Ini:*\n📈 Pemasukan: ${ctx.fmt(todayIncome)}\n📉 Pengeluaran: ${ctx.fmt(todayExpense)}\n\n💡 *Tips:* Ketik *"panduan"* untuk melihat fitur lengkap atau langsung coba catat secara bebas, contoh:\n\`keluar 50k beli kopi ya\`\n\n🚀 Let's go!`
-  });
+    let todayIncome = 0;
+    let todayExpense = 0;
+
+    todayStats.forEach((stat) => {
+      const totalAmount = stat._sum.amount?.toNumber() || 0;
+      if (stat.type === "INCOME") todayIncome = totalAmount;
+      if (stat.type === "EXPENSE") todayExpense = totalAmount;
+    });
+
+    const userName = ctx.user.name || "Sobat GoTEK";
+
+    const message = `👋 *${greeting}, ${userName}!*
+
+🤖 Saya *GoTEK Bot* - asisten pencatat keuangan Anda!
+
+📊 *Quick Stats Hari Ini:*
+📈 Pemasukan: ${ctx.fmt(todayIncome)}
+📉 Pengeluaran: ${ctx.fmt(todayExpense)}
+
+💡 *Tips:* Ketik *"panduan"* untuk melihat fitur lengkap atau langsung coba catat secara bebas, contoh:
+\`keluar 50k beli kopi ya\`
+
+🚀 Let's go!`;
+
+    return NextResponse.json({ message });
+  } catch (error) {
+    console.error("[handleGreeting Error]:", error);
+    return NextResponse.json({
+      message:
+        "🙏 Maaf, saat ini sistem sedang memproses terlalu banyak data. Silakan coba sapa saya lagi sebentar ya!",
+    });
+  }
 }

@@ -1,68 +1,98 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { formatInTimeZone, toZonedTime } from "date-fns-tz";
+import { formatInTimeZone } from "date-fns-tz";
 import type { CommandContext } from "../lib/context";
 
 const TIMEZONE = "Asia/Jakarta";
+const UNDO_TRIGGERS = new Set(["hapus", "undo", "batal"]);
 
-export async function handleUndo(ctx: CommandContext): Promise<NextResponse | null> {
-  if (ctx.command !== "hapus" && ctx.command !== "undo" && ctx.command !== "batal") return null;
-
-  const lastTx = await prisma.transaction.findFirst({
-    where: { user_id: ctx.user.id },
-    orderBy: { created_at: "desc" },
-    include: { category: true }
-  });
-
-  if (!lastTx) {
-    return NextResponse.json({ message: "⚠️ *Tidak Ada Transaksi*\n\nTidak ada transaksi yang bisa dihapus. Mulai catat transaksi baru!" });
-  }
-
-  const nowWIB = toZonedTime(new Date(), TIMEZONE);
-  const txLocalTime = toZonedTime(lastTx.created_at, TIMEZONE);
-  const isToday = nowWIB.toDateString() === txLocalTime.toDateString();
-  if (!isToday) {
-    return NextResponse.json({
-      message: `⚠️ *Tidak Bisa Dihapus*\n\nTransaksi terakhir sudah bukan hari ini.\nHanya transaksi hari ini yang bisa di-undo.\n\n📝 *Transaksi terakhir:*\nRp ${lastTx.amount.toNumber().toLocaleString("id-ID")} - ${lastTx.description}\n(Tanggal: ${formatInTimeZone(txLocalTime, TIMEZONE, "dd/MM/yyyy")})`
-    });
-  }
-
-  // Prepare the operations for atomic undo
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const prismaOperations: any[] = [];
-  let walletRevertInfo = "";
-  
-  if (lastTx.wallet_id) {
-    try {
-      const txAmount = lastTx.amount.toNumber();
-      const revertedWallet = await prisma.wallet.findUnique({ where: { id: lastTx.wallet_id } });
-      
-      if (revertedWallet) {
-        if (lastTx.type === "EXPENSE") {
-          prismaOperations.push(prisma.wallet.update({ where: { id: lastTx.wallet_id }, data: { balance: { increment: txAmount } } }));
-        } else {
-          prismaOperations.push(prisma.wallet.update({ where: { id: lastTx.wallet_id }, data: { balance: { decrement: txAmount } } }));
-        }
-        walletRevertInfo = `\n💳 *Kantong:* ${revertedWallet.name} (saldo dikembalikan)`;
-      }
-    } catch (walletErr) {
-      console.error("Failed to prepare wallet revert:", walletErr);
-    }
-  }
-
-  prismaOperations.push(prisma.transaction.delete({ where: { id: lastTx.id } }));
+export async function handleUndo(
+  ctx: CommandContext,
+): Promise<NextResponse | null> {
+  const cmd = ctx.command.toLowerCase();
+  if (!UNDO_TRIGGERS.has(cmd)) return null;
 
   try {
+    const lastTx = await prisma.transaction.findFirst({
+      where: { user_id: ctx.user.id },
+      orderBy: { created_at: "desc" },
+      include: { category: { select: { name: true } } },
+    });
+
+    if (!lastTx) {
+      return NextResponse.json({
+        message:
+          "⚠️ *Tidak Ada Transaksi*\n\nTidak ada transaksi yang bisa dihapus. Mulai catat transaksi baru!",
+      });
+    }
+
+    const todayStr = formatInTimeZone(new Date(), TIMEZONE, "yyyy-MM-dd");
+    const txDateStr = formatInTimeZone(
+      lastTx.created_at,
+      TIMEZONE,
+      "yyyy-MM-dd",
+    );
+
+    if (todayStr !== txDateStr) {
+      const txFormattedDate = formatInTimeZone(
+        lastTx.created_at,
+        TIMEZONE,
+        "dd/MM/yyyy",
+      );
+      const txAmountStr = lastTx.amount.toNumber().toLocaleString("id-ID");
+
+      return NextResponse.json({
+        message: `⚠️ *Tidak Bisa Dihapus*\n\nTransaksi terakhir sudah bukan hari ini.\nHanya transaksi hari ini yang bisa di-undo.\n\n📝 *Transaksi terakhir:*\nRp ${txAmountStr} - ${lastTx.description}\n(Tanggal: ${txFormattedDate})`,
+      });
+    }
+
+    const prismaOperations: Prisma.PrismaPromise<unknown>[] = [];
+    let walletRevertInfo = "";
+
+    if (lastTx.wallet_id) {
+      const revertedWallet = await prisma.wallet.findUnique({
+        where: { id: lastTx.wallet_id },
+        select: { id: true, name: true },
+      });
+
+      if (revertedWallet) {
+        const txAmount = lastTx.amount;
+
+        prismaOperations.push(
+          prisma.wallet.update({
+            where: { id: lastTx.wallet_id },
+            data: {
+              balance: {
+                [lastTx.type === "EXPENSE" ? "increment" : "decrement"]:
+                  txAmount,
+              },
+            },
+          }),
+        );
+        walletRevertInfo = `\n💳 *Kantong:* ${revertedWallet.name} (saldo dikembalikan)`;
+      }
+    }
+
+    prismaOperations.push(
+      prisma.transaction.delete({ where: { id: lastTx.id } }),
+    );
+
     await prisma.$transaction(prismaOperations);
+
+    const typeEmoji = lastTx.type === "INCOME" ? "📈" : "📉";
+    const typeText = lastTx.type === "INCOME" ? "Pemasukan" : "Pengeluaran";
+    const amountStr = lastTx.amount.toNumber().toLocaleString("id-ID");
+    const catName = lastTx.category?.name || "-";
+
+    return NextResponse.json({
+      message: `🗑️ *Transaksi Dihapus!*\n━━━━━━━━━━━━━━━━━\n${typeEmoji} *Tipe:* ${typeText}\n💰 *Nominal:* Rp ${amountStr}\n📂 *Kategori:* ${catName}\n📝 *Keterangan:* ${lastTx.description}${walletRevertInfo}\n━━━━━━━━━━━━━━━━━\n\n✅ Transaksi sudah dibatalkan`,
+    });
   } catch (error) {
-    console.error("Undo transaction failed:", error);
-    return NextResponse.json({ message: "❌ Gagal membatalkan transaksi karena kesalahan server." });
+    console.error("[handleUndo Error]:", error);
+    return NextResponse.json({
+      message:
+        "❌ Gagal membatalkan transaksi karena kesalahan server. Mohon coba sesaat lagi.",
+    });
   }
-
-  const typeEmoji = lastTx.type === "INCOME" ? "📈" : "📉";
-  const typeText = lastTx.type === "INCOME" ? "Pemasukan" : "Pengeluaran";
-
-  return NextResponse.json({
-    message: `🗑️ *Transaksi Dihapus!*\n━━━━━━━━━━━━━━━━━\n${typeEmoji} *Tipe:* ${typeText}\n💰 *Nominal:* Rp ${lastTx.amount.toNumber().toLocaleString("id-ID")}\n📂 *Kategori:* ${lastTx.category?.name || '-'}\n📝 *Keterangan:* ${lastTx.description}${walletRevertInfo}\n━━━━━━━━━━━━━━━━━\n\n✅ Transaksi sudah dibatalkan`
-  });
 }
