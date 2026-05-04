@@ -57,6 +57,32 @@ export async function POST(request: NextRequest) {
     }
     rawSender = rawSender.replace(/\D/g, "");
 
+    // ── Handle Meta AI / Bot Senders ──
+    const isMetaAI = sender.includes("@bot") || rawSender === "718584497008509";
+    if (isMetaAI) {
+      const aiText = message;
+      
+      // Attempt to extract JSON from Meta AI's text
+      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          const jsonPayload = JSON.parse(jsonMatch[0]);
+          if (jsonPayload.user_jid && Array.isArray(jsonPayload.transactions)) {
+            console.log(`🤖 Meta AI JSON detected! Routing to Meta AI handler for user: ${jsonPayload.user_jid}`);
+            // Fire and forget
+            handleMetaAIResponse(jsonPayload).catch(err => console.error("Error in Meta AI Handler:", err));
+            return NextResponse.json({ message: "" }, { status: 200 });
+          }
+        } catch (e) {
+          console.log(`🤖 Meta AI JSON parse failed. Raw match: ${jsonMatch[0]}`);
+        }
+      }
+
+      // If we reach here, it's a conversational or invalid message from Meta AI.
+      console.log(`🤖 Meta AI non-JSON message ignored: ${message.substring(0, 50)}...`);
+      return NextResponse.json({ message: "" }, { status: 200 });
+    }
+
     // Detect LID: either @lid suffix, or by length/prefix pattern (matches image route logic)
     const isLid = hasLidSuffix ||
       rawSender.length > 15 ||
@@ -102,31 +128,6 @@ export async function POST(request: NextRequest) {
       normalizedSender = normalizePhone(rawSender);
     }
 
-    // ── Handle Meta AI / Bot Senders ──
-    const isMetaAI = sender.includes("@bot") || rawSender === "718584497008509";
-    if (isMetaAI) {
-      const aiText = message;
-      
-      // Attempt to extract JSON from Meta AI's text
-      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          const jsonPayload = JSON.parse(jsonMatch[0]);
-          if (jsonPayload.user_jid && Array.isArray(jsonPayload.transactions)) {
-            console.log(`🤖 Meta AI JSON detected! Routing to Meta AI handler for user: ${jsonPayload.user_jid}`);
-            // Fire and forget
-            handleMetaAIResponse(jsonPayload).catch(err => console.error("Error in Meta AI Handler:", err));
-            return NextResponse.json({ message: "" }, { status: 200 });
-          }
-        } catch (e) {
-          console.log(`🤖 Meta AI JSON parse failed. Raw match: ${jsonMatch[0]}`);
-        }
-      }
-
-      // If we reach here, it's a conversational or invalid message from Meta AI.
-      console.log(`🤖 Meta AI non-JSON message ignored: ${message.substring(0, 50)}...`);
-      return NextResponse.json({ message: "" }, { status: 200 });
-    }
 
     console.log(`Webhook received sender: ${sender} -> Normalized: ${normalizedSender}${isLid ? ' (via LID mapping)' : ''}`);
 
