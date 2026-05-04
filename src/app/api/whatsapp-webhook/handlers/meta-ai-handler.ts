@@ -5,7 +5,7 @@ import { checkBudgetStatus } from "@/lib/whatsapp/service";
 import { formatInTimeZone } from "date-fns-tz";
 import { id } from "date-fns/locale";
 import { findAccessibleWallets } from "../lib/wallet-utils";
-import { sendWhatsAppMessageAsync } from "@/lib/whatsapp/send";
+import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
 import { formatMoneyBot } from "@/lib/phone";
 
 const TIMEZONE = "Asia/Jakarta";
@@ -33,7 +33,7 @@ export async function handleMetaAIResponse(jsonPayload: MetaAIPayload) {
 
   if (!transactions || transactions.length === 0) {
     console.log(`🤖 Meta AI returned empty transactions for user ${user_jid}`);
-    sendWhatsAppMessageAsync(user_jid, "❌ Gagal memproses pesan dengan AI. Coba ubah sedikit kata-katanya ya!");
+    await sendWhatsAppMessage(user_jid, "❌ Gagal memproses pesan dengan AI. Coba ubah sedikit kata-katanya ya!");
     return;
   }
 
@@ -164,7 +164,7 @@ export async function handleMetaAIResponse(jsonPayload: MetaAIPayload) {
       await prisma.$transaction(prismaOperations);
     } catch (atomicError) {
       console.error("[Atomic AI Transaction Error]:", atomicError);
-      sendWhatsAppMessageAsync(user_jid, `❌ Terjadi kesalahan saat menyimpan transaksi AI. Seluruh operasi dibatalkan.`);
+      await sendWhatsAppMessage(user_jid, `❌ Terjadi kesalahan saat menyimpan transaksi AI. Seluruh operasi dibatalkan.`);
       return;
     }
   }
@@ -176,11 +176,11 @@ export async function handleMetaAIResponse(jsonPayload: MetaAIPayload) {
     if (errors.length > 0)
       reply += `\n\n⚠️ ${errors.length} transaksi gagal diproses.`;
 
-    sendWhatsAppMessageAsync(user_jid, reply);
+    await sendWhatsAppMessage(user_jid, reply);
     return;
   }
 
   if (errors.length > 0) {
-    sendWhatsAppMessageAsync(user_jid, `❌ AI Gagal mencatat transaksi:\n${errors.join("\n")}`);
+    await sendWhatsAppMessage(user_jid, `❌ AI Gagal mencatat transaksi:\n${errors.join("\n")}`);
   }
 }

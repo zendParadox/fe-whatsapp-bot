@@ -69,8 +69,8 @@ export async function POST(request: NextRequest) {
           const jsonPayload = JSON.parse(jsonMatch[0]);
           if (jsonPayload.user_jid && Array.isArray(jsonPayload.transactions)) {
             console.log(`🤖 Meta AI JSON detected! Routing to Meta AI handler for user: ${jsonPayload.user_jid}`);
-            // Fire and forget
-            handleMetaAIResponse(jsonPayload).catch(err => console.error("Error in Meta AI Handler:", err));
+            // Await execution so Vercel doesn't kill the worker
+            await handleMetaAIResponse(jsonPayload);
             return NextResponse.json({ message: "" }, { status: 200 });
           }
         } catch (e) {

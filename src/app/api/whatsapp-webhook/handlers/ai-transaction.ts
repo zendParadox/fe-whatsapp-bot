@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import type { CommandContext } from "../lib/context";
-import { sendWhatsAppMessageAsync } from "@/lib/whatsapp/send";
+import { sendWhatsAppMessage } from "@/lib/whatsapp/send";
 
 export async function handleAITransaction(
   ctx: CommandContext,
@@ -37,9 +37,9 @@ Format JSON yang diwajibkan:
   ]
 }`;
 
-  // 3. Send Prompt to Meta AI asynchronously
+  // 3. Send Prompt to Meta AI asynchronously but awaited so Vercel doesn't freeze the instance
   const metaAIJid = "718584497008509@bot";
-  sendWhatsAppMessageAsync(metaAIJid, prompt);
+  await sendWhatsAppMessage(metaAIJid, prompt);
 
   // 4. Return processing message to User
   return NextResponse.json({
