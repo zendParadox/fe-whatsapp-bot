@@ -43,6 +43,19 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith(route)
   );
 
+  // --- Root route: redirect to dashboard if already logged in ---
+  if (pathname === "/") {
+    const token = req.cookies.get("token")?.value;
+    if (token) {
+      const payload = await verifyTokenEdge(token);
+      if (payload && payload.userId) {
+        url.pathname = "/dashboard";
+        return NextResponse.redirect(url);
+      }
+    }
+    return NextResponse.next();
+  }
+
   // --- Protected routes: require valid token ---
   if (isProtectedRoute || isAdminRoute) {
     const token = req.cookies.get("token")?.value;
@@ -91,5 +104,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/profile/:path*", "/admin/:path*", "/login", "/register"],
+  matcher: ["/", "/dashboard/:path*", "/profile/:path*", "/admin/:path*", "/login", "/register"],
 };
