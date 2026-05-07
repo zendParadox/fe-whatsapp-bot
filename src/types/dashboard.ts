@@ -1,7 +1,6 @@
 export interface CategoryObj {
   id?: string;
   name?: string;
-  [k: string]: any;
 }
 
 export interface Transaction {

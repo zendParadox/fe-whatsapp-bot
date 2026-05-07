@@ -7,20 +7,7 @@ import { format } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import Link from "next/link";
 
-interface CategoryObj {
-  id?: string;
-  name?: string;
-  [k: string]: unknown;
-}
-
-interface Transaction {
-  id: string;
-  type: "INCOME" | "EXPENSE";
-  amount: number | string;
-  category?: string | CategoryObj | null;
-  description?: string | null;
-  created_at: string;
-}
+import { CategoryObj, Transaction } from "@/types/dashboard";
 
 interface ExportReportButtonsProps {
   transactions: Transaction[];

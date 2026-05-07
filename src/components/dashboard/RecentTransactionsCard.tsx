@@ -24,19 +24,7 @@ import {
 import { Input } from "../ui/input";
 import { Checkbox } from "../ui/checkbox";
 
-interface CategoryObj {
-  id?: string;
-  name?: string;
-}
-
-interface Transaction {
-  id: string;
-  type: "INCOME" | "EXPENSE";
-  amount: number | string;
-  category?: string | CategoryObj | null;
-  description?: string | null;
-  created_at: string;
-}
+import { CategoryObj, Transaction } from "@/types/dashboard";
 
 interface Props {
   currentPeriod: {

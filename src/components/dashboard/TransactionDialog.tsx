@@ -32,7 +32,7 @@ interface TransactionDialogProps {
   onOpenChange: (open: boolean) => void;
   isEditing: boolean;
   form: TransactionForm;
-  handleFormChange: (key: keyof TransactionForm, value: any) => void;
+  handleFormChange: (key: keyof TransactionForm, value: string) => void;
   amountError: string;
   categories: CategoryObj[];
   categoriesLoading: boolean;

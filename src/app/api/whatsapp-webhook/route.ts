@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
             await handleMetaAIResponse(jsonPayload);
             return NextResponse.json({ message: "" }, { status: 200 });
           }
-        } catch (e) {
+        } catch {
           console.log(`🤖 Meta AI JSON parse failed. Raw match: ${jsonMatch[0]}`);
         }
       }
