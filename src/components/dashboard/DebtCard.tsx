@@ -72,12 +72,18 @@ interface DebtCardProps {
   planType?: "FREE" | "PREMIUM";
 }
 
-export default function DebtCard({ onDataChange, wallets = [], planType = "FREE" }: DebtCardProps) {
+export default function DebtCard({
+  onDataChange,
+  wallets = [],
+  planType = "FREE",
+}: DebtCardProps) {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [summary, setSummary] = useState<DebtSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "HUTANG" | "PIUTANG">("all");
-  const [statusFilter, setStatusFilter] = useState<"UNPAID" | "PAID" | "all">("UNPAID");
+  const [statusFilter, setStatusFilter] = useState<"UNPAID" | "PAID" | "all">(
+    "UNPAID",
+  );
 
   // Dialog states
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -101,8 +107,7 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
   const [repayDebt, setRepayDebt] = useState<Debt | null>(null);
   const [repayWalletId, setRepayWalletId] = useState("none");
 
-  const formatCurrency = (value: number | string) =>
-    formatMoney(Number(value));
+  const formatCurrency = (value: number | string) => formatMoney(Number(value));
 
   // Fetch debts
   async function fetchDebts() {
@@ -156,7 +161,9 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
         throw new Error(data.error || "Gagal menyimpan");
       }
 
-      toast.success(`${form.type === "HUTANG" ? "Hutang" : "Piutang"} berhasil ditambahkan`);
+      toast.success(
+        `${form.type === "HUTANG" ? "Hutang" : "Piutang"} berhasil ditambahkan`,
+      );
       setIsAddOpen(false);
       resetForm();
       fetchDebts();
@@ -223,15 +230,18 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
       const res = await fetch(`/api/debts/${repayDebt.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: "PAID",
-          repayment_wallet_id: repayWalletId !== "none" ? repayWalletId : undefined
+          repayment_wallet_id:
+            repayWalletId !== "none" ? repayWalletId : undefined,
         }),
       });
 
       if (!res.ok) throw new Error("Gagal mengubah status");
 
-      toast.success(`${repayDebt.type === "HUTANG" ? "Hutang" : "Piutang"} ditandai lunas`);
+      toast.success(
+        `${repayDebt.type === "HUTANG" ? "Hutang" : "Piutang"} ditandai lunas`,
+      );
       setIsRepayOpen(false);
       setRepayDebt(null);
       setRepayWalletId("none");
@@ -300,7 +310,9 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
     <>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-lg font-semibold">Hutang & Piutang</CardTitle>
+          <CardTitle className="text-lg font-semibold">
+            Hutang & Piutang
+          </CardTitle>
           <Button size="sm" onClick={() => setIsAddOpen(true)}>
             <Plus className="h-4 w-4 mr-1" />
             Tambah
@@ -318,7 +330,9 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
                 <p className="text-lg font-bold text-red-700 dark:text-red-300 mt-1">
                   {formatCurrency(summary.totalHutang)}
                 </p>
-                <p className="text-xs text-red-500">{summary.countHutang} orang</p>
+                <p className="text-xs text-red-500">
+                  {summary.countHutang} orang
+                </p>
               </div>
               <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
                 <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
@@ -328,7 +342,9 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
                 <p className="text-lg font-bold text-green-700 dark:text-green-300 mt-1">
                   {formatCurrency(summary.totalPiutang)}
                 </p>
-                <p className="text-xs text-green-500">{summary.countPiutang} orang</p>
+                <p className="text-xs text-green-500">
+                  {summary.countPiutang} orang
+                </p>
               </div>
             </div>
           )}
@@ -345,7 +361,10 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
                 <SelectItem value="PIUTANG">Piutang</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
+            <Select
+              value={statusFilter}
+              onValueChange={(v: any) => setStatusFilter(v)}
+            >
               <SelectTrigger className="w-[120px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
@@ -371,15 +390,17 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
                     debt.status === "PAID"
                       ? "bg-muted/50 opacity-60"
                       : debt.type === "HUTANG"
-                      ? "bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
-                      : "bg-green-50/50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                        ? "bg-red-50/50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+                        : "bg-green-50/50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge
-                          variant={debt.type === "HUTANG" ? "destructive" : "default"}
+                          variant={
+                            debt.type === "HUTANG" ? "destructive" : "default"
+                          }
                           className="text-xs"
                         >
                           {debt.type === "HUTANG" ? "Hutang" : "Piutang"}
@@ -392,7 +413,9 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
                       </div>
                       <div className="flex items-center gap-1 mt-1 text-sm">
                         <User className="h-3 w-3" />
-                        <span className="font-medium truncate">{debt.person_name}</span>
+                        <span className="font-medium truncate">
+                          {debt.person_name}
+                        </span>
                       </div>
                       {debt.description && (
                         <p className="text-xs text-muted-foreground mt-1 truncate">
@@ -404,7 +427,9 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
                           <Calendar className="h-3 w-3" />
                           <span>
                             Jatuh tempo:{" "}
-                            {format(new Date(debt.due_date), "d MMM yyyy", { locale: localeId })}
+                            {format(new Date(debt.due_date), "d MMM yyyy", {
+                              locale: localeId,
+                            })}
                           </span>
                         </div>
                       )}
@@ -412,7 +437,9 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
                     <div className="text-right">
                       <p
                         className={`font-bold ${
-                          debt.type === "HUTANG" ? "text-red-600" : "text-green-600"
+                          debt.type === "HUTANG"
+                            ? "text-red-600"
+                            : "text-green-600"
                         }`}
                       >
                         {formatCurrency(debt.amount)}
@@ -464,8 +491,8 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
             <DialogTitle>Tambah Hutang/Piutang</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+            <div className="gap-4">
+              <div className="space-y-2 w-full">
                 <Label>Tipe</Label>
                 <Select
                   value={form.type}
@@ -473,24 +500,28 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
                     setForm({ ...form, type: v })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="HUTANG">Hutang (Saya berhutang)</SelectItem>
-                    <SelectItem value="PIUTANG">Piutang (Orang berhutang)</SelectItem>
+                    <SelectItem value="HUTANG">
+                      Hutang (Saya berhutang)
+                    </SelectItem>
+                    <SelectItem value="PIUTANG">
+                      Piutang (Orang berhutang)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Jumlah</Label>
-                <Input
-                  type="number"
-                  value={form.amount}
-                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                  placeholder="100000"
-                />
-              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Jumlah</Label>
+              <Input
+                type="number"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                placeholder="100000"
+              />
             </div>
             {planType === "PREMIUM" && wallets.length > 0 && (
               <div className="space-y-2">
@@ -499,13 +530,15 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
                   value={form.wallet_id}
                   onValueChange={(v) => setForm({ ...form, wallet_id: v })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue placeholder="Pilih Kantong" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Tanpa Kantong</SelectItem>
-                    {wallets.map(w => (
-                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                    {wallets.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -515,7 +548,9 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
               <Label>Nama Orang</Label>
               <Input
                 value={form.person_name}
-                onChange={(e) => setForm({ ...form, person_name: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, person_name: e.target.value })
+                }
                 placeholder="Nama orang yang berhutang/di-hutangi"
               />
             </div>
@@ -523,7 +558,9 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
               <Label>Keterangan (opsional)</Label>
               <Input
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
                 placeholder="Contoh: Pinjam untuk modal usaha"
               />
             </div>
@@ -586,14 +623,18 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
               <Label>Nama Orang</Label>
               <Input
                 value={form.person_name}
-                onChange={(e) => setForm({ ...form, person_name: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, person_name: e.target.value })
+                }
               />
             </div>
             <div className="space-y-2">
               <Label>Keterangan</Label>
               <Input
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, description: e.target.value })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -625,15 +666,20 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
             <AlertDialogDescription>
               {deleteDebt && (
                 <>
-                  Anda akan menghapus {deleteDebt.type === "HUTANG" ? "hutang" : "piutang"}{" "}
-                  sebesar {formatCurrency(deleteDebt.amount)} dari {deleteDebt.person_name}.
+                  Anda akan menghapus{" "}
+                  {deleteDebt.type === "HUTANG" ? "hutang" : "piutang"} sebesar{" "}
+                  {formatCurrency(deleteDebt.amount)} dari{" "}
+                  {deleteDebt.person_name}.
                 </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex justify-end gap-2">
             <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
               Hapus
             </AlertDialogAction>
           </div>
@@ -647,27 +693,32 @@ export default function DebtCard({ onDataChange, wallets = [], planType = "FREE"
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-sm text-muted-foreground">
-              Apakah Anda yakin ingin menandai {repayDebt?.type === "HUTANG" ? "hutang" : "piutang"} sebesar {formatCurrency(Number(repayDebt?.amount))} dari {repayDebt?.person_name} sebagai lunas?
+              Apakah Anda yakin ingin menandai{" "}
+              {repayDebt?.type === "HUTANG" ? "hutang" : "piutang"} sebesar{" "}
+              {formatCurrency(Number(repayDebt?.amount))} dari{" "}
+              {repayDebt?.person_name} sebagai lunas?
             </p>
             {planType === "PREMIUM" && wallets.length > 0 && (
               <div className="space-y-2 mt-4">
-                <Label>Pilih Kantong Penerima / Sumber Pelunasan (Opsional)</Label>
-                <Select
-                  value={repayWalletId}
-                  onValueChange={setRepayWalletId}
-                >
+                <Label>
+                  Pilih Kantong Penerima / Sumber Pelunasan (Opsional)
+                </Label>
+                <Select value={repayWalletId} onValueChange={setRepayWalletId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih Kantong" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Kantong Asal (Bawaan)</SelectItem>
-                    {wallets.map(w => (
-                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                    {wallets.map((w) => (
+                      <SelectItem key={w.id} value={w.id}>
+                        {w.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Jika dikosongkan, saldo akan dikembalikan ke kantong asal saat {repayDebt?.type === "HUTANG" ? "hutang" : "piutang"} dicatat.
+                  Jika dikosongkan, saldo akan dikembalikan ke kantong asal saat{" "}
+                  {repayDebt?.type === "HUTANG" ? "hutang" : "piutang"} dicatat.
                 </p>
               </div>
             )}
