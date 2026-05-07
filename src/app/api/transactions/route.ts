@@ -115,7 +115,8 @@ async function handleTransactionsPOST(request: Request) {
     const userId = payload.userId as string;
 
     const body = await request.json();
-    const { amount, type, description, category_id, date, wallet_id } = body;
+    const { amount, type, description, category_id, date, created_at, wallet_id } = body;
+    const finalDate = created_at || date;
 
     // Basic validation
     if (!amount || !type) {
@@ -165,7 +166,7 @@ async function handleTransactionsPOST(request: Request) {
           description: description || "",
           category_id: category_id || null,
           wallet_id: finalWalletId,
-          created_at: date ? new Date(date) : undefined,
+          created_at: finalDate ? new Date(finalDate) : undefined,
         },
       }),
     );
