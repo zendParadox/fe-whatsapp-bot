@@ -1,4 +1,4 @@
-import { Edit, Trash, RefreshCw, Search, X } from "lucide-react";
+import { Edit, Trash, RefreshCw, Search, X, Plus } from "lucide-react";
 import React, { useState, useMemo } from "react";
 import { Button } from "../ui/button";
 import {
@@ -48,6 +48,7 @@ interface Props {
   handleDeleteConfirmed: (tx: Transaction) => void;
   handleBulkDelete?: (ids: string[]) => Promise<void>;
   onRefresh?: () => void;
+  onAdd?: () => void;
   isDeleting: boolean;
   isRefreshing?: boolean;
 }
@@ -60,6 +61,7 @@ export default function RecentTransactionsCard({
   handleDeleteConfirmed,
   handleBulkDelete,
   onRefresh,
+  onAdd,
   isDeleting,
   isRefreshing = false,
 }: Props) {
@@ -163,7 +165,15 @@ export default function RecentTransactionsCard({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <CardTitle>Transaksi Terbaru</CardTitle>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {/* Tambah Manual Button */}
+            {onAdd && (
+              <Button size="sm" onClick={onAdd} className="shrink-0">
+                <Plus className="w-4 h-4 sm:mr-1" />
+                <span className="hidden sm:inline">Tambah Manual</span>
+              </Button>
+            )}
+
             {/* Refresh Button */}
             {onRefresh && (
               <Button

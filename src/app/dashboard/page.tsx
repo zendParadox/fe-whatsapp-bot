@@ -52,145 +52,18 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatMoney } from "@/lib/phone";
 
-// --- INTERFACE & KONSTANTA ---
-interface CategoryObj {
-  id?: string;
-  name?: string;
-  [k: string]: any;
-}
-
-interface Transaction {
-  id: string;
-  type: "INCOME" | "EXPENSE";
-  amount: number | string;
-  category?: string | CategoryObj | null;
-  description?: string | null;
-  created_at: string;
-  wallet_id?: string | null;
-}
-
-interface Summary {
-  totalIncome: number;
-  totalExpense: number;
-  balance: number;
-}
-
-interface DashboardData {
-  currentPeriod: {
-    summary: Summary;
-    transactions: Transaction[];
-    topCategories: { category: string; amount: number }[];
-    avgDailyExpense: number;
-  };
-  previousPeriod: {
-    summary: { totalExpense: number };
-  };
-  trendData: { name: string; Pemasukan: number; Pengeluaran: number }[];
-  budgetData: { category: string; budget: number; actual: number }[];
-  totalSaldo: number;
-  plan_type?: "FREE" | "PREMIUM";
-  wallets?: {
-    id: string;
-    name: string;
-    icon: string | null;
-    balance: number | string;
-    created_at: string;
-  }[];
-}
-
-interface UserProfile {
-  name: string | null;
-  avatar_url: string | null;
-  plan_type?: string;
-  premium_valid_until?: string | null;
-}
+import {
+  CategoryObj,
+  Transaction,
+  DashboardData,
+  UserProfile,
+} from "@/types/dashboard";
+import { ComparisonCard } from "@/components/dashboard/ComparisonCard";
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
+import { TransactionDialog } from "@/components/dashboard/TransactionDialog";
+import { AddCategoryDialog } from "@/components/dashboard/AddCategoryDialog";
 
 const PIE_CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
-
-// --- KOMPONEN BANTU ---
-function ComparisonCard({
-  title,
-  currentValue,
-  previousValue,
-  formatter,
-}: {
-  title: string;
-  currentValue: number;
-  previousValue: number;
-  formatter: (value: number) => string;
-}) {
-  const difference = currentValue - previousValue;
-  const percentageChange =
-    previousValue === 0 ? 100 : (difference / previousValue) * 100;
-  const isPositive = difference >= 0;
-  const isExpense = title.toLowerCase().includes("pengeluaran");
-  const isGood = isExpense ? !isPositive : isPositive;
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{formatter(currentValue)}</div>
-        <p className={`text-xs ${isGood ? "text-green-500" : "text-red-500"}`}>
-          {percentageChange.toFixed(1)}% vs bulan lalu
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function BudgetStatus({
-  item,
-  formatter,
-}: {
-  item: { category: string; budget: number; actual: number };
-  formatter: (value: number) => string;
-}) {
-  const percentage = (item.actual / item.budget) * 100;
-  const isOverBudget = percentage > 100;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex justify-between items-center text-sm">
-        <span className="font-medium">{item.category}</span>
-        <span
-          className={`font-mono ${
-            isOverBudget ? "text-red-500" : "text-muted-foreground"
-          }`}
-        >
-          {formatter(item.actual)} / {formatter(item.budget)}
-        </span>
-      </div>
-      <Progress
-        value={Math.min(percentage, 100)}
-        className={isOverBudget ? "[&>div]:bg-red-500" : ""}
-      />
-    </div>
-  );
-}
-
-function DashboardSkeleton() {
-  return (
-    <div className="space-y-8 animate-pulse">
-      <div className="grid gap-4 md:grid-cols-4">
-        <Skeleton className="h-24" />
-        <Skeleton className="h-24" />
-        <Skeleton className="h-24" />
-        <Skeleton className="h-24" />
-      </div>
-      <div className="grid gap-8 md:grid-cols-2">
-        <Skeleton className="h-80" />
-        <Skeleton className="h-80" />
-      </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <Skeleton className="h-96" />
-        <Skeleton className="h-96" />
-      </div>
-    </div>
-  );
-}
 
 // --- KOMPONEN UTAMA DASHBOARD ---
 export default function Dashboard() {
@@ -401,7 +274,6 @@ export default function Dashboard() {
       : "";
 
   async function handleSave() {
-    if (!editingTx) return;
 
     // if invalid, block
     if (amountError) {
@@ -804,17 +676,12 @@ export default function Dashboard() {
           />
         </div>
         <div className="lg:col-span-3 overflow-x-auto relative">
-          <div className="absolute top-4 sm:top-5 right-4 sm:right-6 z-10 flex gap-2">
-            <Button size="sm" onClick={openAdd}>
-              <Plus className="w-4 h-4 sm:mr-1" />
-              <span className="hidden sm:inline">Tambah Manual</span>
-            </Button>
-          </div>
           <RecentTransactionsCard
             currentPeriod={currentPeriod}
             getCategoryName={getCategoryName}
             formatCurrency={formatCurrency}
             openEdit={openEdit}
+            onAdd={openAdd}
             handleDeleteConfirmed={handleDeleteConfirmed}
             isDeleting={isDeleting}
             handleBulkDelete={async (ids) => {
@@ -828,203 +695,31 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Edit/Add Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={(v) => setIsDialogOpen(v)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {editingTx ? "Edit Transaksi" : "Tambah Transaksi Manual"}
-            </DialogTitle>
-          </DialogHeader>
+      {/* Dialogs */}
+      <TransactionDialog
+        isOpen={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        isEditing={!!editingTx}
+        form={form}
+        handleFormChange={handleFormChange}
+        amountError={amountError}
+        categories={categories}
+        categoriesLoading={categoriesLoading}
+        onAddCategoryClick={() => setIsAddCategoryOpen(true)}
+        isSaving={isSaving}
+        handleSave={handleSave}
+        planType={data.plan_type as "FREE" | "PREMIUM"}
+        wallets={data.wallets}
+      />
 
-          <div className="grid gap-2 py-2">
-            {/* Category: Select dari daftar kategori user */}
-            <div>
-              <Label>Category</Label>
-              <div className="flex gap-2 mt-1">
-                <div className="flex-1">
-                  <Select
-                    value={form.categoryId}
-                    onValueChange={(v) => handleFormChange("categoryId", v)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue
-                        placeholder={
-                          categoriesLoading
-                            ? "Memuat..."
-                            : form.category || "Pilih kategori"
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoriesLoading ? (
-                        <div className="p-2 text-sm text-muted-foreground">
-                          Memuat kategori...
-                        </div>
-                      ) : categories.length > 0 ? (
-                        categories.map((c) => (
-                          <SelectItem
-                            key={c.id ?? c.name}
-                            value={c.id ?? c.name}
-                          >
-                            {c.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <div className="p-2 text-sm text-muted-foreground">
-                          Belum ada kategori
-                        </div>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Tombol Tambah kategori */}
-                <div className="w-36">
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => setIsAddCategoryOpen(true)}
-                  >
-                    + Tambah kategori
-                  </Button>
-                </div>
-              </div>
-
-              <p className="text-xs text-muted-foreground mt-1">
-                Jika kategori belum ada, tambahkan di sini.
-              </p>
-            </div>
-
-            {/* Type */}
-            <div>
-              <Label className="mb-1">Type</Label>
-              <Select
-                value={form.type}
-                onValueChange={(v) =>
-                  handleFormChange("type", v as "INCOME" | "EXPENSE")
-                }
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Pilih type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="INCOME">Pemasukan (INCOME)</SelectItem>
-                  <SelectItem value="EXPENSE">Pengeluaran (EXPENSE)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Wallet Selection (Premium Only) */}
-            {data.plan_type === "PREMIUM" &&
-              data.wallets &&
-              data.wallets.length > 0 && (
-                <div>
-                  <Label className="mb-1">Kantong (Opsional)</Label>
-                  <Select
-                    value={form.wallet_id}
-                    onValueChange={(v) => handleFormChange("wallet_id", v)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Pilih Kantong" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Tanpa Kantong</SelectItem>
-                      {data.wallets.map((w) => (
-                        <SelectItem key={w.id} value={w.id}>
-                          {w.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Saldo kantong akan otomatis menyesuaikan.
-                  </p>
-                </div>
-              )}
-
-            {/* Amount */}
-            <div>
-              <Label className="mb-1">Amount</Label>
-              <Input
-                value={form.amount}
-                onChange={(e) => handleFormChange("amount", e.target.value)}
-                inputMode="numeric"
-              />
-              {amountError && (
-                <p className="mt-1 text-xs text-red-500">{amountError}</p>
-              )}
-            </div>
-
-            {/* Description */}
-            <div>
-              <Label className="mb-1">Deskripsi (opsional)</Label>
-              <Input
-                value={form.description}
-                onChange={(e) =>
-                  handleFormChange("description", e.target.value)
-                }
-              />
-            </div>
-
-            {/* Transaction Date */}
-            <div>
-              <Label className="mb-1">Tanggal Transaksi</Label>
-              <Input
-                type="date"
-                value={form.createdAt}
-                onChange={(e) => handleFormChange("createdAt", e.target.value)}
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="flex items-center justify-between">
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Batal
-              </Button>
-              <Button onClick={handleSave} disabled={isSaving || !!amountError}>
-                {isSaving ? "Menyimpan..." : "Simpan"}
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Category Dialog (sub-dialog) */}
-      <Dialog
-        open={isAddCategoryOpen}
-        onOpenChange={(v) => setIsAddCategoryOpen(v)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tambah Kategori Baru</DialogTitle>
-          </DialogHeader>
-
-          <div className="grid gap-2 py-2">
-            <div>
-              <Label className="mb-1">Nama Kategori</Label>
-              <Input
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="Mis. Makanan, Transport, Gaji"
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsAddCategoryOpen(false)}
-            >
-              Batal
-            </Button>
-            <Button onClick={handleAddCategory} disabled={addingCategory}>
-              {addingCategory ? "Menyimpan..." : "Simpan"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddCategoryDialog
+        isOpen={isAddCategoryOpen}
+        onOpenChange={setIsAddCategoryOpen}
+        newCategoryName={newCategoryName}
+        setNewCategoryName={setNewCategoryName}
+        handleAddCategory={handleAddCategory}
+        addingCategory={addingCategory}
+      />
 
       {/* Footer */}
       <footer className="mt-12 py-6 border-t text-center text-sm text-muted-foreground">
