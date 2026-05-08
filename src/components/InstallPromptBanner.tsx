@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Share, PlusSquare, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -100,9 +101,10 @@ export default function InstallPromptBanner() {
   };
 
   if (!showBanner || isStandalone) return null;
+  if (typeof document === "undefined") return null;
 
-  return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 animate-in slide-in-from-bottom-full duration-300 md:hidden">
+  return createPortal(
+    <div className="fixed bottom-0 left-0 right-0 z-[100] animate-in slide-in-from-bottom-full duration-300 md:hidden">
       <div className="bg-card border-t border-border shadow-[0_-8px_30px_rgba(0,0,0,0.12)] rounded-t-2xl p-5 pb-8 flex flex-col gap-3 relative overflow-hidden">
         {/* Close Button */}
         <button
@@ -156,6 +158,7 @@ export default function InstallPromptBanner() {
           </Button>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
