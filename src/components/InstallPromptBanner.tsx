@@ -5,10 +5,23 @@ import { X, Share, PlusSquare, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
+interface NavigatorWithStandalone extends Navigator {
+  standalone?: boolean;
+}
+
 export default function InstallPromptBanner() {
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(true); // Default true to prevent flash
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
 
   useEffect(() => {
@@ -18,7 +31,7 @@ export default function InstallPromptBanner() {
         "(display-mode: standalone)",
       ).matches;
       const isStandaloneNavigator =
-        (window.navigator as any).standalone === true;
+        (window.navigator as NavigatorWithStandalone).standalone === true;
       return isStandaloneMedia || isStandaloneNavigator;
     };
 
@@ -47,7 +60,7 @@ export default function InstallPromptBanner() {
     // 4. Handle Android / Chrome install prompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
       if (!isIOSDevice) {
         setShowBanner(true);
       }
