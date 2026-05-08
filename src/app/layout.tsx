@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import Script from "next/script";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import PullToRefresh from "@/components/PullToRefresh";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -132,6 +133,7 @@ export default function RootLayout({
           <Toaster richColors />
         </ThemeProvider>
         <SpeedInsights />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

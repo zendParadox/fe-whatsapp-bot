@@ -62,6 +62,7 @@ import { ComparisonCard } from "@/components/dashboard/ComparisonCard";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { TransactionDialog } from "@/components/dashboard/TransactionDialog";
 import { AddCategoryDialog } from "@/components/dashboard/AddCategoryDialog";
+import InstallPromptBanner from "@/components/InstallPromptBanner";
 
 const PIE_CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
@@ -736,6 +737,8 @@ export default function Dashboard() {
           </a>
         </p>
       </footer>
+
+      <InstallPromptBanner />
     </div>
   );
 }
