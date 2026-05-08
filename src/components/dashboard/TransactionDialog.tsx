@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -171,10 +172,9 @@ export function TransactionDialog({
           {/* Amount */}
           <div>
             <Label className="mb-1">Amount</Label>
-            <Input
+            <CurrencyInput
               value={form.amount}
-              onChange={(e) => handleFormChange("amount", e.target.value)}
-              inputMode="numeric"
+              onValueChange={(val) => handleFormChange("amount", val)}
             />
             {amountError && (
               <p className="mt-1 text-xs text-red-500">{amountError}</p>

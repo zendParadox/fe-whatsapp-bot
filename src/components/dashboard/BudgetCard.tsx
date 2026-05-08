@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Edit, Trash, Plus } from "lucide-react";
 import { toast } from "sonner";
@@ -360,11 +361,10 @@ export default function BudgetCard({
             {/* Amount */}
             <div>
               <Label className="mb-2">Jumlah Budget (Rp)</Label>
-              <Input
+              <CurrencyInput
                 value={form.amount}
-                onChange={(e) => handleFormChange("amount", e.target.value)}
-                inputMode="numeric"
-                placeholder="Contoh: 500000"
+                onValueChange={(val) => handleFormChange("amount", val)}
+                placeholder="Contoh: 500.000"
               />
               {amountError && form.amount && (
                 <p className="mt-1 text-xs text-red-500">{amountError}</p>

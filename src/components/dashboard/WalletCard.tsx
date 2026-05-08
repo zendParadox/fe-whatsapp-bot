@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import {
   Plus,
@@ -74,10 +75,18 @@ function getWalletIcon(name: string, icon: string | null) {
 
 function getWalletTypeIcon(name: string) {
   const lower = name.toLowerCase();
-  if (["bca", "mandiri", "bri", "bni", "cimb", "bank"].some((k) => lower.includes(k))) {
+  if (
+    ["bca", "mandiri", "bri", "bni", "cimb", "bank"].some((k) =>
+      lower.includes(k),
+    )
+  ) {
     return <Landmark className="w-4 h-4 text-blue-400" />;
   }
-  if (["gopay", "shopeepay", "dana", "ovo", "linkaja"].some((k) => lower.includes(k))) {
+  if (
+    ["gopay", "shopeepay", "dana", "ovo", "linkaja"].some((k) =>
+      lower.includes(k),
+    )
+  ) {
     return <Smartphone className="w-4 h-4 text-green-400" />;
   }
   return <Banknote className="w-4 h-4 text-yellow-400" />;
@@ -125,7 +134,9 @@ export default function WalletCard({
       setShowAddDialog(false);
       onRefresh();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Gagal menambah kantong.");
+      toast.error(
+        err instanceof Error ? err.message : "Gagal menambah kantong.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -149,22 +160,31 @@ export default function WalletCard({
       setShowEditDialog(false);
       onRefresh();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Gagal mengedit kantong.");
+      toast.error(
+        err instanceof Error ? err.message : "Gagal mengedit kantong.",
+      );
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function handleDelete(wallet: WalletData) {
-    if (!confirm(`Hapus kantong "${wallet.name}"? Transaksi tidak akan terhapus.`)) return;
+    if (
+      !confirm(`Hapus kantong "${wallet.name}"? Transaksi tidak akan terhapus.`)
+    )
+      return;
     try {
-      const res = await fetch(`/api/wallets/${wallet.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/wallets/${wallet.id}`, {
+        method: "DELETE",
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success(`Kantong "${wallet.name}" dihapus.`);
       onRefresh();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Gagal menghapus kantong.");
+      toast.error(
+        err instanceof Error ? err.message : "Gagal menghapus kantong.",
+      );
     }
   }
 
@@ -181,7 +201,9 @@ export default function WalletCard({
       <Card className="glass-card border-border/30 relative overflow-hidden">
         <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center gap-3">
           <Lock className="w-8 h-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground font-medium">Fitur Kantong — Premium Only</p>
+          <p className="text-sm text-muted-foreground font-medium">
+            Fitur Kantong — Premium Only
+          </p>
           <Button variant="outline" size="sm" asChild>
             <Link href="/pricing">⭐️ Upgrade ke Premium</Link>
           </Button>
@@ -194,7 +216,10 @@ export default function WalletCard({
         <CardContent>
           <div className="space-y-2 opacity-30">
             {["BCA", "Gopay", "Cash"].map((n) => (
-              <div key={n} className="flex items-center justify-between py-2 border-b border-border/20">
+              <div
+                key={n}
+                className="flex items-center justify-between py-2 border-b border-border/20"
+              >
                 <span className="text-sm">{n}</span>
                 <span className="text-sm font-mono">Rp ***</span>
               </div>
@@ -236,11 +261,11 @@ export default function WalletCard({
                 </div>
                 <div>
                   <Label>Saldo Awal</Label>
-                  <Input
-                    type="number"
+                  <CurrencyInput
                     placeholder="0"
                     value={newBalance}
-                    onChange={(e) => setNewBalance(e.target.value)}
+                    onValueChange={setNewBalance}
+                    allowNegative
                   />
                 </div>
               </div>
@@ -254,7 +279,10 @@ export default function WalletCard({
         </div>
         {wallets.length > 0 && (
           <p className="text-xs text-muted-foreground mt-1">
-            Total seluruh kantong: <span className="font-semibold text-foreground">{formatCurrency(totalBalance)}</span>
+            Total seluruh kantong:{" "}
+            <span className="font-semibold text-foreground">
+              {formatCurrency(totalBalance)}
+            </span>
           </p>
         )}
       </CardHeader>
@@ -273,7 +301,9 @@ export default function WalletCard({
                 onClick={() => router.push(`/dashboard/wallet/${w.id}`)}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">{getWalletIcon(w.name, w.icon)}</span>
+                  <span className="text-xl">
+                    {getWalletIcon(w.name, w.icon)}
+                  </span>
                   <div>
                     <p className="text-sm font-medium flex items-center gap-1.5">
                       {w.name}
@@ -284,7 +314,9 @@ export default function WalletCard({
                         </span>
                       )}
                       {w.role === "MEMBER" && (
-                        <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium">Member</span>
+                        <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium">
+                          Member
+                        </span>
                       )}
                     </p>
                   </div>
@@ -298,7 +330,10 @@ export default function WalletCard({
                     {formatCurrency(Number(w.balance))}
                   </span>
                   {(!w.role || w.role === "OWNER" || w.role === "ADMIN") && (
-                    <div className="hidden group-hover:flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <div
+                      className="hidden group-hover:flex items-center gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <button
                         onClick={() => openEdit(w)}
                         className="p-1 rounded hover:bg-muted transition-colors"
@@ -328,19 +363,24 @@ export default function WalletCard({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Kantong</DialogTitle>
-            <DialogDescription>Ubah detail kantong &quot;{editWallet?.name}&quot;</DialogDescription>
+            <DialogDescription>
+              Ubah detail kantong &quot;{editWallet?.name}&quot;
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div>
               <Label>Nama</Label>
-              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+              />
             </div>
             <div>
               <Label>Saldo</Label>
-              <Input
-                type="number"
+              <CurrencyInput
                 value={editBalance}
-                onChange={(e) => setEditBalance(e.target.value)}
+                onValueChange={setEditBalance}
+                allowNegative
               />
             </div>
           </div>

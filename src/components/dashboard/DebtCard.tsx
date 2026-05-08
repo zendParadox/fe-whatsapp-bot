@@ -22,6 +22,7 @@ import {
   AlertDialogDescription,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -516,11 +517,10 @@ export default function DebtCard({
             </div>
             <div className="space-y-2">
               <Label>Jumlah</Label>
-              <Input
-                type="number"
+              <CurrencyInput
                 value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                placeholder="100000"
+                onValueChange={(val) => setForm({ ...form, amount: val })}
+                placeholder="100.000"
               />
             </div>
             {planType === "PREMIUM" && wallets.length > 0 && (
